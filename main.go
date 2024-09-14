@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+  "html/template"
 	"os"
 	"github.com/joho/godotenv"
 )
@@ -12,7 +13,15 @@ import (
 func main() {
 	
 	fmt.Println("main")
-	err := godotenv.Load()
+
+  http.HandleFunc("/", homeHandler)
+  http.HandleFunc("/finance", financeHandler)
+
+  err := http.ListenAndServe(":8080", nil)
+
+  // -----------------------------------------------
+  
+	err = godotenv.Load()
 
 	url := os.Getenv("URL")
 
@@ -34,3 +43,31 @@ func main() {
 
 	fmt.Println("Received Data:", string(body))
 }
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+  fmt.Println("Home Request")
+  tmpl, err := template.ParseFiles("templates/home.html")
+  if err != nil {
+    http.Error(w, "Error parsing template", http.StatusInternalServerError)
+  }
+
+  err = tmpl.Execute(w, nil)
+  if err != nil {
+    http.Error(w, "Error executing temlate", http.StatusInternalServerError)
+  }
+
+}
+
+func financeHandler(w http.ResponseWriter, r *http.Request) {
+  fmt.Println("Finance Page Request")
+  tmpl, err := template.ParseFiles("templates/finance.html")
+  if err != nil {
+    http.Error(w, "Error parsing template", http.StatusInternalServerError)
+  }
+
+  err = tmpl.Execute(w, nil)
+  if err != nil {
+    http.Error(w, "Error executing temlate", http.StatusInternalServerError)
+  }
+}
+
