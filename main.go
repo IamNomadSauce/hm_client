@@ -47,6 +47,7 @@ func main() {
 func homeHandler(w http.ResponseWriter, r *http.Request) {
   fmt.Println("Home Request")
   tmpl, err := template.ParseFiles(
+    "templates/base.html",
     "templates/home.html",
     "templates/components/navbar.html",
   )
@@ -57,6 +58,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
   err = tmpl.Execute(w, nil)
   if err != nil {
     http.Error(w, "Error executing temlate", http.StatusInternalServerError)
+    fmt.Println("Error executing template", err)
   }
 
 }
@@ -64,6 +66,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 func financeHandler(w http.ResponseWriter, r *http.Request) {
   fmt.Println("Finance Page Request")
   tmpl, err := template.ParseFiles(
+    "templates/base.html",
     "templates/finance.html",
     "templates/components/navbar.html",
   )
