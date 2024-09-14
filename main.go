@@ -46,7 +46,10 @@ func main() {
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
   fmt.Println("Home Request")
-  tmpl, err := template.ParseFiles("templates/home.html")
+  tmpl, err := template.ParseFiles(
+    "templates/home.html",
+    "templates/components/navbar.html",
+  )
   if err != nil {
     http.Error(w, "Error parsing template", http.StatusInternalServerError)
   }
@@ -60,7 +63,10 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func financeHandler(w http.ResponseWriter, r *http.Request) {
   fmt.Println("Finance Page Request")
-  tmpl, err := template.ParseFiles("templates/finance.html")
+  tmpl, err := template.ParseFiles(
+    "templates/finance.html",
+    "templates/components/navbar.html",
+  )
   if err != nil {
     http.Error(w, "Error parsing template", http.StatusInternalServerError)
   }
