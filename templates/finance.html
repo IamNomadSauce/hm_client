@@ -2,6 +2,9 @@
 <h2>Finance Page</h2>
 {{range .}}
 <h1>{{.Name}}</h1>
+{{range .Watchlist}}
+<p>{{.Product}}</p>
+{{end}}
 {{range .Timeframes}}
 <p>{{.TF}}</p>
 <p>{{.Endpoint}}</p>
