@@ -1,3 +1,11 @@
 {{define "content"}}    
 <h2>Finance Page</h2>
+{{range .}}
+<h1>{{.Name}}</h1>
+{{range .Timeframes}}
+<p>{{.TF}}</p>
+<p>{{.Endpoint}}</p>
+{{end}}
+
+{{end}}
 {{end}}
