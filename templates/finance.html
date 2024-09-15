@@ -1,14 +1,36 @@
 {{define "content"}}    
-<h2>Finance Page</h2>
-{{range .}}
-<h1>{{.Name}}</h1>
-{{range .Watchlist}}
-<p>{{.Product}}</p>
-{{end}}
-{{range .Timeframes}}
-<p>{{.TF}}</p>
-<p>{{.Endpoint}}</p>
-{{end}}
-
-{{end}}
+  <h2>Finance Page</h2>
+  {{range .}}
+    <div class="border rounded mb-3 p-1">
+      <div class="row row-cols-auto">
+        <h1>{{.Name}}</h1>
+      </div>
+      <div class="row row-cols-auto p-2">
+        <div class="col">
+          <h5>Watchlist:</h5>
+        </div>
+        {{range .Watchlist}}
+            <div class="col">
+              <button class="btn btn-sm btn-info">
+                {{.Product}}
+              </button>      
+            </div>
+        {{end}}
+        <div>
+          <button class="btn btn-sm btn-warning">+</button>
+        </div>
+      </div>
+      <div class="row row-cols-auto p-2">
+        <div class="col">
+          <h5>Timeframes</h5>
+        </div>  
+        {{range .Timeframes}}
+          <div class="col">
+            <p>{{.TF}}</p>
+            <p>{{.Endpoint}}</p>
+          </div>
+        {{end}}
+      </div>
+    </div>
+  {{end}}
 {{end}}
