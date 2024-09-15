@@ -131,20 +131,33 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
     selectedProduct := selectedExchange.Watchlist[productIndex]
 
-    fmt.Println("\n------------------\nSelected Product:\n", productIndex, selectedProduct)
+    timeframeIndex, err := strconv.Atoi(r.URL.Query().Get("timeframe_index"))
+    if err != nil || timeframeIndex < 0 || timeframeIndex >= len(selectedExchange.Timeframes) {
+      timeframeIndex = 0
+    }
+    var selectedTimeframe Timeframe
+    if len(selectedExchange.Timeframes) > 0 {
+      selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
+    }
+
+    fmt.Println("\n------------------\nSelected Product:\n", productIndex, selectedProduct, selectedTimeframe)
 
     data := struct {
-        Exchanges        []Exchange
-        SelectedExchange Exchange
-        SelectedIndex    int
-        ProductIndex     int
-        SelectedProduct  Watchlist
+        Exchanges           []Exchange
+        SelectedExchange    Exchange
+        SelectedIndex       int
+        ProductIndex        int
+        SelectedProduct     Watchlist
+        TimeframeIndex      int
+        SelectedTimeframe   Timeframe
     }{
-        Exchanges:        exchanges,
-        SelectedExchange: selectedExchange,
-        SelectedIndex:    selectedIndex,
-        ProductIndex:     productIndex,
-        SelectedProduct:  selectedProduct,
+        Exchanges:          exchanges,
+        SelectedExchange:   selectedExchange,
+        SelectedIndex:      selectedIndex,
+        ProductIndex:       productIndex,
+        SelectedProduct:    selectedProduct,
+        TimeframeIndex:     timeframeIndex, 
+        SelectedTimeframe:  selectedTimeframe,   
     }
 
     // Use a buffer to render the template first
