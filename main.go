@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+  "bytes"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"github.com/joho/godotenv"
   "hm_client/api"
+  "strconv"
 )
 
 func main() {
@@ -18,6 +20,7 @@ func main() {
 
   http.HandleFunc("/", homeHandler)
   http.HandleFunc("/finance", financeHandler)
+  //http.HandleFunc("/change_exchange", exchange_changeHandler)
 
   err := http.ListenAndServe(":8080", nil)
 
@@ -48,6 +51,19 @@ func main() {
 	fmt.Println("Received Data:", string(body))
 }
 
+/*
+func exchange_changeHandler(w http.ResponseWriter, r *http.Request) {
+  fmt.Println("Change Exchange")
+  exchangeIndex := r.FormValue("exchange_index")
+  fmt.Println("\n",exchangeIndex, "\n")
+  session, _ := store.Get(r, "session-name")
+  session.Values["selectedExchangeIndex"] = exchangeIndex
+  session.Save(r,w)
+
+  http.Redirect(w, r, "/finance", http.StatusSeeOther)
+}
+*/
+
 func homeHandler(w http.ResponseWriter, r *http.Request) {
   fmt.Println("Home Request")
   tmpl, err := template.ParseFiles(
@@ -68,38 +84,72 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func financeHandler(w http.ResponseWriter, r *http.Request) {
-  fmt.Println("Finance Page Request")
-  tmpl, err := template.ParseFiles(
-    "templates/base.html",
-    "templates/finance.html",
-    "templates/components/navbar.html",
-  )
-  if err != nil {
-    http.Error(w, "Error parsing template", http.StatusInternalServerError)
-  }
+    fmt.Println("Finance Page Request")
+    tmpl, err := template.ParseFiles(
+        "templates/base.html",
+        "templates/finance.html",
+        "templates/components/navbar.html",
+    )
+    if err != nil {
+        http.Error(w, "Error parsing template", http.StatusInternalServerError)
+        return
+    }
 
-	err = godotenv.Load()
+    err = godotenv.Load()
+    if err != nil {
+        log.Println("Error loading .env file:", err)
+        // Decide whether to return or continue based on your requirements
+    }
 
+    url := os.Getenv("URL")
 
-	url := os.Getenv("URL")
+    exchangeData, err := api.GetExchanges(url)
+    if err != nil {
+        http.Error(w, "Error fetching exchange data: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
 
-  exchangeData, err := api.GetExchanges(url)
-  if err != nil {
-    http.Error(w, "Error fetching exchange data:"+err.Error(), http.StatusInternalServerError)
-    return
-  }
-  var exchanges []Exchange
-  err = json.Unmarshal(exchangeData, &exchanges)
-  if err != nil {
-    http.Error(w, "Error parsing exchange data: "+err.Error(), http.StatusInternalServerError)
-    return
-  }
-  fmt.Println(exchanges)
+    var exchanges []Exchange
+    err = json.Unmarshal(exchangeData, &exchanges)
+    if err != nil {
+        http.Error(w, "Error parsing exchange data: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+    fmt.Println(exchanges)
 
-  err = tmpl.Execute(w, exchanges)
-  if err != nil {
-    http.Error(w, "Error executing temlate", http.StatusInternalServerError)
-  }
+    selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
+    if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
+        selectedIndex = 0
+    }
+
+    selectedExchange := exchanges[selectedIndex]
+
+    data := struct {
+        Exchanges        []Exchange
+        SelectedExchange Exchange
+        SelectedIndex    int
+    }{
+        Exchanges:        exchanges,
+        SelectedExchange: selectedExchange,
+        SelectedIndex:    selectedIndex,
+    }
+
+    // Use a buffer to render the template first
+    var buf bytes.Buffer
+    err = tmpl.Execute(&buf, data)
+    if err != nil {
+        http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // If template execution was successful, write the result to the response
+    w.Header().Set("Content-Type", "text/html; charset=utf-8")
+    _, err = buf.WriteTo(w)
+    if err != nil {
+        log.Printf("Error writing response: %v", err)
+        // At this point, we've already started writing the response,
+        // so we can't send an HTTP error status anymore.
+    }
 }
 
 type Exchange struct {

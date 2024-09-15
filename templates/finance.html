@@ -1,36 +1,63 @@
 {{define "content"}}    
-  <h2>Finance Page</h2>
-  {{range .}}
-    <div class="border rounded mb-3 p-1">
-      <div class="row row-cols-auto">
-        <h1>{{.Name}}</h1>
+  <div class="row row-cols-auto">
+    <h2>Finance Page</h2>
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+        <a class="nav-link" aria-current="page" href="#">Exchanges</a> 
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">Accounts</a> 
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">Overview</a> 
+      </li>
+    </ul>
+  </div>
+
+  <div class="row row-cols-auto mt-3 mb-4">
+    {{range $index, $exchange := .Exchanges}}
+      <div class="col">
+        <form action="/finance" method="GET">
+          <input type="hidden" name="selected_index" value="{{$index}}">
+          <button type="submit" class="btn {{if eq $index $.SelectedIndex}}btn-primary{{else}}btn-warning{{end}} mb-2">
+            {{$exchange.Name}}
+          </button>
+        </form>
       </div>
-      <div class="row row-cols-auto p-2">
-        <div class="col">
-          <h5>Watchlist:</h5>
-        </div>
-        {{range .Watchlist}}
-            <div class="col">
-              <button class="btn btn-sm btn-info">
-                {{.Product}}
-              </button>      
-            </div>
-        {{end}}
-        <div>
-          <button class="btn btn-sm btn-warning">+</button>
-        </div>
+    {{end}}
+  </div>
+
+  <div class="border rounded mb-3 p-1">
+    <div class="row row-cols-auto">
+      <h1>{{.SelectedExchange.Name}}</h1>
+    </div>
+    <div class="row row-cols-auto p-2">
+      <div class="col">
+        <h5>Watchlist:</h5>
       </div>
-      <div class="row row-cols-auto p-2">
+      {{range .SelectedExchange.Watchlist}}
         <div class="col">
-          <h5>Timeframes</h5>
-        </div>  
-        {{range .Timeframes}}
-          <div class="col">
-            <p>{{.TF}}</p>
-            <p>{{.Endpoint}}</p>
-          </div>
-        {{end}}
+          <button class="btn btn-sm btn-info">
+            {{.Product}}
+          </button>      
+        </div>
+      {{end}}
+      <div>
+        <button class="btn btn-sm btn-warning">+</button>
       </div>
     </div>
-  {{end}}
+    <div class="row row-cols-auto p-2">
+      <div class="col">
+        <h5>Timeframes</h5>
+      </div>  
+      {{range .SelectedExchange.Timeframes}}
+        <div class="col">
+          <button class="btn btn-sm btn-secondary">
+            {{.TF}}
+          </button>
+        </div>
+      {{end}}
+    </div>
+  </div>
 {{end}}
+
