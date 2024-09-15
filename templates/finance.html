@@ -35,11 +35,15 @@
       <div class="col">
         <h5>Watchlist:</h5>
       </div>
-      {{range .SelectedExchange.Watchlist}}
+      {{range $index, $product := .SelectedExchange.Watchlist}}
         <div class="col">
-          <button class="btn btn-sm btn-info">
-            {{.Product}}
-          </button>      
+          <form action="/finance" method="GET">
+            <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
+            <input type="hidden" name="product_index" value="{{$index}}">
+            <button type="submit" class="btn btn-sm {{if eq $index $.ProductIndex}}btn-primary{{else}}btn-info{{end}}">
+              {{$product.Product}}
+            </button>
+          </form>
         </div>
       {{end}}
       <div>
@@ -59,5 +63,12 @@
       {{end}}
     </div>
   </div>
+
+  {{if .SelectedProduct.Product}}
+    <div class="mt-4">
+      <h3>Selected Product: {{.SelectedProduct.Product}}</h3>
+      <!-- Add more product-specific information here -->
+    </div>
+  {{end}}
 {{end}}
 

@@ -91,7 +91,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
         "templates/components/navbar.html",
     )
     if err != nil {
-        http.Error(w, "Error parsing template", http.StatusInternalServerError)
+        fmt.Println("Error parsing template", err)
         return
     }
 
@@ -124,14 +124,27 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
     selectedExchange := exchanges[selectedIndex]
 
+    productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
+    if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {
+        productIndex = 0
+    }
+
+    selectedProduct := selectedExchange.Watchlist[productIndex]
+
+    fmt.Println("\n------------------\nSelected Product:\n", productIndex, selectedProduct)
+
     data := struct {
         Exchanges        []Exchange
         SelectedExchange Exchange
         SelectedIndex    int
+        ProductIndex     int
+        SelectedProduct  Watchlist
     }{
         Exchanges:        exchanges,
         SelectedExchange: selectedExchange,
         SelectedIndex:    selectedIndex,
+        ProductIndex:     productIndex,
+        SelectedProduct:  selectedProduct,
     }
 
     // Use a buffer to render the template first
@@ -152,6 +165,10 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+
+
+
+// Structs (temporary)
 type Exchange struct {
   ID          int
   Name        string
@@ -159,6 +176,14 @@ type Exchange struct {
   Orders      []Order
   Fills       []Fill
   Watchlist   []Watchlist
+}
+type Asset struct {
+  ID        int 
+  Name      string
+  XchID     int
+  TF        Timeframe
+  //Candles   []Candle
+
 }
 type Watchlist struct {
 ID                  int     `db:"id"`
