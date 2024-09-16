@@ -13,6 +13,7 @@ import (
   "hm_client/api"
   "strconv"
   "hm_client/model"
+  "strings"
 )
 
 func main() {
@@ -116,7 +117,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Error parsing exchange data: "+err.Error(), http.StatusInternalServerError)
         return
     }
-    fmt.Println(exchanges)
+    //fmt.Println(exchanges)
 
     selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
     if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
@@ -146,14 +147,14 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
     var candles []model.Candle
 
     if selectedProduct.Product != "" && selectedTimeframe.TF != "" {
-      candles, err = api.GetCandles(selectedProduct.Product, selectedTimeframe.TF, selectedExchange.Name)
+      candles, err = api.GetCandles(strings.Replace(selectedProduct.Product, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
       if err != nil {
         log.Printf("Error fetching candles: %v", err)
       }
     }
 
-    fmt.Println("\n------------------\nSelected Product:\n", productIndex, selectedProduct, selectedTimeframe)
-    fmt.Println("\n------------------------------\nCandles:", len(candles))
+    fmt.Println("\n------------------\nSelected Product:\n", selectedExchange.Name, selectedProduct, selectedTimeframe)
+    fmt.Println("Candles:", len(candles), "\n------------------------------\n")
 
     data := struct {
         Exchanges           []Exchange

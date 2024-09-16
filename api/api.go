@@ -68,7 +68,6 @@ func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
         return nil, fmt.Errorf("Error reading response: %v", err)
     }
 
-    fmt.Println("Raw Response:", string(body))
 
     if resp.StatusCode != http.StatusOK {
         return nil, fmt.Errorf("Status Code: %d, Body: %s", resp.StatusCode, string(body))
