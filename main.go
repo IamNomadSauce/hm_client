@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
   "hm_client/api"
   "strconv"
+  "hm_client/model"
 )
 
 func main() {
@@ -140,7 +141,19 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
       selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
     }
 
+
+    // Candles
+    var candles []model.Candle
+
+    if selectedProduct.Product != "" && selectedTimeframe.TF != "" {
+      candles, err = api.GetCandles(selectedProduct.Product, selectedTimeframe.TF, selectedExchange.Name)
+      if err != nil {
+        log.Printf("Error fetching candles: %v", err)
+      }
+    }
+
     fmt.Println("\n------------------\nSelected Product:\n", productIndex, selectedProduct, selectedTimeframe)
+    fmt.Println("\n------------------------------\nCandles:", len(candles))
 
     data := struct {
         Exchanges           []Exchange

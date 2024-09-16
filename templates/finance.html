@@ -57,15 +57,14 @@
       </div>  
       {{range $index, $timeframe := .SelectedExchange.Timeframes}}
         <div class="col">
-        <form action="/finance">
+          <form action="/finance">
             <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
             <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
             <input type="hidden" name="timeframe_index" value="{{$index}}">
             <button type="submit" class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
               {{$timeframe.TF}}
             </button>
-          
-        </form>
+          </form>
         </div>
       {{end}}
     </div>
