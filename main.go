@@ -91,6 +91,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
         "templates/base.html",
         "templates/finance.html",
         "templates/components/navbar.html",
+        "templates/components/chart.html",
     )
     if err != nil {
         fmt.Println("Error parsing template", err)
@@ -164,6 +165,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
         SelectedProduct     Watchlist
         TimeframeIndex      int
         SelectedTimeframe   Timeframe
+        Candles             []model.Candle
     }{
         Exchanges:          exchanges,
         SelectedExchange:   selectedExchange,
@@ -172,6 +174,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
         SelectedProduct:    selectedProduct,
         TimeframeIndex:     timeframeIndex, 
         SelectedTimeframe:  selectedTimeframe,   
+        Candles:            candles,
     }
 
     // Use a buffer to render the template first

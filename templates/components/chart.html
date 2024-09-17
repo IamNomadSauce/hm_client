@@ -1,0 +1,132 @@
+{{define "chart"}}
+<div id="chartContainer" style="width: 100%; height: calc(100vh - 400px);">
+    <canvas id="candlestickChart"></canvas>
+</div>
+
+<style>
+    #chartContainer {
+        position: relative;
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+    }
+    
+    #candlestickChart {
+        width: 100% !important;
+        height: 100% !important;
+        cursor: grab;
+    }
+</style>
+
+<script>
+    var stockData = {{.}}; // Assuming .Candles contains the JSON data
+
+    function drawCandlestickChart(data, start, end) {
+        var canvas = document.getElementById('candlestickChart');
+        var ctx = canvas.getContext('2d');
+
+        // Set canvas size to match container
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Define chart dimensions and margins
+        var width = canvas.width;
+        var height = canvas.height;
+        var margin = 50;
+        var visibleData = data.slice(start, end);
+        var candleWidth = (width - 2 * margin) / visibleData.length;
+
+        // Find the min and max values for scaling
+        var minPrice = Math.min(...visibleData.map(d => d.Low));
+        var maxPrice = Math.max(...visibleData.map(d => d.High));
+
+        // Draw each candlestick
+        visibleData.forEach((d, i) => {
+            var x = margin + i * candleWidth;
+            var openY = height - margin - ((d.Open - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            var closeY = height - margin - ((d.Close - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            var highY = height - margin - ((d.High - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            var lowY = height - margin - ((d.Low - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+            // Draw the high-low line
+            ctx.beginPath();
+            ctx.moveTo(x + candleWidth / 2, highY);
+            ctx.lineTo(x + candleWidth / 2, lowY);
+            ctx.strokeStyle = 'black';
+            ctx.stroke();
+
+            // Draw the open-close rectangle
+            ctx.beginPath();
+            ctx.rect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
+            ctx.fillStyle = d.Close >= d.Open ? 'green' : 'red';
+            ctx.fill();
+            ctx.stroke();
+        });
+    }
+
+    // Initial parameters for zoom and pan
+    var start = 0;
+    var end = Math.min(30, stockData.length); // Display first 30 data points
+    var zoomFactor = 10;
+
+    // Initial draw
+    drawCandlestickChart(stockData, start, end);
+
+    // Add event listeners for zooming and panning
+    document.getElementById('chartContainer').addEventListener('wheel', function(event) {
+        event.preventDefault();
+        if (event.deltaY < 0) { // Zoom in
+            if (end - start > zoomFactor) {
+                start += zoomFactor;
+                end -= zoomFactor;
+            }
+        } else { // Zoom out
+            start = Math.max(0, start - zoomFactor);
+            end = Math.min(stockData.length, end + zoomFactor);
+        }
+        drawCandlestickChart(stockData, start, end);
+    });
+
+    var isDragging = false;
+    var startX;
+
+    var canvas = document.getElementById('candlestickChart');
+
+    canvas.addEventListener('mousedown', function(event) {
+        isDragging = true;
+        startX = event.clientX;
+        canvas.style.cursor = 'grabbing';
+    });
+
+    canvas.addEventListener('mouseup', function() {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('mouseleave', function() {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('mousemove', function(event) {
+        if (isDragging) {
+            var dx = event.clientX - startX;
+            var panFactor = Math.floor(dx / 10);
+            if (panFactor !== 0) {
+                start = Math.max(0, start - panFactor);
+                end = Math.min(stockData.length, end - panFactor);
+                startX = event.clientX;
+                drawCandlestickChart(stockData, start, end);
+            }
+        }
+    });
+
+    // Redraw on window resize
+    window.addEventListener('resize', function() {
+        drawCandlestickChart(stockData, start, end);
+    });
+</script>
+{{end}}
+
