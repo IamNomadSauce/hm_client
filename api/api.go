@@ -75,13 +75,21 @@ func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
 
     var candles []model.Candle
     err = json.Unmarshal(body, &candles)
+
     if err != nil {
         return nil, fmt.Errorf("Error unmarshalling JSON: %v", err)
     }
 
+    reverseCandles(candles)
+
     return candles, nil
 }
 
+func reverseCandles(candles []model.Candle) {
+    for i, j := 0, len(candles)-1; i < j; i, j = i+1, j-1 {
+        candles[i], candles[j] = candles[j], candles[i]
+    }
+}
 
 
 

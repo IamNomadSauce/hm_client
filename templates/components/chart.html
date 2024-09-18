@@ -67,8 +67,8 @@
     }
 
     // Initial parameters for zoom and pan
-    var start = 0;
-    var end = Math.min(30, stockData.length); // Display first 30 data points
+    var end = stockData.length
+    var start = Math.max(0, end-250); // Display first 30 data points
     var zoomFactor = 10;
 
     // Initial draw
