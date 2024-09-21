@@ -7,13 +7,12 @@ import (
 	"log"
 	"net/http"
   "html/template"
-  "encoding/json"
 	"os"
 	"github.com/joho/godotenv"
-  "hm_client/api"
   "strconv"
-  "hm_client/model"
   "strings"
+  "hm_client/api"
+  "hm_client/model"
 )
 
 func main() {
@@ -106,19 +105,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
     url := os.Getenv("URL")
 
-    exchangeData, err := api.GetExchanges(url)
+    exchanges, err := api.GetExchanges(url)
     if err != nil {
         http.Error(w, "Error fetching exchange data: "+err.Error(), http.StatusInternalServerError)
         return
     }
-
-    var exchanges []Exchange
-    err = json.Unmarshal(exchangeData, &exchanges)
-    if err != nil {
-        http.Error(w, "Error parsing exchange data: "+err.Error(), http.StatusInternalServerError)
-        return
-    }
-    //fmt.Println(exchanges)
+    fmt.Println(exchanges)
 
     selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
     if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
@@ -138,7 +130,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
     if err != nil || timeframeIndex < 0 || timeframeIndex >= len(selectedExchange.Timeframes) {
       timeframeIndex = 0
     }
-    var selectedTimeframe Timeframe
+    var selectedTimeframe model.Timeframe
     if len(selectedExchange.Timeframes) > 0 {
       selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
     }
@@ -158,13 +150,13 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
     fmt.Println("Candles:", len(candles), "\n------------------------------\n")
 
     data := struct {
-        Exchanges           []Exchange
-        SelectedExchange    Exchange
+        Exchanges           []model.Exchange
+        SelectedExchange    model.Exchange
         SelectedIndex       int
         ProductIndex        int
-        SelectedProduct     Watchlist
+        SelectedProduct     model.Watchlist
         TimeframeIndex      int
-        SelectedTimeframe   Timeframe
+        SelectedTimeframe   model.Timeframe
         Candles             []model.Candle
     }{
         Exchanges:          exchanges,
@@ -196,64 +188,5 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-
-
-// Structs (temporary)
-type Exchange struct {
-  ID          int
-  Name        string
-  Timeframes  []Timeframe
-  Orders      []Order
-  Fills       []Fill
-  Watchlist   []Watchlist
-}
-type Asset struct {
-  ID        int 
-  Name      string
-  XchID     int
-  TF        Timeframe
-  //Candles   []Candle
-
-}
-type Watchlist struct {
-ID                  int     `db:"id"`
-Product             string  `db:"product"`
-XchID               int     `db:"xch_id"`
-}
- 
- type Order struct {
- Timestamp           int64  `db:"time"`
- OrderID             string `db:"orderid"`  // Exchange specific order identifier
- ProductID           string `db:"productid"` // xbt_usd_15
- TradeType           string `db:"tradetype"` // Long / Short
- Side                string `db:"side"` // buy / sell
- XchID               int    `db:"xch_id"`
- MarketCategory      string `db:"marketcategory"` // (crypto / equities)_(spot / futures)
- Price               string `db:"price"` // instrument_currency
- Size                string `db:"size"` // How many of instrument
- }
-
-type Timeframe struct {
-ID                  int     `db:"id"`
-XchID               int     `db:"xch_id"`
-TF                  string  `db:"label"`
-Endpoint            string  `db:"endpoint"`
-Minutes             int     `db:"minutes"`
-}
-
-type Fill struct {
-Timestamp       int     `db:"time"`
-EntryID         string  `db:"entryid"`
-TradeID         string  `db:"tradeid"`
-OrderID         string  `db:"orderid"`
-TradeType       string  `db:"tradetype"`
-Price           string  `db:"price"`
-Size            string  `db:"size"`
-Side            string  `db:"side"`
-Commission      string  `db:"commission"`
-ProductID       string  `db:"productid"`
-XchID           int     `db:"xch_id"`
-MarketCategory  string  `db:"marketcategory"`
-}
 
 

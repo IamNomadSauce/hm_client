@@ -71,6 +71,9 @@
         drawCrosshair(ctx, width, height, margin, minPrice, maxPrice)
     }
 
+    function calculatePrice(y, height, margin, minPrice, maxPrice) {
+      return maxPrice - (y - margin) / (height - 2 * margin) * (maxPrice - minPrice)
+    }
     function drawCrosshair(ctx, width, height, margin, minPrice, maxPrice) {
       // Draw vertical line
       ctx.beginPath();
@@ -136,6 +139,14 @@
         isDragging = false;
         canvas.style.cursor = 'crosshair';
     });
+
+    canvas.addEventListener('click', function(event) {
+      console.log("Click Event")
+      mouseX = event.clientX
+      mouseY = event.clientY
+      calculatePrice(mouseY, height, margin, minPrice, maxPrice)
+      console.log(mouseX, mouseY)
+    })
 
     canvas.addEventListener('mousemove', function(event) {
         var rect = canvas.getBoundingClientRect();

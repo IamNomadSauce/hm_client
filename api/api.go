@@ -13,7 +13,8 @@ import (
 )
 
 
-func GetExchanges(url string) ([]byte, error) {
+func GetExchanges(url string) ([]model.Exchange, error) {
+  fmt.Println("\n------------------------------------\n API:GetExchanges \n------------------------------------\n ")
   url = url + "/exchanges"
   resp, err := http.Get(url)
   if err != nil {
@@ -22,16 +23,26 @@ func GetExchanges(url string) ([]byte, error) {
 
   defer resp.Body.Close()
 
-  body, err := ioutil.ReadAll(resp.Body)
+  raw_exchanges, err := ioutil.ReadAll(resp.Body)
   if err != nil {
     return nil, fmt.Errorf("Error reading response: %v", err)
   }
 
   if resp.StatusCode != http.StatusOK {
-    return nil, fmt.Errorf("Status Code: %d, Body: %s", resp.StatusCode, string(body))
+    return nil, fmt.Errorf("Status Code: %d, raw_exchanges: %s", resp.StatusCode, string(raw_exchanges))
   }
 
-  return body, nil
+  
+  var exchanges []model.Exchange
+  err = json.Unmarshal(raw_exchanges, &exchanges)
+  if err != nil {
+      fmt.Errorf("Error unmarshalling Exchanges %v", err)
+      return nil, err
+  }
+
+  fmt.Println("Exchanges", exchanges)
+
+  return exchanges, nil
 }
 
 func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
