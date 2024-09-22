@@ -1,5 +1,9 @@
 {{define "chart"}}
 <div id="chartContainer" style="width: 100%; height: calc(100vh - 400px);">
+    <div id="toolbar">
+      <button id="line" class="btn btn-sm btn-secondary">Line</button>
+      <button id="box" class="btn btn-sm btn-secondary">Box</button>
+    </div>
     <canvas id="candlestickChart"></canvas>
 </div>
 
@@ -21,6 +25,24 @@
     var stockData = {{.}}; // Assuming .Candles contains the JSON data
     var mouseX = 0;
     var mouseY = 0;
+    var currentTool = null
+    var drawingStart = null
+
+    function drawToolbar(ctx, width, height, margin) {
+      if (currentTool === 'line' && drawingStart) {
+        ctx.beginPath()
+        ctx.moveTo(drawingStart.x, margin)
+        ctx.lineTo(drawingStart.x, height - margin)
+        ctx.strokeStyle = 'blue'
+        ctx.stroke()
+      } else if (currentTool === 'box' && drawingStart) {
+        ctx.beginPath();
+        ctx.rect(drawingStart.x, drawingStart.y, mouseX - drawingStart.x, mouseY - drawingStart.y);
+        ctx.strokeStyle = 'blue';
+        ctx.stroke();
+      }
+    }
+
 
     function drawCandlestickChart(data, start, end) {
         var canvas = document.getElementById('candlestickChart');
@@ -68,6 +90,7 @@
             ctx.stroke();
         });
         
+        drawToolbar(ctx, width, height, margin)
         drawCrosshair(ctx, width, height, margin, minPrice, maxPrice)
     }
 
@@ -125,14 +148,22 @@
     var canvas = document.getElementById('candlestickChart');
 
     canvas.addEventListener('mousedown', function(event) {
+      if (currentTool) {
+        drawingStart = {x: mouseX, y: mouseY}
+      } else {
         isDragging = true;
         startX = event.clientX;
         canvas.style.cursor = 'grabbing';
+      }
     });
 
     canvas.addEventListener('mouseup', function() {
+      if (currentTool) {
+        drawingStart = null
+      } else {
         isDragging = false;
         canvas.style.cursor = 'crosshair';
+      }
     });
 
     canvas.addEventListener('mouseleave', function() {
@@ -140,11 +171,41 @@
         canvas.style.cursor = 'crosshair';
     });
 
+    /*
+    canvas.addEventListener('click', function(event) {
+        console.log("Click Event");
+        var rect = canvas.getBoundingClientRect();
+        var clickX = event.clientX - rect.left;
+        var clickY = event.clientY - rect.top;
+
+        // Get the current chart state
+        var { ctx, width, height, margin, minPrice, maxPrice } = drawCandlestickChart(stockData, start, end);
+
+        // Calculate the price at the clicked point
+        var price = calculatePrice(clickY, height, margin, minPrice, maxPrice);
+
+        console.log("Clicked at:", clickX, clickY);
+        console.log("Price at click point:", price.toFixed(2));
+
+        // Optionally, draw a marker or display the price on the chart
+        ctx.beginPath();
+        ctx.arc(clickX, clickY, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = 'blue';
+        ctx.fill();
+
+        ctx.fillStyle = 'white';
+        ctx.fillRect(clickX + 10, clickY - 20, 70, 20);
+        ctx.fillStyle = 'black';
+        ctx.fillText(price.toFixed(2), clickX + 15, clickY - 5);
+    });
+    */
+
+    
     canvas.addEventListener('click', function(event) {
       console.log("Click Event")
       mouseX = event.clientX
       mouseY = event.clientY
-      calculatePrice(mouseY, height, margin, minPrice, maxPrice)
+      //calculatePrice(mouseY, height, margin, minPrice, maxPrice)
       console.log(mouseX, mouseY)
     })
 
@@ -169,8 +230,19 @@
 
     // Redraw on window resize
     window.addEventListener('resize', function() {
-        drawCandlestickChart(stockData, start, end);
+        chartState = drawCandlestickChart(stockData, start, end);
     });
+
+    document.getElementById('line').addEventListener('click', function() {
+      console.log("Line Selected")
+      currentTool = 'line'
+    })
+    document.getElementById('box').addEventListener('click', function() {
+      console.log("Box Selected")
+      currentTool = 'box'
+    })
+
+    var chartState = drawCandlestickChart(stockData, start, end)
 </script>
 {{end}}
 

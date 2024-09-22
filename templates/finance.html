@@ -32,14 +32,9 @@
       {{end}}
     </div>
 
-  <div class="col mb-3 p-1">
-    <div class="row row-cols-auto">
-      <h1>{{.SelectedExchange.Name}}</h1>
-    </div>
+  <div class="col mb-3 ">
     <div class="row row-cols-auto p-2">
-      <div class="col">
         <h5>Watchlist:</h5>
-      </div>
       {{range $index, $product := .SelectedExchange.Watchlist}}
         <div class="col">
           <form action="/finance" method="GET">
@@ -78,7 +73,7 @@
 
 
   {{if .SelectedProduct.Product}}
-    <div class="mt-4">
+    <div class="">
       <h3>{{.SelectedProduct.Product}}</h3>
       <!-- Add more product-specific information here -->
       {{template "chart" .Candles}}
