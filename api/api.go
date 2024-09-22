@@ -40,6 +40,11 @@ func GetExchanges(url string) ([]model.Exchange, error) {
       return nil, err
   }
 
+  for exchange := range exchanges {
+    fmt.Println("\n----------------------------\n")
+    fmt.Println(exchanges[exchange])
+    fmt.Println("\n----------------------------\n")
+  }
   fmt.Println("Exchanges", exchanges)
 
   return exchanges, nil

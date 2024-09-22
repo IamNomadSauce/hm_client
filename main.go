@@ -118,13 +118,23 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     selectedExchange := exchanges[selectedIndex]
+    fmt.Println(selectedIndex)
+    fmt.Println("\n - Selected Exchange \n", selectedExchange)
 
     productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
     if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {
         productIndex = 0
     }
 
-    selectedProduct := selectedExchange.Watchlist[productIndex]
+    fmt.Println("ProductIndex", productIndex)
+
+    var selectedProduct model.Watchlist
+    if len(selectedExchange.Watchlist) > 0 {
+      selectedProduct = selectedExchange.Watchlist[productIndex]
+    } else {
+      selectedProduct = model.Watchlist{} 
+    }
+
 
     timeframeIndex, err := strconv.Atoi(r.URL.Query().Get("timeframe_index"))
     if err != nil || timeframeIndex < 0 || timeframeIndex >= len(selectedExchange.Timeframes) {
