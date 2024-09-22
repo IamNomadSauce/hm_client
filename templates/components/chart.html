@@ -27,19 +27,34 @@
     var mouseY = 0;
     var currentTool = null
     var drawingStart = null
+    var draw_boxes = []
+    var draw_lines = []
 
     function drawToolbar(ctx, width, height, margin) {
+      draw_lines.forEach((v) => {
+        ctx.beginPath()
+        ctx.moveTo(v.x, v.y)
+        ctx.lineTo(width, v.y)
+        ctx.strokeStyle = 'yellow'
+        ctx.stroke()
+      })
+      
+      draw_boxes.forEach((v) => {
+        //ctx.beginPath()
+        //ctx.moveTo(v.x, v.y)
+      })
       if (currentTool === 'line' && drawingStart) {
         ctx.beginPath()
-        ctx.moveTo(drawingStart.x, margin)
-        ctx.lineTo(drawingStart.x, height - margin)
-        ctx.strokeStyle = 'blue'
+        ctx.moveTo(drawingStart.x, drawingStart.y)
+        ctx.lineTo(width - margin, drawingStart.y )
+        ctx.strokeStyle = 'yellow'
         ctx.stroke()
       } else if (currentTool === 'box' && drawingStart) {
         ctx.beginPath();
         ctx.rect(drawingStart.x, drawingStart.y, mouseX - drawingStart.x, mouseY - drawingStart.y);
-        ctx.strokeStyle = 'blue';
+        ctx.strokeStyle = 'yellow';
         ctx.stroke();
+        console.log("Box draw end")
       }
     }
 
@@ -148,7 +163,12 @@
     var canvas = document.getElementById('candlestickChart');
 
     canvas.addEventListener('mousedown', function(event) {
+      console.log("MouseDown", mouseX, mouseY)
       if (currentTool) {
+        if (currentTool === 'line') {
+          draw_lines.push({x: mouseX, y:mouseY})
+          console.log("Draw_Lines", draw_lines)
+        }
         drawingStart = {x: mouseX, y: mouseY}
       } else {
         isDragging = true;
@@ -158,8 +178,12 @@
     });
 
     canvas.addEventListener('mouseup', function() {
+      console.log("MouseUp")
       if (currentTool) {
         drawingStart = null
+        if (currentTool === 'box') {
+          console.log(" - _Box end", mouseX, mouseY)
+        }
       } else {
         isDragging = false;
         canvas.style.cursor = 'crosshair';
@@ -171,42 +195,13 @@
         canvas.style.cursor = 'crosshair';
     });
 
-    /*
-    canvas.addEventListener('click', function(event) {
-        console.log("Click Event");
-        var rect = canvas.getBoundingClientRect();
-        var clickX = event.clientX - rect.left;
-        var clickY = event.clientY - rect.top;
-
-        // Get the current chart state
-        var { ctx, width, height, margin, minPrice, maxPrice } = drawCandlestickChart(stockData, start, end);
-
-        // Calculate the price at the clicked point
-        var price = calculatePrice(clickY, height, margin, minPrice, maxPrice);
-
-        console.log("Clicked at:", clickX, clickY);
-        console.log("Price at click point:", price.toFixed(2));
-
-        // Optionally, draw a marker or display the price on the chart
-        ctx.beginPath();
-        ctx.arc(clickX, clickY, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = 'blue';
-        ctx.fill();
-
-        ctx.fillStyle = 'white';
-        ctx.fillRect(clickX + 10, clickY - 20, 70, 20);
-        ctx.fillStyle = 'black';
-        ctx.fillText(price.toFixed(2), clickX + 15, clickY - 5);
-    });
-    */
-
-    
     canvas.addEventListener('click', function(event) {
       console.log("Click Event")
       mouseX = event.clientX
       mouseY = event.clientY
       //calculatePrice(mouseY, height, margin, minPrice, maxPrice)
       console.log(mouseX, mouseY)
+      console.log("click_end")
     })
 
     canvas.addEventListener('mousemove', function(event) {
