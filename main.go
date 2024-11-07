@@ -140,7 +140,11 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		productIndex = 0
 	}
 
-	selectedProduct := selectedExchange.Watchlist[productIndex]
+	selectedProduct := Product{}
+
+	if len(selectedExchange.Watchlist) > 0 {
+		selectedProduct = selectedExchange.Watchlist[productIndex]
+	}
 
 	timeframeIndex, err := strconv.Atoi(r.URL.Query().Get("timeframe_index"))
 	if err != nil || timeframeIndex < 0 || timeframeIndex >= len(selectedExchange.Timeframes) {
