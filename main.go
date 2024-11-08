@@ -28,6 +28,8 @@ func main() {
 
 	// -----------------------------------------------
 
+	// -----------------------------------------------
+
 	err = godotenv.Load()
 
 	url := os.Getenv("URL")
@@ -103,6 +105,9 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		// Decide whether to return or continue based on your requirements
 	}
 
+	// -----------------------------------------------
+	// -----------------------------------------------
+
 	url := os.Getenv("URL")
 
 	exchanges, err := api.GetExchanges(url)
@@ -149,8 +154,8 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	// Candles
 	var candles []model.Candle
 
-	if selectedProduct.BaseName != "" && selectedTimeframe.TF != "" {
-		candles, err = api.GetCandles(strings.Replace(selectedProduct.BaseName, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
+	if selectedProduct.ProductID != "" && selectedTimeframe.TF != "" {
+		candles, err = api.GetCandles(strings.Replace(selectedProduct.ProductID, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
 		if err != nil {
 			log.Printf("Error fetching candles: %v", err)
 		}

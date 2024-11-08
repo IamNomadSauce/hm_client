@@ -50,6 +50,7 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 }
 
 func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
+	fmt.Println("Get Candles", product, timeframe, exchange)
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Error loading .env file:", err)
@@ -93,6 +94,8 @@ func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error unmarshalling JSON: %v", err)
 	}
+
+	// fmt.Println("\n-------------------------------------\n", candles)
 
 	reverseCandles(candles)
 
