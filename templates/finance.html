@@ -42,7 +42,7 @@
             <input type="hidden" name="product_index" value="{{$index}}">
             <input type="hidden" name="timeframe_index" value="{{$.TimeframeIndex}}">
             <button type="submit" class="btn btn-sm {{if eq $index $.ProductIndex}}btn-primary{{else}}btn-secondary{{end}}">
-              {{$product.Product}}
+              {{$product.ProductID}}
             </button>
           </form>
         </div>
@@ -72,9 +72,9 @@
   </div>
 
 
-  {{if .SelectedProduct.Product}}
+  {{if .SelectedProduct.ProductID}}
     <div class="">
-      <h3>{{.SelectedProduct.Product}}</h3>
+      <h3>{{.SelectedProduct.ProductID}}</h3>
       <!-- Add more product-specific information here -->
       {{template "chart" .Candles}}
         

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"hm_client/api"
 	"hm_client/model"
@@ -106,17 +105,9 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := os.Getenv("URL")
 
-	exchangeData, err := api.GetExchanges(url)
+	exchanges, err := api.GetExchanges(url)
 	if err != nil {
 		http.Error(w, "Error fetching exchange data: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var exchanges []Exchange
-	err = json.Unmarshal(exchangeData, &exchanges)
-	if err != nil {
-		fmt.Errorf("Internal Server Error: %w", err)
-		http.Error(w, "Error parsing exchange data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -140,7 +131,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		productIndex = 0
 	}
 
-	selectedProduct := Product{}
+	selectedProduct := model.Product{}
 
 	if len(selectedExchange.Watchlist) > 0 {
 		selectedProduct = selectedExchange.Watchlist[productIndex]
@@ -150,7 +141,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil || timeframeIndex < 0 || timeframeIndex >= len(selectedExchange.Timeframes) {
 		timeframeIndex = 0
 	}
-	var selectedTimeframe Timeframe
+	var selectedTimeframe model.Timeframe
 	if len(selectedExchange.Timeframes) > 0 {
 		selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
 	}
@@ -169,13 +160,13 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Candles:", len(candles), "\n------------------------------\n")
 
 	data := struct {
-		Exchanges         []Exchange
-		SelectedExchange  Exchange
+		Exchanges         []model.Exchange
+		SelectedExchange  model.Exchange
 		SelectedIndex     int
 		ProductIndex      int
-		SelectedProduct   Product
+		SelectedProduct   model.Product
 		TimeframeIndex    int
-		SelectedTimeframe Timeframe
+		SelectedTimeframe model.Timeframe
 		Candles           []model.Candle
 	}{
 		Exchanges:         exchanges,
@@ -204,92 +195,4 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		// At this point, we've already started writing the response,
 		// so we can't send an HTTP error status anymore.
 	}
-}
-
-// Structs (temporary)
-type Candle struct {
-	Timestamp int64
-	Open      float64
-	High      float64
-	Low       float64
-	Close     float64
-	Volume    float64
-}
-
-type Timeframe struct {
-	ID       int64  `db:"id"`
-	XchID    int64  `db:"xch_id"`
-	TF       string `db:"label"`
-	Endpoint string `db:"endpoint"`
-	Minutes  int64  `db:"minutes"`
-}
-
-type Exchange struct {
-	ID                int
-	Name              string
-	Timeframes        []Timeframe
-	Orders            []Order
-	Fills             []Fill
-	Watchlist         []Product
-	CandleLimit       int64
-	AvailableProducts []Product
-}
-
-type Product struct {
-	ID                int    `json:"id"`
-	XchID             int    `json:"xch_id"`
-	ProductID         string `json:"product_id"`
-	BaseName          string `json:"base_name"`
-	QuoteName         string `json:"quote_name"`
-	Status            string `json:"status"`
-	Price             string `json:"price"`
-	Volume_24h        string `json:"volume_24h"`
-	Base_Currency_ID  string `json:"base_currency_id"`
-	Quote_Currency_ID string `json:"quote_currency_id"`
-}
-
-type Asset struct {
-	Symbol           Product
-	AvailableBalance Balance
-	Hold             Balance
-	Value            float64
-}
-
-type Balance struct {
-	Value    string `json:"value"`
-	Currency string `json:"currency"`
-}
-
-type Watchlist struct {
-	ID      int    `db:"id"`
-	Product string `db:"product"`
-	XchID   int    `db:"xch_id"`
-}
-
-type Order struct {
-	Timestamp      int64  `db:"time"`
-	OrderID        string `db:"orderid"`   // Exchange specific order identifier
-	ProductID      string `db:"productid"` // xbt_usd_15
-	TradeType      string `db:"tradetype"` // Long / Short
-	Side           string `db:"side"`      // buy / sell
-	XchID          int    `db:"xch_id"`
-	MarketCategory string `db:"marketcategory"` // (crypto / equities)_(spot / futures)
-	Price          string `db:"price"`          // instrument_currency
-	Size           string `db:"size"`           // How many of instrument
-	Status         string `db:"status"`
-}
-
-type Fill struct {
-	Timestamp      int    `db:"time"`
-	EntryID        string `db:"entryid"`
-	TradeID        string `db:"tradeid"`
-	OrderID        string `db:"orderid"`
-	TradeType      string `db:"tradetype"`
-	Price          string `db:"price"`
-	Size           string `db:"size"`
-	Side           string `db:"side"`
-	Commission     string `db:"commission"`
-	ProductID      string `db:"productid"`
-	XchID          int    `db:"xch_id"`
-	MarketCategory string `db:"marketcategory"`
 }
