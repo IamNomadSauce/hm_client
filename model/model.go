@@ -55,9 +55,9 @@ type Balance struct {
 }
 
 type Watchlist struct {
-	ID      int    `db:"id"`
-	Product string `db:"product"`
-	XchID   int    `db:"xch_id"`
+	ID      int     `db:"id"`
+	Product Product `db:"product"`
+	XchID   int     `db:"xch_id"`
 }
 
 type Order struct {

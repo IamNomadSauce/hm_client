@@ -1,52 +1,91 @@
-{{define "content"}}    
-  <div class="row row-cols-auto">
+{{define "content"}}
+<div class="row row-cols-auto">
+  <div class="col">
+    <h2>Finance Page</h2>
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+        <a class="nav-link" aria-current="page" href="#">Exchanges</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">Accounts</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">Overview</a>
+      </li>
+    </ul>
+  </div>
+  <div class="row">
+    {{if gt (len .Exchanges) 0}}
+    {{range $index, $exchange := .Exchanges}}
     <div class="col">
-      <h2>Finance Page</h2>
-      <ul class="nav nav-pills">
-        <li class="nav-item">
-          <a class="nav-link" aria-current="page" href="#">Exchanges</a> 
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Accounts</a> 
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Overview</a> 
-        </li>
-      </ul>
+      <form action="/finance" method="GET">
+        <input type="hidden" name="selected_index" value="{{$index}}">
+        <button type="submit" class="btn {{if eq $index $.SelectedIndex}}btn-warning{{else}}btn-secondary{{end}} mb-2">
+          {{$exchange.Name}}
+        </button>
+      </form>
     </div>
-    <div class="row">
-      {{if gt (len .Exchanges) 0}}
-        {{range $index, $exchange := .Exchanges}}
-          <div class="col">
-            <form action="/finance" method="GET">
-              <input type="hidden" name="selected_index" value="{{$index}}">
-              <button type="submit" class="btn {{if eq $index $.SelectedIndex}}btn-warning{{else}}btn-secondary{{end}} mb-2">
-                {{$exchange.Name}}
-              </button>
-            </form>
-          </div>
-        {{end}}
-      {{else}}
-        <p>No Exchanges</p>
-        <button class="btn btn-sm btn-warning" type="">+</button>
-      {{end}}
-    </div>
+    {{end}}
+    {{else}}
+    <p>No Exchanges</p>
+    <button class="btn btn-sm btn-warning" type="">+</button>
+    {{end}}
+  </div>
 
   <div class="col mb-3 ">
     <div class="row row-cols-auto p-2">
-        <h5>Watchlist:</h5>
+      <h5>Watchlist:</h5>
       {{range $index, $product := .SelectedExchange.Watchlist}}
-        <div class="col">
-          <form action="/finance" method="GET">
-            <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
-            <input type="hidden" name="product_index" value="{{$index}}">
-            <input type="hidden" name="timeframe_index" value="{{$.TimeframeIndex}}">
-            <button type="submit" class="btn btn-sm {{if eq $index $.ProductIndex}}btn-primary{{else}}btn-secondary{{end}}">
-              {{$product.ProductID}}
-            </button>
-          </form>
-        </div>
+      <div class="col">
+        <form action="/finance" method="GET">
+          <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
+          <input type="hidden" name="product_index" value="{{$index}}">
+          <input type="hidden" name="timeframe_index" value="{{$.TimeframeIndex}}">
+          <button type="submit"
+            class="btn btn-sm {{if eq $index $.ProductIndex}}btn-primary{{else}}btn-secondary{{end}}">
+            {{$product.ProductID}}
+          </button>
+        </form>
+      </div>
       {{end}}
+
+      {{len .SelectedExchange.AvailableProducts}}
+      <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle bg-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          +
+        </button>
+        <div class="dropdown-menu bg-dark p-2" style="width: 300px;">
+          <div class="px-2 pb-2">
+            <input type="text" 
+                   class="form-control bg-dark text-white-50" 
+                   id="productSearch" 
+                   placeholder="Search products..."
+                   autocomplete="off">
+          </div>
+          <div class="dropdown-products" style="max-height: 300px; overflow-y: auto;">
+            {{range .SelectedExchange.AvailableProducts}}
+            <div class="dropdown-item bg-dark text-white-50 product-item" 
+                 data-bs-toggle="popover" 
+                 data-bs-trigger="hover"
+                 data-bs-html="true"
+                 data-bs-content="
+                   <div class='product-details'>
+                     <p><strong>Product ID:</strong> {{.ProductID}}</p>
+                     <p><strong>Base:</strong> {{.BaseName}}</p>
+                     <p><strong>Quote:</strong> {{.QuoteName}}</p>
+                     <p><strong>Status:</strong> {{.Status}}</p>
+                     <p><strong>Price:</strong> {{.Price}}</p>
+                     <p><strong>24h Volume:</strong> {{.Volume_24h}}</p>
+                     <p><strong>Base Currency ID:</strong> {{.Base_Currency_ID}}</p>
+                     <p><strong>Quote Currency ID:</strong> {{.Quote_Currency_ID}}</p>
+                   </div>">
+              {{.ProductID}} | {{.Volume_24h}}
+            </div>
+            {{end}}
+          </div>
+        </div>
+      </div>
+
       <div>
         <button class="btn btn-sm btn-warning">+</button>
       </div>
@@ -54,34 +93,125 @@
     <div class="row row-cols-auto p-2">
       <div class="col">
         <h5>Timeframes</h5>
-      </div>  
+      </div>
       {{range $index, $timeframe := .SelectedExchange.Timeframes}}
-        <div class="col">
-          <form action="/finance">
-            <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
-            <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
-            <input type="hidden" name="timeframe_index" value="{{$index}}">
-            <button type="submit" class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
-              {{$timeframe.TF}}
-            </button>
-          </form>
-        </div>
+      <div class="col">
+        <form action="/finance">
+          <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
+          <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
+          <input type="hidden" name="timeframe_index" value="{{$index}}">
+          <button type="submit"
+            class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
+            {{$timeframe.TF}}
+          </button>
+        </form>
+      </div>
       {{end}}
       <div>
         {{ .SelectedExchange.Name}}
       </div>
     </div>
   </div>
-  </div>
-
-
-  {{if .SelectedProduct.ProductID}}
-    <div class="">
-      <h3>{{.SelectedProduct.ProductID}}</h3>
-      <!-- Add more product-specific information here -->
-      {{template "chart" .Candles}}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize all popovers
+        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                placement: 'right',
+                delay: { show: 100, hide: 100 }
+            });
+        });
+    
+        // Search functionality
+        const searchInput = document.getElementById('productSearch');
+        const productItems = document.querySelectorAll('.product-item');
         
-    </div>
-  {{end}}
-{{end}}
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            productItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    
+        // Prevent dropdown from closing when clicking the search input
+        searchInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    
+        // Clean up popovers when dropdown is hidden
+        document.querySelector('.dropdown').addEventListener('hidden.bs.dropdown', function () {
+            popoverList.forEach(popover => {
+                popover.hide();
+            });
+        });
+    });
+    </script>
+    
+</div>
 
+
+{{if .SelectedProduct.ProductID}}
+<div class="">
+  <h5>{{.SelectedProduct.Price}}</h5>
+  <h3>{{.SelectedProduct.ProductID}}</h3>
+  {{template "chart" .Candles}}
+
+</div>
+{{end}}
+{{end}}
+<style>
+  .dropdown-menu {
+      margin: 0;
+  }
+  
+  .dropdown-products::-webkit-scrollbar {
+      width: 8px;
+  }
+  
+  .dropdown-products::-webkit-scrollbar-track {
+      background: #343a40;
+  }
+  
+  .dropdown-products::-webkit-scrollbar-thumb {
+      background: #666;
+      border-radius: 4px;
+  }
+  
+  .dropdown-products::-webkit-scrollbar-thumb:hover {
+      background: #555;
+  }
+  
+  .product-item:hover {
+      background-color: #2c3034 !important;
+      cursor: pointer;
+  }
+  
+  /* Popover custom styling */
+  .popover {
+      max-width: 300px;
+      background-color: #212529;
+      border: 1px solid #444;
+  }
+  
+  .popover-body {
+      color: #343a40;
+      padding: 12px;
+  }
+  
+  .product-details p {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+  }
+  
+  .popover .arrow::after {
+      border-right-color: #212529;
+  }
+  </style>
+  
