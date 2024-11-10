@@ -117,11 +117,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, exchange := range exchanges {
-		fmt.Println("\n----------------------------\n")
+		fmt.Println("\n----------------------------")
 		fmt.Println("Exchange:", exchange.Name)
 		fmt.Println("Watchlist:", exchange.Watchlist)
 		fmt.Println("Timeframes:", exchange.Timeframes)
-		fmt.Println("\n----------------------------\n")
+		fmt.Println("AvailableProducts:", len(exchange.AvailableProducts))
+		fmt.Println("\n----------------------------")
 	}
 
 	selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))

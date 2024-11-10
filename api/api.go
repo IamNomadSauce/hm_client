@@ -39,18 +39,21 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 		return nil, err
 	}
 
-	for exchange := range exchanges {
-		fmt.Println("\n----------------------------\n")
-		fmt.Println(exchanges[exchange])
-		fmt.Println("\n----------------------------\n")
-	}
-	fmt.Println("Exchanges", exchanges)
+	// for exchange := range exchanges {
+	// 	fmt.Println("\n----------------------------\n")
+	// 	fmt.Println(exchanges[exchange].Name)
+	// 	fmt.Println(exchanges[exchange].Watchlist)
+	// 	fmt.Println(exchanges[exchange].Timeframes)
+	// 	fmt.Println("Available Products", exchanges[exchange].AvailableProducts)
+	// 	fmt.Println("\n----------------------------\n")
+	// }
+	// fmt.Println("Exchanges", exchanges)
 
 	return exchanges, nil
 }
 
 func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
-	fmt.Println("Get Candles", product, timeframe, exchange)
+	// fmt.Println("Get Candles", product, timeframe, exchange)
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Error loading .env file:", err)
@@ -71,7 +74,7 @@ func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
 	q.Set("exchange", exchange)
 	u.RawQuery = q.Encode()
 
-	fmt.Println("Request URL:", u.String())
+	// fmt.Println("Request URL:", u.String())
 	resp, err := http.Get(u.String())
 	if err != nil {
 		return nil, fmt.Errorf("Error retrieving URL: %v", err)
