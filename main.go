@@ -76,16 +76,17 @@ func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	productID := r.FormValue("product_id")
 
-	// Call the AddToWatchlist function
+	log.Printf("Frontend handler: exchange_id=%d, product_id=%s", exchangeID, productID)
+
+	// Call the AddToWatchlist function with correct field names
 	err = api.AddToWatchlist(os.Getenv("URL"), exchangeID, productID)
 	if err != nil {
+		log.Printf("Error adding to watchlist: %v", err)
 		http.Error(w, "Failed to add to watchlist", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("Product successfully added to watchlist")
-
-	// Redirect back to the finance page with the same parameters
+	// Redirect back to the finance page
 	http.Redirect(w, r, "/finance", http.StatusSeeOther)
 }
 

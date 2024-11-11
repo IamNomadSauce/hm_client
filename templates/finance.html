@@ -79,7 +79,7 @@
                    </div>">
 
                    <form action="/add-to-watchlist" method="POST">
-                    <input type="hidden" name="xch_id" value="{{$.SelectedExchange.ID}}">
+                    <input type="hidden" name="xch_id" value="{{$.SelectedExchange.ID}}"> 
                     <input type="hidden" name="product_id" value="{{.ProductID}}">
                     <button type="submit" class="btn btn-sm btn-dark">
                         {{.ProductID}} | {{.Volume_24h}}

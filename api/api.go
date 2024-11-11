@@ -59,7 +59,7 @@ func AddToWatchlist(baseURL string, exchangeID int, productID string) error {
 
 	// Create the request payload
 	payload := struct {
-		ExchangeID int    `json:"exchange_id"`
+		ExchangeID int    `json:"xch_id"`
 		ProductID  string `json:"product_id"`
 	}{
 		ExchangeID: exchangeID,
@@ -71,6 +71,7 @@ func AddToWatchlist(baseURL string, exchangeID int, productID string) error {
 	if err != nil {
 		return fmt.Errorf("error marshaling request payload: %v", err)
 	}
+	log.Printf("Sending payload: %s", string(jsonData))
 
 	// Create a new PUT request
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
