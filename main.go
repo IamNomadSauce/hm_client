@@ -22,6 +22,7 @@ func main() {
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/finance", financeHandler)
+	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -54,18 +55,113 @@ func main() {
 	fmt.Println("Received Data:", string(body))
 }
 
-/*
-func exchange_changeHandler(w http.ResponseWriter, r *http.Request) {
-  fmt.Println("Change Exchange")
-  exchangeIndex := r.FormValue("exchange_index")
-  fmt.Println("\n",exchangeIndex, "\n")
-  session, _ := store.Get(r, "session-name")
-  session.Values["selectedExchangeIndex"] = exchangeIndex
-  session.Save(r,w)
+func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-  http.Redirect(w, r, "/finance", http.StatusSeeOther)
+	// Parse form data
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	// Get values from form
+	exchangeID, err := strconv.Atoi(r.FormValue("xch_id"))
+	if err != nil {
+		http.Error(w, "Invalid exchange ID", http.StatusBadRequest)
+		return
+	}
+	productID := r.FormValue("product_id")
+
+	// Call the AddToWatchlist function
+	err = api.AddToWatchlist(os.Getenv("URL"), exchangeID, productID)
+	if err != nil {
+		http.Error(w, "Failed to add to watchlist", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Product successfully added to watchlist")
+
+	// Redirect back to the finance page with the same parameters
+	http.Redirect(w, r, "/finance", http.StatusSeeOther)
 }
-*/
+
+// func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {
+// 	log.Println("AddToWatchlistHandler")
+// 	// if r.Method != http.MethodPut {
+// 	// 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+// 	// 	return
+// 	// }
+
+// 	xch_id := r.FormValue("xch_id")
+// 	product_id := r.FormValue("product_id")
+
+// 	log.Printf("Form Values:\n%s\n%s", xch_id, product_id)
+// 	// Parse request body
+// 	var request struct {
+// 		ExchangeID int    `json:"xch_id"`
+// 		ProductID  string `json:"product_id"`
+// 	}
+
+// 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+// 		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	log.Printf("Request:\n%s\n%s\n", request.ExchangeID, request.ProductID)
+
+// 	// Construct the backend URL
+// 	baseURL := os.Getenv("URL")
+// 	url := baseURL + "/add-to-watchlist"
+
+// 	// Create the request payload for the backend
+// 	payload := struct {
+// 		ExchangeID int    `json:"xch_id"`
+// 		ProductID  string `json:"product_id"`
+// 	}{
+// 		ExchangeID: request.ExchangeID,
+// 		ProductID:  request.ProductID,
+// 	}
+
+// 	// Marshal the payload
+// 	jsonData, err := json.Marshal(payload)
+// 	if err != nil {
+// 		http.Error(w, "Error preparing request", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	// Create request to backend
+// 	backendReq, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
+// 	if err != nil {
+// 		http.Error(w, "Error creating backend request", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	backendReq.Header.Set("Content-Type", "application/json")
+
+// 	// Send request to backend
+// 	client := &http.Client{}
+// 	resp, err := client.Do(backendReq)
+// 	if err != nil {
+// 		http.Error(w, "Error communicating with backend", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	defer resp.Body.Close()
+
+// 	// Read and check backend response
+// 	body, err := ioutil.ReadAll(resp.Body)
+// 	if err != nil {
+// 		http.Error(w, "Error reading backend response", http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	// Forward backend status and response to client
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(resp.StatusCode)
+// 	w.Write(body)
+// }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Home Request")

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"hm_client/model"
@@ -50,6 +51,56 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	// fmt.Println("Exchanges", exchanges)
 
 	return exchanges, nil
+}
+
+func AddToWatchlist(baseURL string, exchangeID int, productID string) error {
+	log.Printf("API:AddToWatchlist\n%s\n%s", exchangeID, productID)
+	url := baseURL + "/add-to-watchlist"
+
+	// Create the request payload
+	payload := struct {
+		ExchangeID int    `json:"exchange_id"`
+		ProductID  string `json:"product_id"`
+	}{
+		ExchangeID: exchangeID,
+		ProductID:  productID,
+	}
+
+	// Marshal the payload to JSON
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshaling request payload: %v", err)
+	}
+
+	// Create a new PUT request
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create HTTP client and send request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }
 
 func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
