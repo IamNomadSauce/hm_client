@@ -74,16 +74,16 @@ type Order struct {
 }
 
 type Fill struct {
-	Timestamp      int    `db:"time"`
-	EntryID        string `db:"entryid"`
-	TradeID        string `db:"tradeid"`
-	OrderID        string `db:"orderid"`
-	TradeType      string `db:"tradetype"`
-	Price          string `db:"price"`
-	Size           string `db:"size"`
-	Side           string `db:"side"`
-	Commission     string `db:"commission"`
-	ProductID      string `db:"productid"`
-	XchID          int    `db:"xch_id"`
-	MarketCategory string `db:"marketcategory"`
+	Timestamp      int     `db:"time"`
+	EntryID        string  `db:"entryid"`
+	TradeID        string  `db:"tradeid"`
+	OrderID        string  `db:"orderid"`
+	TradeType      string  `db:"tradetype"`
+	Price          float64 `json:"price"`
+	Size           string  `db:"size"`
+	Side           string  `db:"side"`
+	Commission     string  `db:"commission"`
+	ProductID      string  `db:"productid"`
+	XchID          int     `db:"xch_id"`
+	MarketCategory string  `db:"marketcategory"`
 }
