@@ -61,15 +61,15 @@ type Watchlist struct {
 }
 
 type Order struct {
-	Timestamp      int64  `db:"time"`
+	Timestamp      string `db:"time"`
 	OrderID        string `db:"orderid"`   // Exchange specific order identifier
 	ProductID      string `db:"productid"` // xbt_usd_15
 	TradeType      string `db:"tradetype"` // Long / Short
 	Side           string `db:"side"`      // buy / sell
 	XchID          int    `db:"xch_id"`
 	MarketCategory string `db:"marketcategory"` // (crypto / equities)_(spot / futures)
-	Price          string `db:"price"`          // instrument_currency
-	Size           string `db:"size"`           // How many of instrument
+	Price          int64  `db:"price"`          // instrument_currency
+	Size           int64  `db:"size"`           // How many of instrument
 	Status         string `db:"status"`
 }
 
