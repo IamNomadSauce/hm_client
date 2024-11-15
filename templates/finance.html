@@ -1,180 +1,210 @@
 {{define "content"}}
-<div class="row row-cols-auto">
-  <div class="col">
-    <h2>Finance Page</h2>
-    <ul class="nav nav-pills">
-      <li class="nav-item">
-        <a class="nav-link" aria-current="page" href="#">Exchanges</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#">Accounts</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#">Overview</a>
-      </li>
-    </ul>
-  </div>
-  <div class="row">
-    {{if gt (len .Exchanges) 0}}
-    {{range $index, $exchange := .Exchanges}}
-    <div class="col">
-      <form action="/finance" method="GET">
-        <input type="hidden" name="selected_index" value="{{$index}}">
-        <button type="submit" class="btn {{if eq $index $.SelectedIndex}}btn-warning{{else}}btn-secondary{{end}} mb-2">
-          {{$exchange.Name}}
-        </button>
-      </form>
-    </div>
-    {{end}}
-    {{else}}
-    <p>No Exchanges</p>
-    <button class="btn btn-sm btn-warning" type="">+</button>
-    {{end}}
-  </div>
-
-  <div class="col mb-3 ">
-    <div class="row row-cols-auto p-2">
-      <h5>Watchlist:</h5>
-      {{range $index, $product := .SelectedExchange.Watchlist}}
+<div class="container-fluid">
+  <div>
+    <div class="row mb-3">
       <div class="col">
-        <form action="/finance" method="GET">
-          <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
-          <input type="hidden" name="product_index" value="{{$index}}">
-          <input type="hidden" name="timeframe_index" value="{{$.TimeframeIndex}}">
-          <button type="submit"
-            class="btn btn-sm {{if eq $index $.ProductIndex}}btn-primary{{else}}btn-secondary{{end}}">
-            {{$product.ProductID}}
-          </button>
-        </form>
-      </div>
-      {{end}}
-
-      {{len .SelectedExchange.AvailableProducts}}
-      <div class="dropdown">
-        <button class="btn btn-secondary dropdown-toggle bg-dark" type="button" data-bs-toggle="dropdown"
-          aria-expanded="false">
-          +
-        </button>
-        <div class="dropdown-menu bg-dark p-2" style="width: 300px;">
-          <div class="px-2 pb-2">
-            <input type="text" class="form-control bg-dark text-white-50" id="productSearch"
-              placeholder="Search products..." autocomplete="off">
+        <div class="d-flex">
+          {{if gt (len .Exchanges) 0}}
+          {{range $index, $exchange := .Exchanges}}
+          <div class="">
+            <form action="/finance" method="GET">
+              <input type="hidden" name="selected_index" value="{{$index}}">
+              <button type="submit"
+                class="btn {{if eq $index $.SelectedIndex}}btn-warning{{else}}btn-secondary{{end}} mb-2">
+                {{$exchange.Name}}
+              </button>
+            </form>
           </div>
-          <div class="dropdown-products" style="max-height: 300px; overflow-y: auto;">
-            {{range .SelectedExchange.AvailableProducts}}
-            <div class="dropdown-item bg-dark text-white-50 product-item" 
-              data-bs-toggle="popover"
-              data-bs-trigger="hover" 
-              data-bs-html="true" 
-              data-bs-content="
-                   <div class='product-details'>
-                     <p><strong>Product ID:</strong> {{.ProductID}}</p>
-                     <p><strong>Base:</strong> {{.BaseName}}</p>
-                     <p><strong>Quote:</strong> {{.QuoteName}}</p>
-                     <p><strong>Status:</strong> {{.Status}}</p>
-                     <p><strong>Price:</strong> {{.Price}}</p>
-                     <p><strong>24h Volume:</strong> {{.Volume_24h}}</p>
-                     <p><strong>Base Currency ID:</strong> {{.Base_Currency_ID}}</p>
-                     <p><strong>Quote Currency ID:</strong> {{.Quote_Currency_ID}}</p>
-                   </div>">
+          {{end}}
+          {{else}}
+          <p>No Exchanges</p>
+          <button class="btn btn-sm btn-warning" type="">+</button>
+          {{end}}
+        </div>
 
-                   <form action="/add-to-watchlist" method="POST">
-                    <input type="hidden" name="xch_id" value="{{$.SelectedExchange.ID}}"> 
-                    <input type="hidden" name="product_id" value="{{.ProductID}}">
-                    <button type="submit" class="btn btn-sm btn-dark">
-                        {{.ProductID}} | {{.Volume_24h}}
-                    </button>
-                </form>
-                
+      </div>
+      <div class="col">
+        <!-- Watchlist Section -->
+        <div class="row mb-3">
+          <div class="col">
+            <h5>Watchlist:</h5>
+            <div class="d-flex flex-wrap gap-2">
+              {{range $index, $product := .SelectedExchange.Watchlist}}
+              <form action="/finance" method="GET">
+                <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
+                <input type="hidden" name="product_index" value="{{$index}}">
+                <input type="hidden" name="timeframe_index" value="{{$.TimeframeIndex}}">
+                <button type="submit"
+                  class="btn btn-sm {{if eq $index $.ProductIndex}}btn-primary{{else}}btn-secondary{{end}}">
+                  {{$product.ProductID}}
+                </button>
+              </form>
+              {{end}}
+
+              <!-- Add Product Dropdown -->
+              <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle bg-dark" type="button" data-bs-toggle="dropdown">
+                  +
+                </button>
+                <div class="dropdown-menu bg-dark p-2" style="width: 300px;">
+                  <input type="text" class="form-control bg-dark text-white-50 mb-2" id="productSearch"
+                    placeholder="Search products...">
+                  <div class="dropdown-products">
+                    {{range .SelectedExchange.AvailableProducts}}
+                    <div class="dropdown-item bg-dark text-white-50 product-item">
+                      <form action="/add-to-watchlist" method="POST">
+                        <input type="hidden" name="xch_id" value="{{$.SelectedExchange.ID}}">
+                        <input type="hidden" name="product_id" value="{{.ProductID}}">
+                        <button type="submit" class="btn btn-sm btn-dark w-100 text-start">
+                          {{.ProductID}} | {{.Volume_24h}}
+                        </button>
+                      </form>
+                    </div>
+                    {{end}}
+                  </div>
+                </div>
+              </div>
             </div>
-            {{end}}
           </div>
         </div>
       </div>
-
-      <div>
-        <button class="btn btn-sm btn-warning">+</button>
-      </div>
-    </div>
-    <div class="row row-cols-auto p-2">
       <div class="col">
-        <h5>Timeframes</h5>
-      </div>
-      {{range $index, $timeframe := .SelectedExchange.Timeframes}}
-      <div class="col">
-        <form action="/finance">
-          <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
-          <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
-          <input type="hidden" name="timeframe_index" value="{{$index}}">
-          <button type="submit"
-            class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
-            {{$timeframe.TF}}
-          </button>
-        </form>
-      </div>
-      {{end}}
-      <div>
-        {{ .SelectedExchange.Name}}
+        <!-- Timeframes Section -->
+        <div class="row mb-3">
+          <div class="col">
+            <h5>Timeframes</h5>
+            <div class="d-flex flex-wrap gap-2">
+              {{range $index, $timeframe := .SelectedExchange.Timeframes}}
+              <form action="/finance">
+                <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
+                <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
+                <input type="hidden" name="timeframe_index" value="{{$index}}">
+                <button type="submit"
+                  class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
+                  {{$timeframe.TF}}
+                </button>
+              </form>
+              {{end}}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      // Initialize all popovers
-      const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-      const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-        return new bootstrap.Popover(popoverTriggerEl, {
-          placement: 'right',
-          delay: { show: 100, hide: 100 }
-        });
-      });
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-pills mb-3" id="finance-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="portfolio-tab" data-bs-toggle="pill" data-bs-target="#portfolio" type="button"
+        role="tab">
+        Trade
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#orders" type="button" role="tab">
+        Orders
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="fills-tab" data-bs-toggle="pill" data-bs-target="#fills" type="button" role="tab">
+        Fills
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="fills-tab" data-bs-toggle="pill" data-bs-target="#fills" type="button" role="tab">
+        Portfolio
+      </button>
+    </li>
+  </ul>
 
-      // Search functionality
-      const searchInput = document.getElementById('productSearch');
-      const productItems = document.querySelectorAll('.product-item');
+  <!-- Tab Content -->
+  <div class="tab-content" id="finance-tabContent">
+    <!-- Portfolio Tab -->
+    <div class="tab-pane fade show active" id="portfolio" role="tabpanel">
+      <!-- Exchange Selection -->
 
-      searchInput.addEventListener('input', function (e) {
-        const searchTerm = e.target.value.toLowerCase();
 
-        productItems.forEach(item => {
-          const text = item.textContent.toLowerCase();
-          if (text.includes(searchTerm)) {
-            item.style.display = 'block';
-          } else {
-            item.style.display = 'none';
-          }
-        });
-      });
+    </div>
 
-      // Prevent dropdown from closing when clicking the search input
-      searchInput.addEventListener('click', function (e) {
-        e.stopPropagation();
-      });
+    <!-- Orders Tab -->
+    <div class="tab-pane fade" id="orders" role="tabpanel">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Product</th>
+              <th>Side</th>
+              <th>Price</th>
+              <th>Size</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range .SelectedExchange.Orders}}
+            <tr>
+              <td>{{.Timestamp}}</td>
+              <td>{{.ProductID}}</td>
+              <td>{{.Side}}</td>
+              <td>{{.Price}}</td>
+              <td>{{.Size}}</td>
+              <td>{{.Status}}</td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-      // Clean up popovers when dropdown is hidden
-      document.querySelector('.dropdown').addEventListener('hidden.bs.dropdown', function () {
-        popoverList.forEach(popover => {
-          popover.hide();
-        });
-      });
-    });
-  </script>
-
+    <!-- Fills Tab -->
+    <div class="tab-pane fade" id="fills" role="tabpanel">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Product</th>
+              <th>Side</th>
+              <th>Price</th>
+              <th>Size</th>
+              <th>Commission</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range .SelectedExchange.Fills}}
+            <tr>
+              <td>{{.Timestamp}}</td>
+              <td>{{.ProductID}}</td>
+              <td>{{.Side}}</td>
+              <td>{{.Price}}</td>
+              <td>{{.Size}}</td>
+              <td>{{.Commission}}</td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div>
+    <!-- Chart Section -->
+    {{if .SelectedProduct.ProductID}}
+    <div class="row">
+      <div class="col">
+        {{template "chart" .Candles}}
+      </div>
+    </div>
+    {{end}}
+  </div>
 </div>
 
-
-{{if .SelectedProduct.ProductID}}
-<div class="">
-  <h5>{{.SelectedProduct.Price}}</h5>
-  <h3>{{.SelectedProduct.ProductID}}</h3>
-  {{template "chart" .Candles}}
-
-</div>
-{{end}}
-{{end}}
 <style>
   .dropdown-menu {
     margin: 0;
+  }
+
+  .dropdown-products {
+    max-height: 300px;
+    overflow-y: auto;
   }
 
   .dropdown-products::-webkit-scrollbar {
@@ -199,24 +229,52 @@
     cursor: pointer;
   }
 
-  /* Popover custom styling */
-  .popover {
-    max-width: 300px;
+  .table-dark {
     background-color: #212529;
-    border: 1px solid #444;
   }
 
-  .popover-body {
-    color: #343a40;
-    padding: 12px;
+  .nav-pills .nav-link {
+    color: #fff;
   }
 
-  .product-details p {
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-  }
-
-  .popover .arrow::after {
-    border-right-color: #212529;
+  .nav-pills .nav-link.active {
+    background-color: #ffc107;
+    color: #000;
   }
 </style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Initialize tabs
+    const activeTab = localStorage.getItem('activeFinanceTab');
+    if (activeTab) {
+      const tab = new bootstrap.Tab(document.querySelector(activeTab));
+      tab.show();
+    }
+
+    // Store active tab
+    document.querySelectorAll('button[data-bs-toggle="pill"]').forEach(button => {
+      button.addEventListener('shown.bs.tab', function (e) {
+        localStorage.setItem('activeFinanceTab', `#${e.target.id}`);
+      });
+    });
+
+    // Product search functionality
+    const searchInput = document.getElementById('productSearch');
+    const productItems = document.querySelectorAll('.product-item');
+
+    searchInput.addEventListener('input', function (e) {
+      const searchTerm = e.target.value.toLowerCase();
+      productItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+      });
+    });
+
+    // Prevent dropdown from closing when clicking search
+    searchInput.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+  });
+</script>
+{{end}}
