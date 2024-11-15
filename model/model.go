@@ -87,3 +87,9 @@ type Fill struct {
 	XchID          int     `db:"xch_id"`
 	MarketCategory string  `db:"marketcategory"`
 }
+
+type Trade struct {
+	Entry        float64
+	StopLoss     float64
+	ProfitTarget []float64
+}

@@ -23,6 +23,7 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/finance", financeHandler)
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
+	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -87,6 +88,26 @@ func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect back to the finance page
+	http.Redirect(w, r, "/finance", http.StatusSeeOther)
+}
+
+func tradeEntryHandler(w http.ResponseWriter, r *http.Request) {
+
+	log.Println("Trade Entry Handler")
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	entry := r.FormValue("entry")
+	stoploss := r.FormValue("stoploss")
+	pt1 := r.FormValue("pt1")
+	pt2 := r.FormValue("pt2")
+
+	log.Println("Entry:", entry, "StopLoss", stoploss, "PT1", pt1, "PT2", pt2)
+
 	http.Redirect(w, r, "/finance", http.StatusSeeOther)
 }
 
