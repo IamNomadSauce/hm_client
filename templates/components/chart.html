@@ -30,10 +30,11 @@
   var draw_boxes = []
   var draw_lines = []
 
+  // Update drawToolbar function to use price values
   function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
-    draw_lines.forEach((v) => {
-      // Convert stored price to Y coordinate
-      const y = height - margin - ((v.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+    draw_lines.forEach((line) => {
+      // Convert price back to Y coordinate
+      const y = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
       ctx.beginPath();
       ctx.moveTo(margin, y);
@@ -41,12 +42,12 @@
       ctx.strokeStyle = 'yellow';
       ctx.stroke();
 
-      // Optionally draw the price label
+      // Draw price label
       ctx.fillStyle = 'white';
-      ctx.fillText(v.price.toFixed(2), width - 60, y - 5);
+      ctx.font = '12px Arial';
+      ctx.fillText(line.price.toFixed(2), width - 70, y - 5);
     });
 
-    // Drawing current line
     if (currentTool === 'line' && drawingStart) {
       ctx.beginPath();
       ctx.moveTo(margin, drawingStart.y);
@@ -60,6 +61,7 @@
       ctx.stroke();
     }
   }
+
 
   function drawCandlestickChart(data, start, end) {
     var canvas = document.getElementById('candlestickChart');
@@ -85,56 +87,60 @@
 
     // Draw each candlestick
     visibleData.forEach((d, i) => {
-      var x = margin + i * candleWidth;
-      var openY = height - margin - ((d.Open - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-      var closeY = height - margin - ((d.Close - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-      var highY = height - margin - ((d.High - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-      var lowY = height - margin - ((d.Low - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        var x = margin + i * candleWidth;
+        var openY = height - margin - ((d.Open - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        var closeY = height - margin - ((d.Close - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        var highY = height - margin - ((d.High - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        var lowY = height - margin - ((d.Low - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
-      // Draw the high-low line
-      ctx.beginPath();
-      ctx.moveTo(x + candleWidth / 2, highY);
-      ctx.lineTo(x + candleWidth / 2, lowY);
-      ctx.strokeStyle = 'gray';
-      ctx.stroke();
+        // Draw the high-low line
+        ctx.beginPath();
+        ctx.moveTo(x + candleWidth / 2, highY);
+        ctx.lineTo(x + candleWidth / 2, lowY);
+        ctx.strokeStyle = 'gray';
+        ctx.stroke();
 
-      // Draw the open-close rectangle
-      ctx.beginPath();
-      ctx.rect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
-      ctx.fillStyle = d.Close >= d.Open ? 'green' : 'red';
-      ctx.strokeStyle = 'black'
-      ctx.fill();
-      ctx.stroke();
+        // Draw the open-close rectangle
+        ctx.beginPath();
+        ctx.rect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
+        ctx.fillStyle = d.Close >= d.Open ? 'green' : 'red';
+        ctx.strokeStyle = 'black'
+        ctx.fill();
+        ctx.stroke();
     });
 
-    drawToolbar(ctx, width, height, margin)
-    drawCrosshair(ctx, width, height, margin, minPrice, maxPrice)
-  }
+    drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
+    drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
 
+    // Return chart state
+    return { ctx, width, height, margin, minPrice, maxPrice };
+}
+
+  // Fix calculatePrice function
   function calculatePrice(y, height, margin, minPrice, maxPrice) {
-    return maxPrice - (y - margin) / (height - 2 * margin) * (maxPrice - minPrice)
+    return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
   }
   function drawCrosshair(ctx, width, height, margin, minPrice, maxPrice) {
     // Draw vertical line
     ctx.beginPath();
-    ctx.moveTo(mouseX, 0);
-    ctx.lineTo(mouseX, height);
+    ctx.moveTo(mouseX, margin);
+    ctx.lineTo(mouseX, height - margin);
     ctx.strokeStyle = 'rgba(100,100,100,0.5)';
     ctx.stroke();
 
     // Draw horizontal line
     ctx.beginPath();
-    ctx.moveTo(0, mouseY);
-    ctx.lineTo(width, mouseY);
+    ctx.moveTo(margin, mouseY);
+    ctx.lineTo(width - margin, mouseY);
     ctx.strokeStyle = 'rgba(100,100,100,0.5)';
     ctx.stroke();
 
-    // 
-    var price = maxPrice - (mouseY - margin) / (height - 2 * width) * (maxPrice - minPrice);
+    // Calculate price - fixed formula to match the candlestick scaling
+    var price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
     ctx.fillStyle = 'white';
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
+}
 
-  }
 
   // Initial parameters for zoom and pan
   var end = stockData.length
@@ -164,20 +170,34 @@
 
   var canvas = document.getElementById('candlestickChart');
 
-  canvas.addEventListener('mousedown', function (event) {
-    console.log("MouseDown", mouseX, mouseY)
+  // Update mousedown event to store price instead of coordinates
+  canvas.addEventListener('mousedown', function(event) {
+    var rect = canvas.getBoundingClientRect();
+    mouseX = event.clientX - rect.left;
+    mouseY = event.clientY - rect.top;
+
     if (currentTool) {
-      if (currentTool === 'line') {
-        draw_lines.push({ x: mouseX, y: mouseY })
-        console.log("Draw_Lines", draw_lines)
-      }
-      drawingStart = { x: mouseX, y: mouseY }
+        if (currentTool === 'line') {
+            const chartState = drawCandlestickChart(stockData, start, end);
+            const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+            draw_lines.push({
+                price: price
+            });
+            console.log("Draw_Lines", draw_lines);
+            drawCandlestickChart(stockData, start, end);
+        }
+        drawingStart = { x: mouseX, y: mouseY };
     } else {
-      isDragging = true;
-      startX = event.clientX;
-      canvas.style.cursor = 'grabbing';
+        isDragging = true;
+        startX = event.clientX;
+        canvas.style.cursor = 'grabbing';
     }
-  });
+});
+
+// Fix the calculatePrice function
+function calculatePrice(y, height, margin, minPrice, maxPrice) {
+    return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
+}
 
   canvas.addEventListener('mouseup', function () {
     console.log("MouseUp")
@@ -232,13 +252,19 @@
 
   document.getElementById('line').addEventListener('click', function () {
     console.log("Line Selected")
-    currentTool = 'line'
+    if (currentTool == 'line' || currentTool == 'box') {
+      currentTool = null
+    }
+    else {
+
+      currentTool = 'line'
+    }
   })
   document.getElementById('box').addEventListener('click', function () {
     console.log("Box Selected")
     currentTool = 'box'
   })
+  drawCandlestickChart(stockData, start, end);
 
-  var chartState = drawCandlestickChart(stockData, start, end)
 </script>
 {{end}}
