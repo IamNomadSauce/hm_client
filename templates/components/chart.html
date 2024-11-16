@@ -22,7 +22,7 @@
 </style>
 
 <script>
-  var stockData = {{.}}; // Assuming .Candles contains the JSON data
+  var stockData = {{.Candles}}; // Assuming .Candles contains the JSON data
   var mouseX = 0;
   var mouseY = 0;
   var currentTool = null
@@ -85,6 +85,11 @@
     var minPrice = Math.min(...visibleData.map(d => d.Low));
     var maxPrice = Math.max(...visibleData.map(d => d.High));
 
+    let exchange = "{{.SelectedExchange.Name}}"    
+    let orders = "{{.SelectedExchange.Orders}}"
+    console.log("Product", "{{.SelectedProduct}}")
+    console.log("Orders", "{{.SelectedExchange.Orders}}")
+
     // Draw each candlestick
     visibleData.forEach((d, i) => {
         var x = margin + i * candleWidth;
@@ -108,6 +113,29 @@
         ctx.fill();
         ctx.stroke();
     });
+
+    
+    if (window.selectedExchange && window.selectedExchange.Orders) {
+        window.selectedExchange.Orders.forEach(order => {
+            if (order.ProductID === window.selectedProduct.ProductID) {
+                // Convert order price to Y coordinate
+                const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+                
+                
+                // Draw the order line
+                ctx.beginPath();
+                ctx.moveTo(margin, orderY);
+                ctx.lineTo(width - margin, orderY);
+                ctx.strokeStyle = order.Side.toLowerCase() === 'buy' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+                ctx.stroke();
+
+                // Draw order details
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.fillText(`${order.Side} ${order.Size} @ ${order.Price}`, width - 150, orderY - 5);
+            }
+        });
+    }
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);

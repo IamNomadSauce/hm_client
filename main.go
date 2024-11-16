@@ -206,6 +206,15 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func financeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Finance Page Request")
+	// tmpl, err := template.New("").Funcs(template.FuncMap{
+	// 	"json": func(v interface{}) template.JS {
+	// 		b, err := json.Marshal(v)
+	// 		if err != nil {
+	// 			return "[]"
+	// 		}
+	// 		return template.JS(b)
+	// 	},
+	// }).ParseFiles(
 	tmpl, err := template.ParseFiles(
 		"templates/base.html",
 		"templates/finance.html",
@@ -240,6 +249,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Watchlist:", exchange.Watchlist)
 		fmt.Println("Timeframes:", exchange.Timeframes)
 		fmt.Println("AvailableProducts:", len(exchange.AvailableProducts))
+		fmt.Println("Fills", len(exchange.Fills))
 		fmt.Println("\n----------------------------")
 	}
 
@@ -249,6 +259,11 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	selectedExchange := exchanges[selectedIndex]
+
+	// for _, fill := range selectedExchange.Fills {
+	// 	log.Println(fill)
+
+	// }
 
 	productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
 	if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {

@@ -61,31 +61,31 @@ type Watchlist struct {
 }
 
 type Order struct {
-	Timestamp      string `db:"time"`
-	OrderID        string `db:"orderid"`   // Exchange specific order identifier
-	ProductID      string `db:"productid"` // xbt_usd_15
-	TradeType      string `db:"tradetype"` // Long / Short
-	Side           string `db:"side"`      // buy / sell
-	XchID          int    `db:"xch_id"`
-	MarketCategory string `db:"marketcategory"` // (crypto / equities)_(spot / futures)
-	Price          int64  `db:"price"`          // instrument_currency
-	Size           int64  `db:"size"`           // How many of instrument
-	Status         string `db:"status"`
+	Timestamp      string  `db:"time"`
+	OrderID        string  `db:"orderid"`   // Exchange specific order identifier
+	ProductID      string  `db:"productid"` // xbt_usd_15
+	TradeType      string  `db:"tradetype"` // Long / Short
+	Side           string  `db:"side"`      // buy / sell
+	XchID          int     `db:"xch_id"`
+	MarketCategory string  `db:"marketcategory"` // (crypto / equities)_(spot / futures)
+	Price          float64 `db:"price"`          // instrument_currency
+	Size           float64 `db:"size"`           // How many of instrument
+	Status         string  `db:"status"`
 }
 
 type Fill struct {
-	Timestamp      int     `db:"time"`
-	EntryID        string  `db:"entryid"`
-	TradeID        string  `db:"tradeid"`
-	OrderID        string  `db:"orderid"`
-	TradeType      string  `db:"tradetype"`
-	Price          float64 `json:"price"`
-	Size           string  `db:"size"`
-	Side           string  `db:"side"`
-	Commission     string  `db:"commission"`
-	ProductID      string  `db:"productid"`
-	XchID          int     `db:"xch_id"`
-	MarketCategory string  `db:"marketcategory"`
+	EntryID        string  `db:"entry_id" json:"entryid"`
+	TradeID        string  `db:"trade_id" json:"tradeid"`
+	OrderID        string  `db:"order_id" json:"orderid"`
+	Timestamp      string  `db:"time" json:"time"`
+	TradeType      string  `db:"trade_type" json:"tradetype"`
+	Price          float64 `db:"price" json:"price,omitempty"`
+	Size           float64 `db:"size" json:"size,string,omitempty"`
+	Side           string  `db:"side" json:"side"`
+	Commission     float64 `db:"commission" json:"commission,string,omitempty"`
+	ProductID      string  `db:"product_id" json:"productid"`
+	XchID          int     `db:"xch_id" json:"xch_id"`
+	MarketCategory string  `db:"market_category" json:"marketcategory"`
 }
 
 type Trade struct {
