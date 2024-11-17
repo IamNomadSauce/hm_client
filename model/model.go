@@ -27,6 +27,7 @@ type Exchange struct {
 	Watchlist         []Product
 	CandleLimit       int64
 	AvailableProducts []Product
+	Portfolio         []Asset
 }
 
 type Product struct {
@@ -43,10 +44,12 @@ type Product struct {
 }
 
 type Asset struct {
-	Symbol           Product
-	AvailableBalance Balance
-	Hold             Balance
-	Value            float64
+	ID               int     `json:"id"`
+	Asset            string  `json:"asset"`
+	AvailableBalance Balance `json:"available_balance"`
+	Hold             Balance `json:"hold_balance`
+	Value            float64 `json:"value`
+	XchID            int     `json:"xch_id"`
 }
 
 type Balance struct {

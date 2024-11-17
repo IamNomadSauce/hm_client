@@ -40,14 +40,19 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 		return nil, err
 	}
 
-	// for exchange := range exchanges {
-	// 	fmt.Println("\n----------------------------\n")
-	// 	fmt.Println(exchanges[exchange].Name)
-	// 	fmt.Println(exchanges[exchange].Watchlist)
-	// 	fmt.Println(exchanges[exchange].Timeframes)
-	// 	fmt.Println("Available Products", exchanges[exchange].AvailableProducts)
-	// 	fmt.Println("\n----------------------------\n")
-	// }
+	for exchange := range exchanges {
+		fmt.Println("\n----------------------------\n")
+		fmt.Println(exchanges[exchange].Name)
+		// fmt.Println(exchanges[exchange].Watchlist)
+		// fmt.Println(exchanges[exchange].Timeframes)
+		// fmt.Println("Available Products", exchanges[exchange].AvailableProducts)
+		portfolio := exchanges[exchange].Portfolio
+		for _, asset := range portfolio {
+			fmt.Println(asset.Asset)
+			fmt.Println(asset.Value)
+		}
+		fmt.Println("\n----------------------------\n")
+	}
 	// fmt.Println("Exchanges", exchanges)
 
 	return exchanges, nil
