@@ -202,7 +202,7 @@
     <div class="tab-pane fade" id="portfolio" role="tabpanel">
       <div class="d-flex">
         <div class="col-4">
-          <h5>Total Value:</h5>
+          <h5>Total Value: ${{printf "%.2f" .TotalValue}}</h5>
         </div>
         <div class="col-4">
           <table class="table table-striped table-dark">
@@ -217,7 +217,7 @@
               {{range .SelectedExchange.Portfolio}}
               <tr>
                 <td>{{.Asset}}</td>
-                <td>{{.Value}}</td>
+                <td>${{printf "%.2f" .Value}}</td>
                 <td>{{.Hold.Value}}</td>
               </tr>
               {{end}}
@@ -225,10 +225,33 @@
           </table>
         </div>
         <div class="col-4">
-          <h5>PieChart</h5>
-        </div>
+          <svg id="portfolioPie" viewBox="0 0 100 100" class="portfolio-pie">
+            <circle cx="50" cy="50" r="45" fill="#212529" />
+            {{range $index, $item := .PortfolioData}}
+            <circle 
+                class="pie-segment" 
+                id="pie-segment" 
+                r="45" 
+                cx="50" 
+                cy="50" 
+                fill="transparent" 
+                stroke="{{$item.Color}}"
+                stroke-width="10" 
+                stroke-dasharray="{{$item.Percentage}} 100" 
+                transform="rotate({{multiply $index (divide 360 (len $.PortfolioData))}} 50 50)"
+                data-asset="{{$item.Asset}}"
+                data-value="{{printf "%.2f" $item.Value}}"
+                data-percentage="{{printf "%.1f" $item.Percentage}}"
+            />
+            {{end}}
+        </svg>
+        
+        
       </div>
     </div>
+
+
+
   </div>
   <div>
     <!-- Chart Section -->
@@ -291,10 +314,59 @@
     background-color: #1a1a1a;
     border: none;
   }
+
+  .portfolio-pie {
+    width: 100%;
+    height: 300px;
+}
+
+.pie-segment {
+    transition: stroke-width 0.2s ease;
+    cursor: pointer;
+}
+
+.pie-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.pie-tooltip-value {
+    font-weight: bold;
+    color: #ffc107;
+}
+
+.pie-tooltip-percentage {
+    color: #8f8f8f;
+}
+
 </style>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    // Initialize tabs
+    const activeTab = localStorage.getItem('activeFinanceTab');
+    if (activeTab) {
+      const tab = new bootstrap.Tab(document.querySelector(activeTab));
+      tab.show();
+    }
+
+    // Store active tab
+    document.querySelectorAll('button[data-bs-toggle="pill"]').forEach(button => {
+      button.addEventListener('shown.bs.tab', function (e) {
+        localStorage.setItem('activeFinanceTab', `#${e.target.id}`);
+        if (e.target.getAttribute('data-bs-target') === '#portfolio') {
+          updatePieChart();
+        }
+      });
+    });
+
     // Product search functionality
     const searchInput = document.getElementById('productSearch');
     const productItems = document.querySelectorAll('.product-item');
@@ -302,22 +374,13 @@
     if (searchInput) {
       searchInput.addEventListener('input', function (e) {
         const searchTerm = e.target.value.toLowerCase().trim();
-
-        // Debug logging
-        console.log('Search term:', searchTerm);
-        console.log('Number of product items:', productItems.length);
-
         productItems.forEach(item => {
           const text = item.textContent.toLowerCase();
-          const display = text.includes(searchTerm) ? 'block' : 'none';
-          item.style.display = display;
-
-          // Debug logging
-          console.log('Item text:', text, 'Display:', display);
+          item.style.display = text.includes(searchTerm) ? 'block' : 'none';
         });
       });
 
-      // Prevent dropdown from closing when clicking the search input
+      // Prevent dropdown from closing when clicking search
       searchInput.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -330,6 +393,118 @@
       dropdownMenu.addEventListener('click', function (e) {
         e.stopPropagation();
       });
+    }
+
+    function updatePieChart() {
+      const svg = document.querySelector('.portfolio-pie');
+      if (!svg) return;
+
+      const segments = svg.querySelectorAll('.pie-segment');
+      const labels = svg.querySelectorAll('.pie-label');
+      let total = 0;
+
+      // Calculate total value
+      segments.forEach(segment => {
+          const value = parseFloat(segment.dataset.value);
+          if (!isNaN(value)) {
+              total += value;
+          }
+      });
+
+      let cumulativeAngle = -90; // Start at top (-90 degrees)
+      segments.forEach((segment, index) => {
+          const value = parseFloat(segment.dataset.value);
+          if (!isNaN(value)) {
+              const percentage = (value / total) * 100;
+              const circumference = 2 * Math.PI * 45;
+              const dashLength = (percentage / 100) * circumference;
+              
+              // Set the stroke-dasharray
+              segment.style.strokeDasharray = `${dashLength} ${circumference}`;
+              
+              // Set rotation to position segment
+              segment.style.transform = `rotate(${cumulativeAngle}deg)`;
+              
+              // Position label
+              const label = labels[index];
+              if (label) {
+                  // Calculate angle for label position (middle of segment)
+                  const labelAngle = cumulativeAngle + (percentage * 1.8); // 1.8 = 360/200
+                  const labelRadius = 35; // Adjust this value to position labels closer or further
+                  const labelX = 50 + labelRadius * Math.cos(labelAngle * Math.PI / 180);
+                  const labelY = 50 + labelRadius * Math.sin(labelAngle * Math.PI / 180);
+                  
+                  label.setAttribute('x', labelX);
+                  label.setAttribute('y', labelY);
+                  label.textContent = `${segment.dataset.asset} ($${segment.dataset.value})`;
+                  label.style.fontSize = '3px';
+              }
+
+              // Update cumulative angle for next segment
+              cumulativeAngle += (percentage * 3.6); // 3.6 = 360/100
+          }
+      });
+    }
+
+// Add hover effects for segments
+const segments = document.querySelectorAll('.pie-segment');
+segments.forEach(segment => {
+    segment.addEventListener('mouseenter', function() {
+      console.log("ASSET")
+        this.style.strokeWidth = '12';
+        
+        // Create or update tooltip
+        let tooltip = document.querySelector('.pie-tooltip');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.className = 'pie-tooltip';
+            document.body.appendChild(tooltip);
+        }
+        
+        tooltip.innerHTML = `
+            <div>${this.dataset.asset}</div>
+            <div class="pie-tooltip-value">$${this.dataset.value}</div>
+            <div class="pie-tooltip-percentage">${this.dataset.percentage}%</div>
+        `;
+        tooltip.style.display = 'block';
+    });
+
+    segment.addEventListener('mouseleave', function() {
+        this.style.strokeWidth = '10';
+        const tooltip = document.querySelector('.pie-tooltip');
+        if (tooltip) {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    segment.addEventListener('mousemove', function(e) {
+        const tooltip = document.querySelector('.pie-tooltip');
+        if (tooltip) {
+            tooltip.style.left = (e.pageX + 10) + 'px';
+            tooltip.style.top = (e.pageY + 10) + 'px';
+        }
+    });
+
+      segment.addEventListener('mouseleave', function () {
+        if (tooltip) {
+          tooltip.style.display = 'none';
+        }
+      });
+    });
+
+    // Call this after updating the pie chart
+    updateLabelsPosition();
+  });
+
+  // Initial update of pie chart if portfolio tab is active
+  if (document.querySelector('#portfolio.active')) {
+    updatePieChart();
+  }
+
+  // Update pie chart on window resize
+  window.addEventListener('resize', function () {
+    if (document.querySelector('#portfolio.active')) {
+      updatePieChart();
     }
   });
 </script>

@@ -111,80 +111,6 @@ func tradeEntryHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/finance", http.StatusSeeOther)
 }
 
-// func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {
-// 	log.Println("AddToWatchlistHandler")
-// 	// if r.Method != http.MethodPut {
-// 	// 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 	// 	return
-// 	// }
-
-// 	xch_id := r.FormValue("xch_id")
-// 	product_id := r.FormValue("product_id")
-
-// 	log.Printf("Form Values:\n%s\n%s", xch_id, product_id)
-// 	// Parse request body
-// 	var request struct {
-// 		ExchangeID int    `json:"xch_id"`
-// 		ProductID  string `json:"product_id"`
-// 	}
-
-// 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-// 		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	log.Printf("Request:\n%s\n%s\n", request.ExchangeID, request.ProductID)
-
-// 	// Construct the backend URL
-// 	baseURL := os.Getenv("URL")
-// 	url := baseURL + "/add-to-watchlist"
-
-// 	// Create the request payload for the backend
-// 	payload := struct {
-// 		ExchangeID int    `json:"xch_id"`
-// 		ProductID  string `json:"product_id"`
-// 	}{
-// 		ExchangeID: request.ExchangeID,
-// 		ProductID:  request.ProductID,
-// 	}
-
-// 	// Marshal the payload
-// 	jsonData, err := json.Marshal(payload)
-// 	if err != nil {
-// 		http.Error(w, "Error preparing request", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// Create request to backend
-// 	backendReq, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
-// 	if err != nil {
-// 		http.Error(w, "Error creating backend request", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	backendReq.Header.Set("Content-Type", "application/json")
-
-// 	// Send request to backend
-// 	client := &http.Client{}
-// 	resp, err := client.Do(backendReq)
-// 	if err != nil {
-// 		http.Error(w, "Error communicating with backend", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	defer resp.Body.Close()
-
-// 	// Read and check backend response
-// 	body, err := ioutil.ReadAll(resp.Body)
-// 	if err != nil {
-// 		http.Error(w, "Error reading backend response", http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// Forward backend status and response to client
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(resp.StatusCode)
-// 	w.Write(body)
-// }
-
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Home Request")
 	tmpl, err := template.ParseFiles(
@@ -206,23 +132,70 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func financeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Finance Page Request")
-	// tmpl, err := template.New("").Funcs(template.FuncMap{
-	// 	"json": func(v interface{}) template.JS {
-	// 		b, err := json.Marshal(v)
-	// 		if err != nil {
-	// 			return "[]"
-	// 		}
-	// 		return template.JS(b)
-	// 	},
-	// }).ParseFiles(
-	tmpl, err := template.ParseFiles(
+
+	// Create template with functions and specify the base template name
+	tmpl := template.New("base.html").Funcs(template.FuncMap{
+		"multiply": func(a, b interface{}) float64 {
+			var aFloat, bFloat float64
+
+			switch v := a.(type) {
+			case int:
+				aFloat = float64(v)
+			case float64:
+				aFloat = v
+			default:
+				return 0
+			}
+
+			switch v := b.(type) {
+			case int:
+				bFloat = float64(v)
+			case float64:
+				bFloat = v
+			default:
+				return 0
+			}
+
+			return aFloat * bFloat
+		},
+		"divide": func(a, b interface{}) float64 {
+			var aFloat, bFloat float64
+
+			switch v := a.(type) {
+			case int:
+				aFloat = float64(v)
+			case float64:
+				aFloat = v
+			default:
+				return 0
+			}
+
+			switch v := b.(type) {
+			case int:
+				bFloat = float64(v)
+			case float64:
+				bFloat = v
+			default:
+				return 0
+			}
+
+			if bFloat == 0 {
+				return 0
+			}
+			return aFloat / bFloat
+		},
+	})
+
+	// Parse all template files
+	tmpl, err := tmpl.ParseFiles(
 		"templates/base.html",
 		"templates/finance.html",
 		"templates/components/navbar.html",
 		"templates/components/chart.html",
 	)
 	if err != nil {
-		fmt.Println("Error parsing template", err)
+		log.Printf("Error parsing template: %v", err)
+		http.Error(w, "Error parsing template", http.StatusInternalServerError)
 		return
 	}
 
@@ -296,7 +269,18 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println("\n------------------\nSelected Product:\n", selectedExchange.Name, selectedProduct, selectedTimeframe)
-	fmt.Println("Candles:", len(candles), "\n------------------------------\n")
+	// fmt.Println("Candles:", len(candles), "\n------------------------------\n")
+
+	colors := []string{
+		"#3e3e3e", " #82e0aa", "#aeb6bf", "#52be80",
+		"#bfc9ca", "#Fe74c3c", " #5499c7", "#34495e",
+	}
+
+	var totalValue float64
+
+	for _, asset := range selectedExchange.Portfolio {
+		totalValue += asset.Value
+	}
 
 	data := struct {
 		Exchanges         []model.Exchange
@@ -307,6 +291,9 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex    int
 		SelectedTimeframe model.Timeframe
 		Candles           []model.Candle
+		Colors            []string
+		TotalValue        float64
+		PortfolioData     []PortfolioItem
 	}{
 		Exchanges:         exchanges,
 		SelectedExchange:  selectedExchange,
@@ -316,12 +303,16 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex:    timeframeIndex,
 		SelectedTimeframe: selectedTimeframe,
 		Candles:           candles,
+		Colors:            colors,
+		TotalValue:        totalValue,
+		PortfolioData:     preparePortfolioData(selectedExchange.Portfolio),
 	}
 
 	// Use a buffer to render the template first
 	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, data)
+	err = tmpl.ExecuteTemplate(&buf, "base.html", data) // Use ExecuteTemplate with the correct template name
 	if err != nil {
+		log.Printf("Error executing template: %v", err)
 		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -331,7 +322,46 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = buf.WriteTo(w)
 	if err != nil {
 		log.Printf("Error writing response: %v", err)
-		// At this point, we've already started writing the response,
-		// so we can't send an HTTP error status anymore.
 	}
+}
+
+type PortfolioItem struct {
+	Asset      string  `json:"asset"`
+	Value      float64 `json:"value"`
+	Color      string  `json:"color"`
+	Percentage float64 `json:"percentage"`
+}
+
+func preparePortfolioData(portfolio []model.Asset) []PortfolioItem {
+	var total float64
+
+	// Calculate total including hold values
+	for _, asset := range portfolio {
+		holdValue, _ := strconv.ParseFloat(asset.Hold.Value, 64)
+		total += asset.Value + holdValue
+	}
+
+	colors := []string{
+		"#3e3e3e", " #82e0aa", "#aeb6bf", "#52be80",
+		"#bfc9ca", "#Fe74c3c", " #5499c7", "#34495e",
+	}
+
+	var items []PortfolioItem
+	for i, asset := range portfolio {
+		holdValue, _ := strconv.ParseFloat(asset.Hold.Value, 64)
+		totalAssetValue := asset.Value + holdValue
+		percentage := (totalAssetValue / total) * 100
+
+		item := PortfolioItem{
+			Asset:      asset.Asset,
+			Value:      totalAssetValue,
+			Color:      colors[i%len(colors)],
+			Percentage: percentage,
+		}
+
+		items = append(items, item)
+		log.Println(item.Asset, item.Percentage)
+	}
+
+	return items
 }
