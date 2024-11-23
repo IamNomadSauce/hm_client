@@ -22,14 +22,13 @@
 </style>
 
 <script>
-  var stockData = {{.Candles}}; 
-  var selectedProduct = {{.SelectedProduct}};
-  var exchange = {{.SelectedExchange}};
-  var selectedProduct = {{.SelectedProduct}};
+  var stockData = {{.Candles }};
+  var selectedProduct = {{.SelectedProduct }};
+  var exchange = {{.SelectedExchange }};
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var current_fills = all_fills.filter(product => product.productid === selectedProduct.product_id)
-  var current_orders= all_orders.filter(product => product.ProductID === selectedProduct.product_id)
+  var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
   var mouseX = 0;
   var mouseY = 0;
   var currentTool = null
@@ -101,68 +100,103 @@
     var minPrice = Math.min(...visibleData.map(d => d.Low));
     var maxPrice = Math.max(...visibleData.map(d => d.High));
 
-    let exchange = "{{.SelectedExchange.Name}}"    
+    let exchange = "{{.SelectedExchange.Name}}"
     let orders = "{{.SelectedExchange.Orders}}"
     // console.log("Product", "{{.SelectedProduct}}")
     // console.log("Orders", "{{.SelectedExchange.Orders}}")
 
     // Draw each candlestick
     visibleData.forEach((d, i) => {
-        var x = margin + i * candleWidth;
-        var openY = height - margin - ((d.Open - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        var closeY = height - margin - ((d.Close - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        var highY = height - margin - ((d.High - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        var lowY = height - margin - ((d.Low - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      var x = margin + i * candleWidth;
+      var openY = height - margin - ((d.Open - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      var closeY = height - margin - ((d.Close - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      var highY = height - margin - ((d.High - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      var lowY = height - margin - ((d.Low - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
-        // Draw the high-low line
-        ctx.beginPath();
-        ctx.moveTo(x + candleWidth / 2, highY);
-        ctx.lineTo(x + candleWidth / 2, lowY);
-        ctx.strokeStyle = 'gray';
-        ctx.stroke();
+      // Draw the high-low line
+      ctx.beginPath();
+      ctx.moveTo(x + candleWidth / 2, highY);
+      ctx.lineTo(x + candleWidth / 2, lowY);
+      ctx.strokeStyle = 'gray';
+      ctx.stroke();
 
-        // Draw the open-close rectangle
-        ctx.beginPath();
-        ctx.rect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
-        ctx.fillStyle = d.Close >= d.Open ? 'green' : 'red';
-        ctx.strokeStyle = 'black'
-        ctx.fill();
-        ctx.stroke();
+      // Draw the open-close rectangle
+      ctx.beginPath();
+      ctx.rect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
+      ctx.fillStyle = d.Close >= d.Open ? 'gray' : 'gray';
+      ctx.strokeStyle = 'black'
+      ctx.fill();
+      ctx.stroke();
     });
 
-    
+    // Draw Current Fills
+    current_fills.forEach(fill => {
+      // Use fill.time instead of fill.timestamp
+      const fillTime = new Date(fill.time).getTime() / 1000; // Convert to seconds
+      const firstCandleTime = visibleData[0].Timestamp; // Already in seconds
+      const timeRange = visibleData[visibleData.length - 1].Timestamp - firstCandleTime;
 
-    if (window.selectedExchange && window.selectedExchange.Orders) {
-        window.selectedExchange.Orders.forEach(order => {
-                // console.log("\n-------------------------------\n");
-                // console.log("ORDER", order.ProductID)
-                // console.log("\n-------------------------------\n");
-            if (order.ProductID === window.selectedProduct.ProductID) {
-                // Convert order price to Y coordinate
-                const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-                
-                
-                // Draw the order line
-                ctx.beginPath();
-                ctx.moveTo(margin, orderY);
-                ctx.lineTo(width - margin, orderY);
-                ctx.strokeStyle = order.Side.toLowerCase() === 'buy' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
-                ctx.stroke();
+      // Calculate x position based on time
+      const xPosition = margin + ((fillTime - firstCandleTime) / timeRange) * (width - 2 * margin);
 
-                // Draw order details
-                ctx.fillStyle = 'white';
-                ctx.font = '12px Arial';
-                ctx.fillText(`${order.Side} ${order.Size} @ ${order.Price}`, width - 150, orderY - 5);
-            }
-        });
-    }
+      // Calculate y position based on price
+      const fillY = height - margin - ((fill.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+      // Draw dot for fill
+      ctx.beginPath();
+      ctx.arc(xPosition, fillY, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = fill.side.toLowerCase() === 'buy' ? 'lime' : 'red';
+      ctx.fill();
+
+      // Add hover detection for fills
+      canvas.addEventListener('mousemove', function (e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Check if mouse is near the fill dot
+        const distance = Math.sqrt(Math.pow(xPosition - mouseX, 2) + Math.pow(fillY - mouseY, 2));
+        if (distance < 8) {
+          // Draw tooltip
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+          ctx.fillRect(mouseX + 10, mouseY - 40, 120, 60);
+          ctx.fillStyle = 'white';
+          ctx.font = '12px Arial';
+          ctx.fillText(`Fill Price: ${fill.price}`, mouseX + 15, mouseY - 20);
+          ctx.fillText(`Size: ${fill.size}`, mouseX + 15, mouseY);
+        }
+      });
+    });
+
+
+    // Draw Current Orders
+    current_orders.forEach(order => {
+      // console.log("\n-------------------------------\n");
+      // console.log("ORDER", order.ProductID, order.Side )
+      // console.log("\n-------------------------------\n");
+      // Convert order price to Y coordinate
+      const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+
+      // Draw the order line
+      ctx.beginPath();
+      ctx.moveTo(margin, orderY);
+      ctx.lineTo(width - margin, orderY);
+      ctx.strokeStyle = order.Side.toLowerCase() === 'BUY' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+      ctx.stroke();
+
+      // Draw order details
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText(`${order.Side} ${order.Size} @ ${order.Price}`, width - 150, orderY - 5);
+    });
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
 
     // Return chart state
     return { ctx, width, height, margin, minPrice, maxPrice };
-}
+  }
 
   // Fix calculatePrice function
   function calculatePrice(y, height, margin, minPrice, maxPrice) {
@@ -187,7 +221,7 @@
     var price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
     ctx.fillStyle = 'white';
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
-}
+  }
 
 
   // Initial parameters for zoom and pan
@@ -219,33 +253,33 @@
   var canvas = document.getElementById('candlestickChart');
 
   // Update mousedown event to store price instead of coordinates
-  canvas.addEventListener('mousedown', function(event) {
+  canvas.addEventListener('mousedown', function (event) {
     var rect = canvas.getBoundingClientRect();
     mouseX = event.clientX - rect.left;
     mouseY = event.clientY - rect.top;
 
     if (currentTool) {
-        if (currentTool === 'line') {
-            const chartState = drawCandlestickChart(stockData, start, end);
-            const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-            draw_lines.push({
-                price: price
-            });
-            console.log("Draw_Lines", draw_lines);
-            drawCandlestickChart(stockData, start, end);
-        }
-        drawingStart = { x: mouseX, y: mouseY };
+      if (currentTool === 'line') {
+        const chartState = drawCandlestickChart(stockData, start, end);
+        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+        draw_lines.push({
+          price: price
+        });
+        console.log("Draw_Lines", draw_lines);
+        drawCandlestickChart(stockData, start, end);
+      }
+      drawingStart = { x: mouseX, y: mouseY };
     } else {
-        isDragging = true;
-        startX = event.clientX;
-        canvas.style.cursor = 'grabbing';
+      isDragging = true;
+      startX = event.clientX;
+      canvas.style.cursor = 'grabbing';
     }
-});
+  });
 
-// Fix the calculatePrice function
-function calculatePrice(y, height, margin, minPrice, maxPrice) {
+  // Fix the calculatePrice function
+  function calculatePrice(y, height, margin, minPrice, maxPrice) {
     return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
-}
+  }
 
   canvas.addEventListener('mouseup', function () {
     console.log("MouseUp")
