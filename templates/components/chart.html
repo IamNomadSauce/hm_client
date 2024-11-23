@@ -22,13 +22,29 @@
 </style>
 
 <script>
-  var stockData = {{.Candles}}; // Assuming .Candles contains the JSON data
+  var stockData = {{.Candles}}; 
+  var selectedProduct = {{.SelectedProduct}};
+  var exchange = {{.SelectedExchange}};
+  var selectedProduct = {{.SelectedProduct}};
+  var all_fills = exchange.Fills;
+  var all_orders = exchange.Orders;
+  var current_fills = all_fills.filter(product => product.productid === selectedProduct.product_id)
+  var current_orders= all_orders.filter(product => product.ProductID === selectedProduct.product_id)
   var mouseX = 0;
   var mouseY = 0;
   var currentTool = null
   var drawingStart = null
   var draw_boxes = []
   var draw_lines = []
+
+  console.log("Current Exchange", exchange)
+  console.log("Selected Product", selectedProduct)
+  console.log("Fills", all_fills)
+  console.log("Orders", all_orders)
+  console.log("Current Fills", current_fills)
+  console.log("Current Orders", current_orders)
+
+
 
   // Update drawToolbar function to use price values
   function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
@@ -87,8 +103,8 @@
 
     let exchange = "{{.SelectedExchange.Name}}"    
     let orders = "{{.SelectedExchange.Orders}}"
-    console.log("Product", "{{.SelectedProduct}}")
-    console.log("Orders", "{{.SelectedExchange.Orders}}")
+    // console.log("Product", "{{.SelectedProduct}}")
+    // console.log("Orders", "{{.SelectedExchange.Orders}}")
 
     // Draw each candlestick
     visibleData.forEach((d, i) => {
@@ -115,8 +131,12 @@
     });
 
     
+
     if (window.selectedExchange && window.selectedExchange.Orders) {
         window.selectedExchange.Orders.forEach(order => {
+                // console.log("\n-------------------------------\n");
+                // console.log("ORDER", order.ProductID)
+                // console.log("\n-------------------------------\n");
             if (order.ProductID === window.selectedProduct.ProductID) {
                 // Convert order price to Y coordinate
                 const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
