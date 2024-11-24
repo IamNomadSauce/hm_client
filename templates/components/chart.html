@@ -5,6 +5,14 @@
     <button id="box" class="btn btn-sm btn-secondary">Box</button>
   </div>
   <canvas id="candlestickChart"></canvas>
+  <div id="lineMenu" class="line-menu" style="display: none;">
+    <div class="line-menu-item" data-action="entry">Trade Entry</div>
+    <div class="line-menu-item" data-action="pt">Profit Target</div>
+    <div class="line-menu-item" data-action="stop">Stop Loss</div>
+    <div class="line-menu-item" data-action="alert">Alert</div>
+    <div class="line-menu-item" data-action="delete">Delete</div>
+  </div>
+
 </div>
 
 <style>
@@ -18,6 +26,28 @@
     width: 100% !important;
     height: 100% !important;
     cursor: grab;
+  }
+
+  .line-menu {
+    position: absolute;
+    background: #212529;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 5px 0;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  .line-menu-item {
+    padding: 8px 15px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .line-menu-item:hover {
+    background: #2c3034;
   }
 </style>
 
@@ -35,6 +65,9 @@
   var drawingStart = null
   var draw_boxes = []
   var draw_lines = []
+  var activeLineIndex = -1;
+
+
 
   console.log("Current Exchange", exchange)
   console.log("Selected Product", selectedProduct)
@@ -45,23 +78,24 @@
 
 
 
-  // Update drawToolbar function to use price values
   function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
-    draw_lines.forEach((line) => {
+    let activeLineIndex = -1;
+    draw_lines.forEach((line, index) => {
       // Convert price back to Y coordinate
       const y = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
       ctx.beginPath();
       ctx.moveTo(margin, y);
       ctx.lineTo(width - margin, y);
-      ctx.strokeStyle = 'yellow';
+      ctx.strokeStyle = line.color || 'yellow';
       ctx.stroke();
 
-      // Draw price label
+      // Draw price label with type if exists
       ctx.fillStyle = 'white';
       ctx.font = '12px Arial';
-      ctx.fillText(line.price.toFixed(2), width - 70, y - 5);
+      ctx.fillText(`${line.type ? line.type + ' - ' : ''}${line.price.toFixed(2)}`, width - 120, y - 5);
     });
+
 
     if (currentTool === 'line' && drawingStart) {
       ctx.beginPath();
@@ -104,6 +138,22 @@
     let orders = "{{.SelectedExchange.Orders}}"
     // console.log("Product", "{{.SelectedProduct}}")
     // console.log("Orders", "{{.SelectedExchange.Orders}}")
+
+    let isNearLine = false;
+    draw_lines.forEach((line, index) => {
+      const lineY = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      if (isMouseNearLine(mouseY, lineY)) {
+        console.log("Mouse Hover", line, mouseY)
+        canvas.style.cursor = 'pointer';
+        isNearLine = true;
+        activeLineIndex = index;
+      }
+    });
+
+    if (!isNearLine) {
+      canvas.style.cursor = 'default';
+      activeLineIndex = -1;
+    }
 
     // Draw each candlestick
     visibleData.forEach((d, i) => {
@@ -177,7 +227,6 @@
       // Convert order price to Y coordinate
       const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
-
       // Draw the order line
       ctx.beginPath();
       ctx.moveTo(margin, orderY);
@@ -195,7 +244,37 @@
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
 
     // Return chart state
-    return { ctx, width, height, margin, minPrice, maxPrice };
+    chartState = { ctx, width, height, margin, minPrice, maxPrice };
+    return chartState;
+  }
+
+  // Move these functions outside drawToolbar and fix typos
+  function isMouseNearLine(mouseY, lineY, threshold = 5) {
+    return Math.abs(mouseY - lineY) < threshold;
+  }
+
+  var chartState = null;
+
+  function showLineMenu(x, y) {
+    const menu = document.getElementById('lineMenu');
+    const line = draw_lines[activeLineIndex];
+
+    // Calculate line's Y position using stored chartState
+    if (chartState) {
+      const lineY = chartState.height - chartState.margin -
+        ((line.price - chartState.minPrice) /
+          (chartState.maxPrice - chartState.minPrice)) *
+        (chartState.height - 2 * chartState.margin);
+
+      menu.style.display = 'block';
+      menu.style.left = `${x}px`;
+      menu.style.top = `${lineY}px`;
+    }
+  }
+
+  function hideLineMenu() {
+    const menu = document.getElementById('lineMenu');
+    menu.style.display = 'none';
   }
 
   // Fix calculatePrice function
@@ -300,18 +379,22 @@
   });
 
   canvas.addEventListener('click', function (event) {
-    console.log("Click Event")
-    mouseX = event.clientX
-    mouseY = event.clientY
-    //calculatePrice(mouseY, height, margin, minPrice, maxPrice)
-    console.log(mouseX, mouseY)
-    console.log("click_end")
-  })
+    if (activeLineIndex >= 0) {
+      showLineMenu(event.pageX, event.pageY);
+      console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
+      if (draw_lines[activeLineIndex].type) {
+        console.log("Line type:", draw_lines[activeLineIndex].type);
+      }
+    }
+  });
+
+
 
   canvas.addEventListener('mousemove', function (event) {
     var rect = canvas.getBoundingClientRect();
     mouseX = event.clientX - rect.left;
     mouseY = event.clientY - rect.top;
+
 
     if (isDragging) {
       var dx = event.clientX - startX;
@@ -343,9 +426,61 @@
     }
   })
   document.getElementById('box').addEventListener('click', function () {
-    console.log("Box Selected")
-    currentTool = 'box'
+    if (currentTool == 'line' || currentTool == 'box') {
+      currentTool = null
+    }
+    else {
+      console.log("Box Selected")
+      currentTool = 'box'
+    }
   })
+
+  // Add this after your existing event listeners
+  document.querySelectorAll('.line-menu-item').forEach(item => {
+    item.addEventListener('click', function (e) {
+      const action = this.dataset.action;
+      const line = draw_lines[activeLineIndex];
+
+      switch (action) {
+        case 'entry':
+          line.type = 'entry';
+          line.color = '#00ff00';
+          console.log("Entry line at price:", line.price);
+          break;
+        case 'fill':
+          line.type = 'pt';
+          line.color = '#ffff00';
+          console.log("Fill line at price:", line.price);
+          break;
+        case 'stop':
+          line.type = 'stop';
+          line.color = '#ff0000';
+          console.log("Stop loss at price:", line.price);
+          break;
+        case 'alert':
+          line.type = 'alert';
+          line.color = '#0088ff';
+          console.log("Alert at price:", line.price);
+          break;
+        case 'delete':
+          draw_lines.splice(activeLineIndex, 1);
+          console.log("Line deleted at price:", line.price);
+          break;
+      }
+
+      hideLineMenu();
+      drawCandlestickChart(stockData, start, end);
+    });
+  });
+
+
+  // Add click outside handler
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#lineMenu') && !e.target.closest('#candlestickChart')) {
+      hideLineMenu();
+    }
+  });
+
   drawCandlestickChart(stockData, start, end);
 
 </script>
