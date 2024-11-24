@@ -45,6 +45,7 @@ type Product struct {
 
 type Asset struct {
 	ID               int     `json:"id"`
+	Balance          float64 `json:"balance"`
 	Asset            string  `json:"asset"`
 	AvailableBalance Balance `json:"available_balance"`
 	Hold             Balance `json:"hold_balance`

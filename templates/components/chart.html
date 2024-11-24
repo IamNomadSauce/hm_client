@@ -143,7 +143,7 @@
     draw_lines.forEach((line, index) => {
       const lineY = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
       if (isMouseNearLine(mouseY, lineY)) {
-        console.log("Mouse Hover", line, mouseY)
+        // console.log("Mouse Hover", line, mouseY)
         canvas.style.cursor = 'pointer';
         isNearLine = true;
         activeLineIndex = index;

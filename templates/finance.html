@@ -209,6 +209,7 @@
             <thead>
               <tr>
                 <th>Asset</th>
+                <th>Balance</th>
                 <th>USD Value</th>
                 <th>On-Hold</th>
               </tr>
@@ -217,6 +218,7 @@
               {{range .SelectedExchange.Portfolio}}
               <tr>
                 <td>{{.Asset}}</td>
+                <td>{{.AvailableBalance.Value}}</td>
                 <td>${{printf "%.2f" .Value}}</td>
                 <td>{{.Hold.Value}}</td>
               </tr>
