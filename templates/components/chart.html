@@ -231,7 +231,7 @@
       ctx.beginPath();
       ctx.moveTo(margin, orderY);
       ctx.lineTo(width - margin, orderY);
-      ctx.strokeStyle = order.Side.toLowerCase() === 'BUY' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
+      ctx.strokeStyle = order.Side.toLowerCase() === 'buy' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
       ctx.stroke();
 
       // Draw order details
