@@ -87,7 +87,7 @@ type Fill struct {
 	Size           float64 `db:"size" json:"size,string,omitempty"`
 	Side           string  `db:"side" json:"side"`
 	Commission     float64 `db:"commission" json:"commission,string,omitempty"`
-	ProductID      string  `db:"product_id" json:"productid"`
+	ProductID      string  `db:"product_id" json:"product_id"`
 	XchID          int     `db:"xch_id" json:"xch_id"`
 	MarketCategory string  `db:"market_category" json:"marketcategory"`
 }

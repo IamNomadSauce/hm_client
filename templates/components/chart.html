@@ -57,7 +57,7 @@
   var exchange = {{.SelectedExchange }};
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
-  var current_fills = all_fills.filter(product => product.productid === selectedProduct.product_id)
+  var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
   var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
   var mouseX = 0;
   var mouseY = 0;
@@ -70,8 +70,11 @@
 
 
   console.log("Current Exchange", exchange)
-  console.log("Selected Product", selectedProduct)
+  console.log("Selected Product", selectedProduct.product_id)
   console.log("Fills", all_fills)
+  // all_fills.forEach((fill)=> {
+  //   console.log(fill.product_id, selectedProduct.product_id, fill.product_id == selectedProduct.product_id)
+  // })
   console.log("Orders", all_orders)
   console.log("Current Fills", current_fills)
   console.log("Current Orders", current_orders)
