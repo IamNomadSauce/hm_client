@@ -302,7 +302,7 @@
     ctx.stroke();
 
     // Calculate price - fixed formula to match the candlestick scaling
-    var pr/lineice = minPrice + ((height - margin - mouseY) /(height - 2 * margin)) * (maxPrice - minPrice);
+    var price = minPrice + ((height - margin - mouseY) /(height - 2 * margin)) * (maxPrice - minPrice);
     ctx.fillStyle = 'white';
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
   }
