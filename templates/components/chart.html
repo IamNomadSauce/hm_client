@@ -302,7 +302,7 @@
     ctx.stroke();
 
     // Calculate price - fixed formula to match the candlestick scaling
-    var price = minPrice + ((height - margin - mouseY) /(height - 2 * margin)) * (maxPrice - minPrice);
+    var price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
     ctx.fillStyle = 'white';
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
   }
@@ -384,7 +384,7 @@
   });
 
   canvas.addEventListener('click', function (event) {
-    if (activeLineIndex >= 0) {
+    if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
       showLineMenu(event.pageX, event.pageY);
       console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
       if (draw_lines[activeLineIndex].type) {
@@ -392,6 +392,7 @@
       }
     }
   });
+
 
 
 
@@ -444,50 +445,43 @@
   document.querySelectorAll('.line-menu-item').forEach(item => {
     item.addEventListener('click', function (e) {
       const action = this.dataset.action;
-      const line = draw_lines[activeLineIndex];
+      if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
+        const line = draw_lines[activeLineIndex];
 
-      switch (action) {
-        case 'entry':
-          line.type = 'entry';
-          line.color = '#00ff00';
-          console.log("Entry line at price:", line.price);
-          // Store entry price for potential trade group
-          window.currentTrade = {
-            entry: line.price,
-            productId: selectedProduct.product_id
-          };
-          break;
+        switch (action) {
+          case 'entry':
+            line.type = 'entry';
+            line.color = '#00ff00';
+            console.log("Entry line at price:", line.price);
+            window.currentTrade = {
+              entry: line.price,
+              productId: selectedProduct.product_id
+            };
+            break;
 
-        case 'pt':
-          line.type = 'pt';
-          line.color = '#ffff00';
-          console.log("Profit target at price:", line.price);
-          if (window.currentTrade && window.currentTrade.entry) {
-            window.currentTrade.target = line.price;
-          }
-          break;
+          case 'pt':
+            line.type = 'pt';
+            line.color = '#ffff00';
+            console.log("Profit target at price:", line.price);
+            if (window.currentTrade && window.currentTrade.entry) {
+              window.currentTrade.target = line.price;
+            }
+            break;
 
-        case 'stop':
-          line.type = 'stop';
-          line.color = '#ff0000';
-          console.log("Stop loss at price:", line.price);
-          if (window.currentTrade && window.currentTrade.entry) {
-            window.currentTrade.stop = line.price;
-          }
-          // If we have all components, create trade
-          if (window.currentTrade &&
-            window.currentTrade.entry &&
-            window.currentTrade.target &&
-            window.currentTrade.stop) {
-            createTradeGroup(window.currentTrade);
-            window.currentTrade = null;
-          }
-          break;
+          case 'stop':
+            line.type = 'stop';
+            line.color = '#ff0000';
+            console.log("Stop loss at price:", line.price);
+            if (window.currentTrade && window.currentTrade.entry) {
+              window.currentTrade.stop = line.price;
+            }
+            break;
 
-        case 'delete':
-          draw_lines.splice(activeLineIndex, 1);
-          console.log("Line deleted at price:", line.price);
-          break;
+          case 'delete':
+            draw_lines.splice(activeLineIndex, 1);
+            console.log("Line deleted at price:", line.price);
+            break;
+        }
       }
 
       hideLineMenu();
@@ -495,13 +489,14 @@
     });
   });
 
+
   function createTradeGroup(trade) {
     const side = trade.targe > trade.entry ? 'BUY' : 'SELL';
     const riskAmount = Math.abs(trade.entry - trade.stop);
-    const rewardAmount = math.abs(trade.target - trade.entry);
+    const rewardAmount = Math.abs(trade.target - trade.entry);
     const riskRewardRatio = (rewardAmount / riskAmount).toFixed(2);
 
-    const tradaeData = {
+    const tradeData = {
       product_id: trade.productID,
       side: side,
       entry_price: trade.entry,
