@@ -57,6 +57,8 @@
   var exchange = {{.SelectedExchange }};
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
+  var all_trades = exchange.Trades;
+
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
   var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
   var mouseX = 0;
@@ -300,7 +302,7 @@
     ctx.stroke();
 
     // Calculate price - fixed formula to match the candlestick scaling
-    var price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
+    var pr/lineice = minPrice + ((height - margin - mouseY) /(height - 2 * margin)) * (maxPrice - minPrice);
     ctx.fillStyle = 'white';
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
   }
@@ -449,22 +451,39 @@
           line.type = 'entry';
           line.color = '#00ff00';
           console.log("Entry line at price:", line.price);
+          // Store entry price for potential trade group
+          window.currentTrade = {
+            entry: line.price,
+            productId: selectedProduct.product_id
+          };
           break;
-        case 'fill':
+
+        case 'pt':
           line.type = 'pt';
           line.color = '#ffff00';
-          console.log("Fill line at price:", line.price);
+          console.log("Profit target at price:", line.price);
+          if (window.currentTrade && window.currentTrade.entry) {
+            window.currentTrade.target = line.price;
+          }
           break;
+
         case 'stop':
           line.type = 'stop';
           line.color = '#ff0000';
           console.log("Stop loss at price:", line.price);
+          if (window.currentTrade && window.currentTrade.entry) {
+            window.currentTrade.stop = line.price;
+          }
+          // If we have all components, create trade
+          if (window.currentTrade &&
+            window.currentTrade.entry &&
+            window.currentTrade.target &&
+            window.currentTrade.stop) {
+            createTradeGroup(window.currentTrade);
+            window.currentTrade = null;
+          }
           break;
-        case 'alert':
-          line.type = 'alert';
-          line.color = '#0088ff';
-          console.log("Alert at price:", line.price);
-          break;
+
         case 'delete':
           draw_lines.splice(activeLineIndex, 1);
           console.log("Line deleted at price:", line.price);
@@ -475,6 +494,37 @@
       drawCandlestickChart(stockData, start, end);
     });
   });
+
+  function createTradeGroup(trade) {
+    const side = trade.targe > trade.entry ? 'BUY' : 'SELL';
+    const riskAmount = Math.abs(trade.entry - trade.stop);
+    const rewardAmount = math.abs(trade.target - trade.entry);
+    const riskRewardRatio = (rewardAmount / riskAmount).toFixed(2);
+
+    const tradaeData = {
+      product_id: trade.productID,
+      side: side,
+      entry_price: trade.entry,
+      stop_price: trade.stop,
+      target_price: trade.target,
+      risk_reward: riskRewardRatio
+    };
+
+    fetch('/bracket-order', {
+      methhod: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(tradeData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Trade group created: ', data)
+      })
+      .catch(error => {
+        console.error('Error creating trade: ', error)
+      });
+  }
 
 
   // Add click outside handler
