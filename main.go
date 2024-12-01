@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"hm_client/api"
 	"hm_client/model"
@@ -24,6 +25,7 @@ func main() {
 	http.HandleFunc("/finance", financeHandler)
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
+	http.HandleFunc("/bracket-order", bracketOrderHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -54,6 +56,44 @@ func main() {
 	}
 
 	fmt.Println("Received Data:", string(body))
+}
+
+func bracketOrderHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Bracket Order Handler")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var bracketOrder model.BracketOrder
+	if err := json.NewDecoder(r.Body).Decode(&bracketOrder); err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Creating bracket order: %+v", bracketOrder)
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	url := os.Getenv("URL")
+
+	err = api.CreateBracketOrder(url, bracketOrder)
+	if err != nil {
+		log.Printf("Error creating bracket order: %v", err)
+		http.Error(w, "Failed to create bracket order", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Bracket order created successfully",
+	})
 }
 
 func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {

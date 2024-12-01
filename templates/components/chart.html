@@ -11,6 +11,7 @@
     <div class="line-menu-item" data-action="stop">Stop Loss</div>
     <div class="line-menu-item" data-action="alert">Alert</div>
     <div class="line-menu-item" data-action="delete">Delete</div>
+    <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
   </div>
 
 </div>
@@ -48,6 +49,18 @@
 
   .line-menu-item:hover {
     background: #2c3034;
+  }
+
+  .create-trade-btn {
+    background-color: #198754;
+    color: white;
+    font-weight: bold;
+    border-top: 1px solid #444;
+    margin-top: 5px;
+  }
+
+  .create-trade-btn:hover {
+    background-color: #157347;
   }
 </style>
 
@@ -481,6 +494,27 @@
             draw_lines.splice(activeLineIndex, 1);
             console.log("Line deleted at price:", line.price);
             break;
+
+          case 'create':
+            const entryLine = draw_lines.find(line => line.type === 'entry')
+            const stopLine = draw_lines.find(line => line.type === 'stop')
+            const targetLine = draw_lines.find(line => line.type === 'pt')
+
+            if (!entryLine || !stopLine || !targetLine) {
+              alert('Please set entry, stop loss, and profit target levels before creating trade')
+              return
+            }
+
+            const tradeSetup = {
+              entry: entryLine.price,
+              size: 500,
+              stop: stopLine.price,
+              target: targetLine.price,
+              productId: selectedProduct.product_id
+            }
+            createTradeGroup(tradeSetup)
+            console.log("Trade group created", tradeSetup)
+            break;
         }
       }
 
@@ -491,22 +525,24 @@
 
 
   function createTradeGroup(trade) {
-    const side = trade.targe > trade.entry ? 'BUY' : 'SELL';
+    const side = trade.target > trade.entry ? 'BUY' : 'SELL';
     const riskAmount = Math.abs(trade.entry - trade.stop);
     const rewardAmount = Math.abs(trade.target - trade.entry);
-    const riskRewardRatio = (rewardAmount / riskAmount).toFixed(2);
+    const riskRewardRatio = parseFloat((rewardAmount / riskAmount).toFixed(2));
 
     const tradeData = {
-      product_id: trade.productID,
+      product_id: trade.productId,
       side: side,
-      entry_price: trade.entry,
-      stop_price: trade.stop,
-      target_price: trade.target,
-      risk_reward: riskRewardRatio
+      size: parseFloat(trade.size || "0"),
+      entry_price: parseFloat(trade.entry),
+      stop_price: parseFloat(trade.stop),
+      target_price: parseFloat(trade.target),
+      risk_reward: riskRewardRatio,
+      xch_id: exchange.ID
     };
 
     fetch('/bracket-order', {
-      methhod: 'POST',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
@@ -514,13 +550,12 @@
     })
       .then(response => response.json())
       .then(data => {
-        console.log('Trade group created: ', data)
+        console.log('Trade group created:', data);
       })
       .catch(error => {
-        console.error('Error creating trade: ', error)
+        console.error('Error creating trade:', error);
       });
   }
-
 
   // Add click outside handler
   document.addEventListener('click', function (e) {

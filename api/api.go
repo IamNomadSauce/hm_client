@@ -58,6 +58,43 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	return exchanges, nil
 }
 
+func CreateBracketOrder(baseURL string, order model.BracketOrder) error {
+	log.Printf("API:CreateBracketOrder\n%+v", order)
+	url := baseURL + "/bracket-trade"
+
+	jsonData, err := json.Marshal(order)
+	if err != nil {
+		return fmt.Errorf("Error marshaling request payload: %v", err)
+	}
+	log.Printf("Sending paylload: %s", string(jsonData))
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("Error creating request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Error sending request: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Error reading response body: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 func AddToWatchlist(baseURL string, exchangeID int, productID string) error {
 	log.Printf("API:AddToWatchlist\n%s\n%s", exchangeID, productID)
 	url := baseURL + "/add-to-watchlist"
