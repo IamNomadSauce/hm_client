@@ -99,12 +99,12 @@ type Trade struct {
 }
 
 type BracketOrder struct {
-	ProductID   string  `json:"product_id"`
-	Side        string  `json:"side"`
-	Size        float64 `json:"size"`
-	EntryPrice  float64 `json:"entry_price"`
-	StopPrice   float64 `json:"stop_price"`
-	TargetPrice float64 `json:"target_price"`
-	RiskReward  float64 `json:"risk_reward"`
-	XchID       int     `json:"xch_id"`
+	ProductID     string    `json:"product_id"`
+	Side          string    `json:"side"`
+	Size          float64   `json:"size"`
+	EntryPrice    float64   `json:"entry_price"`
+	StopPrice     float64   `json:"stop_price"`
+	ProfitTargets []float64 `json:"profit_targets"`
+	RiskReward    float64   `json:"risk_reward"`
+	XchID         int       `json:"xch_id"`
 }

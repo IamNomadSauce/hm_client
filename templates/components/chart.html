@@ -530,13 +530,16 @@
     const rewardAmount = Math.abs(trade.target - trade.entry);
     const riskRewardRatio = parseFloat((rewardAmount / riskAmount).toFixed(2));
 
+    const ptLines = draw_lines.filter(line => line.type ==="pt");
+    const profitTargets = ptLines.map(line => parseFloat(line.price))
+
     const tradeData = {
       product_id: trade.productId,
       side: side,
       size: parseFloat(trade.size || "0"),
       entry_price: parseFloat(trade.entry),
       stop_price: parseFloat(trade.stop),
-      target_price: parseFloat(trade.target),
+      profit_targets: profitTargets,
       risk_reward: riskRewardRatio,
       xch_id: exchange.ID
     };
