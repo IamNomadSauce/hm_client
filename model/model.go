@@ -98,7 +98,7 @@ type Trade struct {
 	ProfitTarget []float64
 }
 
-type BracketOrder struct {
+type TradeGroup struct {
 	ProductID     string    `json:"product_id"`
 	Side          string    `json:"side"`
 	Size          float64   `json:"size"`

@@ -58,9 +58,9 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	return exchanges, nil
 }
 
-func CreateBracketOrder(baseURL string, order model.BracketOrder) error {
-	log.Printf("API:CreateBracketOrder\n%+v", order)
-	url := baseURL + "/bracket-trade"
+func CreateTradeGroup(baseURL string, order model.TradeGroup) error {
+	log.Printf("API:CreateTradeGroup\n%+v", order)
+	url := baseURL + "/new_trade_group"
 
 	jsonData, err := json.Marshal(order)
 	if err != nil {

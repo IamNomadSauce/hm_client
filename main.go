@@ -25,7 +25,7 @@ func main() {
 	http.HandleFunc("/finance", financeHandler)
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
-	http.HandleFunc("/bracket-order", bracketOrderHandler)
+	http.HandleFunc("/bracket-order", TradeGroupHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -58,7 +58,7 @@ func main() {
 	fmt.Println("Received Data:", string(body))
 }
 
-func bracketOrderHandler(w http.ResponseWriter, r *http.Request) {
+func TradeGroupHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Bracket Order Handler")
 
 	if r.Method != http.MethodPost {
@@ -66,14 +66,14 @@ func bracketOrderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var bracketOrder model.BracketOrder
-	if err := json.NewDecoder(r.Body).Decode(&bracketOrder); err != nil {
+	var TradeGroup model.TradeGroup
+	if err := json.NewDecoder(r.Body).Decode(&TradeGroup); err != nil {
 		log.Printf("Error decoding request body: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Creating bracket order: %+v", bracketOrder)
+	log.Printf("Creating bracket order: %+v", TradeGroup)
 
 	err := godotenv.Load()
 	if err != nil {
@@ -82,7 +82,7 @@ func bracketOrderHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := os.Getenv("URL")
 
-	err = api.CreateBracketOrder(url, bracketOrder)
+	err = api.CreateTradeGroup(url, TradeGroup)
 	if err != nil {
 		log.Printf("Error creating bracket order: %v", err)
 		http.Error(w, "Failed to create bracket order", http.StatusInternalServerError)
