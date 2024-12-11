@@ -58,7 +58,7 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	return exchanges, nil
 }
 
-func CreateTradeGroup(baseURL string, order model.TradeGroup) error {
+func CreateTradeGroup(baseURL string, order model.TradeBlock) error {
 	log.Printf("API:CreateTradeGroup\n%+v", order)
 	url := baseURL + "/new_trade_group"
 

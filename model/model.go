@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // Structs (temporary)
 type Candle struct {
 	Timestamp int64
@@ -28,6 +30,7 @@ type Exchange struct {
 	CandleLimit       int64
 	AvailableProducts []Product
 	Portfolio         []Asset
+	Trades            []Trade
 }
 
 type Product struct {
@@ -93,13 +96,29 @@ type Fill struct {
 }
 
 type Trade struct {
-	Entry        float64
-	StopLoss     float64
-	ProfitTarget []float64
+	ID           int       `json:"id"`
+	GroupID      string    `json:"group_id"`
+	ProductID    string    `json:"product_id"`
+	Side         string    `json:"side"`
+	StopPrice    float64   `json:"stop_price"`
+	EntryPrice   float64   `json:"entry_price"`
+	PTPrice      float64   `json:"pt_price"`
+	Size         float64   `json:"size"`
+	StopOrderID  string    `json:"stop_order_id"`
+	EntryOrderID string    `json:"entry_order_id"`
+	PTOrderID    string    `json:"pt_order_id"`
+	StopStatus   string    `json:"stop_status"`
+	EntryStatus  string    `json:"entry_status"`
+	PTStatus     string    `json:"pt_status"`
+	PTAmount     int       `json:"pt_amount"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	XchID        int       `json:"xch_id"`
 }
 
-type TradeGroup struct {
+type TradeBlock struct {
 	ProductID     string    `json:"product_id"`
+	GroupID       string    `json:"group_id"`
 	Side          string    `json:"side"`
 	Size          float64   `json:"size"`
 	EntryPrice    float64   `json:"entry_price"`

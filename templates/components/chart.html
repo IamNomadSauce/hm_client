@@ -74,6 +74,7 @@
 
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
   var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
+  var current_trades = all_trades.filter(trade => trade.product_id === selectedProduct.product_id)
   var mouseX = 0;
   var mouseY = 0;
   var currentTool = null
@@ -93,6 +94,8 @@
   console.log("Orders", all_orders)
   console.log("Current Fills", current_fills)
   console.log("Current Orders", current_orders)
+  console.log("All Trades", all_trades)
+  // console.log("Current Trades", current_trades)
 
 
 
@@ -251,12 +254,53 @@
       ctx.lineTo(width - margin, orderY);
       ctx.strokeStyle = order.Side.toLowerCase() === 'buy' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
       ctx.stroke();
+    });
+
+    current_trades.forEach(trade => {
+      // console.log("Current Trade:", trade)
+
+      // entry
+      // ------------------------------------------------------------------------------------
+      const entryY = height - margin - ((trade.entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      ctx.beginPath();
+      ctx.moveTo(margin, entryY);
+      ctx.lineTo(width - margin, entryY);
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+      ctx.stroke();
 
       // Draw order details
       ctx.fillStyle = 'white';
       ctx.font = '12px Arial';
-      ctx.fillText(`${order.Side} ${order.Size} @ ${order.Price}`, width - 150, orderY - 5);
-    });
+      ctx.fillText(`${trade.side} ${trade.size} @ ${trade.entry_price}`, width - 150, entryY - 5);
+
+      // stoploss
+      // ------------------------------------------------------------------------------------
+      const stopY = height - margin - ((trade.stop_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      ctx.beginPath();
+      ctx.moveTo(margin, stopY);
+      ctx.lineTo(width - margin, stopY);
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+      ctx.stroke();
+
+      // Draw order details
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText(`SL @ ${trade.stop_price}`, width - 150, stopY - 5);
+
+      // profit target
+      // ------------------------------------------------------------------------------------
+      const ptY = height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      ctx.beginPath();
+      ctx.moveTo(margin, ptY);
+      ctx.lineTo(width - margin, ptY);
+      ctx.strokeStyle = 'rgba(255, 175, 0, 0.8)';
+      ctx.stroke();
+
+      // Draw order details
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText(`PT @ ${trade.pt_price}`, width - 150, ptY - 5);
+    })
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);

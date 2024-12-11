@@ -66,7 +66,7 @@ func TradeGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var TradeGroup model.TradeGroup
+	var TradeGroup model.TradeBlock
 	if err := json.NewDecoder(r.Body).Decode(&TradeGroup); err != nil {
 		log.Printf("Error decoding request body: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
