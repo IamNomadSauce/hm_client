@@ -62,6 +62,20 @@
   .create-trade-btn:hover {
     background-color: #157347;
   }
+
+  .trade-menu {
+    position: absolute;
+    background: rgba(33, 37, 41, 0.95);
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 10px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    color: white;
+    font-size: 12px;
+    pointer-events: none;
+    max-width: 250px;
+  }
 </style>
 
 <script>
@@ -256,51 +270,82 @@
       ctx.stroke();
     });
 
+    let tradeGroups = {};
     current_trades.forEach(trade => {
-      // console.log("Current Trade:", trade)
+      if (!tradeGroups[trade.group_id]) {
+        tradeGroups[trade.group_id] = [];
+      }
+      tradeGroups[trade.group_id].push(trade);
+    });
 
-      // entry
-      // ------------------------------------------------------------------------------------
-      const entryY = height - margin - ((trade.entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-      ctx.beginPath();
-      ctx.moveTo(margin, entryY);
-      ctx.lineTo(width - margin, entryY);
-      ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-      ctx.stroke();
+    Object.values(tradeGroups).forEach(trades => {
+      trades.forEach(trade => {
+        // Draw entry line
+        const entryY = height - margin - ((trade.entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(margin, entryY);
+        ctx.lineTo(width - margin, entryY);
+        ctx.strokeStyle = trade.entry_status === 'FILLED' ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.5)';
+        ctx.stroke();
 
-      // Draw order details
-      ctx.fillStyle = 'white';
-      ctx.font = '12px Arial';
-      ctx.fillText(`${trade.side} ${trade.size} @ ${trade.entry_price}`, width - 150, entryY - 5);
+        // Draw stop loss line
+        const stopY = height - margin - ((trade.stop_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(margin, stopY);
+        ctx.lineTo(width - margin, stopY);
+        ctx.strokeStyle = trade.stop_status === 'FILLED' ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 0, 0, 0.5)';
+        ctx.stroke();
 
-      // stoploss
-      // ------------------------------------------------------------------------------------
-      const stopY = height - margin - ((trade.stop_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-      ctx.beginPath();
-      ctx.moveTo(margin, stopY);
-      ctx.lineTo(width - margin, stopY);
-      ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
-      ctx.stroke();
+        // Draw profit target line
+        const ptY = height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(margin, ptY);
+        ctx.lineTo(width - margin, ptY);
+        ctx.strokeStyle = trade.pt_status === 'FILLED' ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 255, 0, 0.5)';
+        ctx.stroke();
 
-      // Draw order details
-      ctx.fillStyle = 'white';
-      ctx.font = '12px Arial';
-      ctx.fillText(`SL @ ${trade.stop_price}`, width - 150, stopY - 5);
+        canvas.addEventListener('mousemove', function (e) {
+          const rect = canvas.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
 
-      // profit target
-      // ------------------------------------------------------------------------------------
-      const ptY = height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-      ctx.beginPath();
-      ctx.moveTo(margin, ptY);
-      ctx.lineTo(width - margin, ptY);
-      ctx.strokeStyle = 'rgba(255, 175, 0, 0.8)';
-      ctx.stroke();
+          // Remove any existing menus
+          document.querySelectorAll('.trade-menu').forEach(el => el.remove());
 
-      // Draw order details
-      ctx.fillStyle = 'white';
-      ctx.font = '12px Arial';
-      ctx.fillText(`PT @ ${trade.pt_price}`, width - 150, ptY - 5);
-    })
+          if (isMouseNearLine(mouseY, entryY) ||
+            isMouseNearLine(mouseY, stopY) ||
+            isMouseNearLine(mouseY, ptY)) {
+
+            const menu = document.createElement('div');
+            menu.className = 'trade-menu';
+            menu.style.left = `${e.pageX + 10}px`;
+            menu.style.top = `${e.pageY + 10}px`;
+
+            const groupTrades = tradeGroups[trade.group_id];
+            menu.innerHTML = `
+                    <div><strong>Trade Group ${trade.group_id}</strong></div>
+                    <div>Side: ${trade.side}</div>
+                    <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
+                    <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
+                    <div>Size: ${trade.size}</div>
+                    <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
+                    <div>Targets:</div>
+                    ${groupTrades.map(t => `
+                        <div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})</div>
+                    `).join('')}
+                `;
+
+            document.body.appendChild(menu);
+          }
+        });
+      });
+    });
+
+    // Add mouseleave handler to remove menus
+    canvas.addEventListener('mouseleave', function () {
+      document.querySelectorAll('.trade-menu').forEach(el => el.remove());
+    });
+
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
@@ -574,7 +619,7 @@
     const rewardAmount = Math.abs(trade.target - trade.entry);
     const riskRewardRatio = parseFloat((rewardAmount / riskAmount).toFixed(2));
 
-    const ptLines = draw_lines.filter(line => line.type ==="pt");
+    const ptLines = draw_lines.filter(line => line.type === "pt");
     const profitTargets = ptLines.map(line => parseFloat(line.price))
 
     const tradeData = {
