@@ -279,6 +279,35 @@
     });
 
     Object.values(tradeGroups).forEach(trades => {
+      // Draw group background/border
+      const entryY = height - margin - ((trades[0].entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      const stopY = height - margin - ((trades[0].stop_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+      const ptYs = trades.map(trade => height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin));
+
+      // Draw connecting lines between targets
+      ctx.beginPath();
+      ctx.setLineDash([5, 5]); // Create dashed line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ptYs.forEach((ptY, i) => {
+        if (i > 0) {
+          ctx.moveTo(margin, ptYs[i - 1]);
+          ctx.lineTo(width - margin, ptY);
+        }
+      });
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset line style
+
+      // Draw R:R for each target
+      trades.forEach((trade, i) => {
+        const ptY = ptYs[i];
+        const riskAmount = Math.abs(trade.entry_price - trade.stop_price);
+        const rewardAmount = Math.abs(trade.pt_price - trade.entry_price);
+        const rr = (rewardAmount / riskAmount).toFixed(2);
+
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.fillText(`R:R ${rr}`, width - 80, ptY - 5);
+      });
       trades.forEach(trade => {
         // Draw entry line
         const entryY = height - margin - ((trade.entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
@@ -323,17 +352,22 @@
 
             const groupTrades = tradeGroups[trade.group_id];
             menu.innerHTML = `
-                    <div><strong>Trade Group ${trade.group_id}</strong></div>
-                    <div>Side: ${trade.side}</div>
-                    <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
-                    <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
-                    <div>Size: ${trade.size}</div>
-                    <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
-                    <div>Targets:</div>
-                    ${groupTrades.map(t => `
-                        <div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})</div>
-                    `).join('')}
-                `;
+    <div><strong>Trade Group ${trade.group_id}</strong></div>
+    <div>Side: ${trade.side}</div>
+    <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
+    <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
+    <div>Size: ${trade.size}</div>
+    <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
+    <div>Targets:</div>
+    ${groupTrades.map(t => {
+              const rr = ((Math.abs(t.pt_price - t.entry_price)) /
+                (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
+              return `
+            <div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
+            <span style="color: #ffff00"> R:R ${rr}</span></div>
+        `;
+            }).join('')}
+`;
 
             document.body.appendChild(menu);
           }
