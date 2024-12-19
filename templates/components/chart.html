@@ -76,6 +76,27 @@
     pointer-events: none;
     max-width: 250px;
   }
+
+  .order-menu {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 10px;
+    border-radius: 4px;
+    pointer-events: auto;
+  }
+
+  .cancel-button {
+    margin-top: 5px;
+    padding: 5px;
+    background: #ff4444;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+
+  .cancel-button:hover {
+    background: #ff6666;
+  }
 </style>
 
 <script>
@@ -256,10 +277,6 @@
 
     // Draw Current Orders
     current_orders.forEach(order => {
-      // console.log("\n-------------------------------\n");
-      // console.log("ORDER", order.ProductID, order.Side )
-      // console.log("\n-------------------------------\n");
-      // Convert order price to Y coordinate
       const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
       // Draw the order line
@@ -268,7 +285,56 @@
       ctx.lineTo(width - margin, orderY);
       ctx.strokeStyle = order.Side.toLowerCase() === 'buy' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
       ctx.stroke();
+
+      // Create a hit zone for the order line
+      ctx.beginPath();
+      ctx.rect(margin, orderY - 5, width - 2 * margin, 10);
+
+      // Add hover detection
+      let menuVisible = false;
+      canvas.addEventListener('mousemove', function (e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseY = e.clientY - rect.top;
+
+        if (Math.abs(mouseY - orderY) < 5) {
+          if (!menuVisible) {
+            // Remove any existing menus
+            document.querySelectorAll('.order-menu').forEach(el => el.remove());
+
+            const menu = document.createElement('div');
+            menu.className = 'order-menu';
+            menu.style.position = 'absolute';
+            menu.style.left = `${e.pageX}px`;
+            menu.style.top = `${e.pageY}px`;
+            menu.style.zIndex = '1000';
+
+            menu.innerHTML = `
+                    <div><strong>Order Details</strong></div>
+                    <div>Side: ${order.Side}</div>
+                    <div>Product: ${order.ProductID}</div>
+                    <div>Price: ${order.Price}</div>
+                    <div>Size: ${order.Size}</div>
+                    <div>Status: ${order.Status}</div>
+                    <div class="cancel-button" onclick="cancelOrder('${order.OrderID}')">Cancel Order</div>
+                `;
+
+            // Add hover handlers to the menu
+            menu.addEventListener('mouseenter', () => {
+              menuVisible = true;
+            });
+
+            menu.addEventListener('mouseleave', () => {
+              menuVisible = false;
+              menu.remove();
+            });
+
+            document.body.appendChild(menu);
+            menuVisible = true;
+          }
+        }
+      });
     });
+
 
     let tradeGroups = {};
     current_trades.forEach(trade => {
@@ -411,6 +477,27 @@
       menu.style.left = `${x}px`;
       menu.style.top = `${lineY}px`;
     }
+  }
+
+  function cancelOrder(orderID) {
+    fetch('/cancel-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        order_id: orderID
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Order cancelled:', data);
+        // Refresh the chart
+        drawCandlestickChart(stockData, start, end);
+      })
+      .catch(error => {
+        console.error('Error cancelling order:', error);
+      });
   }
 
   function hideLineMenu() {
