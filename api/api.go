@@ -58,6 +58,42 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	return exchanges, nil
 }
 
+func CreateAlert(baseURL string, alert model.Alert) error {
+	log.Printf("API:CreateAlert\n%+v", alert)
+	url := baseURL + "/create-alert"
+
+	jsonData, err := json.Marshal(alert)
+	if err != nil {
+		return fmt.Errorf("Error marshaling request payload: %v", err)
+	}
+	log.Printf("Sending payload: %s", string(jsonData))
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("Error creating request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("Error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Error reading response body: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("Unexpected status Code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 func CreateTradeGroup(baseURL string, order model.TradeBlock) error {
 	log.Printf("API:CreateTradeGroup\n%+v", order)
 	url := baseURL + "/new_trade_group"
@@ -66,7 +102,7 @@ func CreateTradeGroup(baseURL string, order model.TradeBlock) error {
 	if err != nil {
 		return fmt.Errorf("Error marshaling request payload: %v", err)
 	}
-	log.Printf("Sending paylload: %s", string(jsonData))
+	log.Printf("Sending payload: %s", string(jsonData))
 
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
 	if err != nil {

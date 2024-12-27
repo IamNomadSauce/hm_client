@@ -26,6 +26,7 @@ func main() {
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/bracket-order", TradeGroupHandler)
+	http.HandleFunc("/create-alert", createAlertHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -56,6 +57,39 @@ func main() {
 	}
 
 	fmt.Println("Received Data:", string(body))
+}
+
+func createAlertHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Create Alert")
+
+	var alert model.Alert
+	if err := json.NewDecoder(r.Body).Decode(&alert); err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Creating New Alert: %v", alert)
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	url := os.Getenv("URL")
+
+	err = api.CreateAlert(url, alert)
+	if err != nil {
+		log.Printf("Error creating alert %v", err)
+		http.Error(w, "Failled to create bracket order", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "New alert created successfully",
+	})
 }
 
 func TradeGroupHandler(w http.ResponseWriter, r *http.Request) {
