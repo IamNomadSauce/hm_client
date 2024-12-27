@@ -140,18 +140,29 @@
       // Convert price back to Y coordinate
       const y = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
+      if (line.type === 'alert') {
+        ctx.setLineDash([5, 5])
+      } else {
+        ctx.setLineDash([])
+      }
+
       ctx.beginPath();
       ctx.moveTo(margin, y);
       ctx.lineTo(width - margin, y);
       ctx.strokeStyle = line.color || 'yellow';
       ctx.stroke();
 
-      // Draw price label with type if exists
       ctx.fillStyle = 'white';
       ctx.font = '12px Arial';
-      ctx.fillText(`${line.type ? line.type + ' - ' : ''}${line.price.toFixed(2)}`, width - 120, y - 5);
+      if (line.type === 'alert') {
+        const lastCandle = stockData[stockData.length - 1]
+        const currentPrice = lastCandle.Close
+        const alertType = line.price > currentPrice ? 'Alert Above' : 'Alert Below'
+        ctx.fillText(`${alertType}: ${line.price.toFixed(8)}`, width - 200, y - 5)
+      } else {
+        ctx.fillText(`${line.type ? line.type + ' - ' : ''}${line.price.toFixed(2)}`, width - 120, y - 5);
+      }
     });
-
 
     if (currentTool === 'line' && drawingStart) {
       ctx.beginPath();
@@ -607,9 +618,11 @@
   });
 
   canvas.addEventListener('click', function (event) {
+    console.log("Line Clicked", draw_lines)
     if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
       showLineMenu(event.pageX, event.pageY);
       console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
+      console.log("Line type", draw_lines[activeLineIndex].type)
       if (draw_lines[activeLineIndex].type) {
         console.log("Line type:", draw_lines[activeLineIndex].type);
       }
@@ -672,6 +685,38 @@
         const line = draw_lines[activeLineIndex];
 
         switch (action) {
+          case 'alert':
+            const lastCandle = stockData[stockData.length - 1]
+            const currentPrice = lastCandle.Close
+
+            line.type = 'alert';
+            line.color = '%ff00ff';
+
+            const alertData = {
+              product_id: selectedProduct.product_id,
+              type: line.price > currentPrice ? 'price_above' : 'price_below',
+              price: parseFloat(line.price),
+              status: 'active',
+              xch_id: exchange.ID
+            }
+
+            fetch('create-alert', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(alertData)
+            })
+              .then(response => response.json())
+              .then(data => {
+                console.log('Alert Created: ', data)
+                line.alertId = data.id
+              })
+              .catch(error => {
+                console.log('Error creating alert:', error)
+              })
+            break;
+
           case 'entry':
             line.type = 'entry';
             line.color = '#00ff00';

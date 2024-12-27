@@ -2,7 +2,17 @@ package model
 
 import "time"
 
-// Structs (temporary)
+type Alert struct {
+	ID        int     `json:"id"`
+	ProductID string  `json:"product_id"`
+	Type      string  `json:"type"`
+	Price     float64 `json:"price"`
+	Status    string  `json:"status"`
+	XchID     int     `json:"xch_id"`
+	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
+}
+
 type Candle struct {
 	Timestamp int64
 	Open      float64
