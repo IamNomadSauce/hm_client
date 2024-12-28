@@ -364,7 +364,7 @@
       button.addEventListener('shown.bs.tab', function (e) {
         localStorage.setItem('activeFinanceTab', `#${e.target.id}`);
         if (e.target.getAttribute('data-bs-target') === '#portfolio') {
-          updatePieChart();
+          // updatePieChart();
         }
       });
     });
@@ -495,18 +495,18 @@ segments.forEach(segment => {
     });
 
     // Call this after updating the pie chart
-    updateLabelsPosition();
+    // updateLabelsPosition();
   });
 
   // Initial update of pie chart if portfolio tab is active
   if (document.querySelector('#portfolio.active')) {
-    updatePieChart();
+    // updatePieChart();
   }
 
   // Update pie chart on window resize
   window.addEventListener('resize', function () {
     if (document.querySelector('#portfolio.active')) {
-      updatePieChart();
+      // updatePieChart();
     }
   });
 </script>

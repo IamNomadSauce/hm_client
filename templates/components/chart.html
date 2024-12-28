@@ -85,6 +85,15 @@
     pointer-events: auto;
   }
 
+  .alert-menu {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 10px;
+    border-radius: 4px;
+    pointer-events: auto;
+    font-size: 12px;
+  }
+
   .cancel-button {
     margin-top: 5px;
     padding: 5px;
@@ -106,10 +115,13 @@
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
+  var all_alerts = exchange.Alerts;
 
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
   var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
   var current_trades = all_trades.filter(trade => trade.product_id === selectedProduct.product_id)
+  var current_alerts = all_alerts.filter(alert => alert.product_id === selectedProduct.product_id)
+
   var mouseX = 0;
   var mouseY = 0;
   var currentTool = null
@@ -178,6 +190,8 @@
     }
   }
 
+
+  // --------------------------------------------------------------------------------------------------------
 
   function drawCandlestickChart(data, start, end) {
     var canvas = document.getElementById('candlestickChart');
@@ -284,6 +298,72 @@
         }
       });
     });
+
+    // Draw Current Alerts
+    current_alerts.forEach(alert => {
+      const alertY = height - margin - ((alert.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+      // Draw the alert line
+      ctx.beginPath();
+      ctx.moveTo(margin, alertY);
+      ctx.lineTo(width - margin, alertY);
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = '#ff00ff';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // Add mouseleave handler to canvas
+    canvas.addEventListener('mousemove', function (e) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseY = e.clientY - rect.top;
+
+      // Find alert line near mouse
+      const nearAlert = current_alerts.find(alert => {
+        const alertY = height - margin - ((alert.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        return Math.abs(mouseY - alertY) < 5;
+      });
+
+      if (nearAlert) {
+        let existingMenu = document.querySelector('.alert-menu');
+        if (!existingMenu) {
+          const alertY = height - margin - ((nearAlert.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+          const menu = document.createElement('div');
+          menu.className = 'alert-menu';
+          menu.style.position = 'absolute';
+          menu.style.left = `${e.pageX - 20}px`; // Offset to the right
+          menu.style.top = `${alertY + rect.top - 50}px`;
+          menu.style.zIndex = '1000';
+          menu.dataset.hovering = 'false';
+
+          menu.innerHTML = `
+                <div><strong>Alert Details</strong></div>
+                <div>Type: ${nearAlert.type}</div>
+                <div>Price: ${nearAlert.price}</div>
+                <div>Status: ${nearAlert.status}</div>
+                <div class="cancel-button" onclick="cancelAlert(${nearAlert.id})">Cancel Alert</div>
+            `;
+
+          menu.addEventListener('mouseenter', () => {
+            menu.dataset.hovering = 'true';
+          });
+
+          menu.addEventListener('mouseleave', () => {
+            menu.dataset.hovering = 'false';
+            menu.remove();
+          });
+
+          document.body.appendChild(menu);
+        }
+      } else {
+        const menu = document.querySelector('.alert-menu');
+        if (menu && menu.dataset.hovering !== 'true') {
+          menu.remove();
+        }
+      }
+    });
+
+
 
 
     // Draw Current Orders
@@ -509,6 +589,24 @@
       .catch(error => {
         console.error('Error cancelling order:', error);
       });
+  }
+
+  function cancelAlert(alertID) {
+    fetch('/cancel-alert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ alert_id: alertID })
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Alert cancelled:', data)
+        drawCandlestickChart(stockData, start, end)
+      })
+      .catch(error => {
+        console.error('Error cancelling alert:', error);
+      })
   }
 
   function hideLineMenu() {

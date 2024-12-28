@@ -32,6 +32,7 @@ type Timeframe struct {
 
 type Exchange struct {
 	ID                int
+	Alerts            []Alert
 	Name              string
 	Timeframes        []Timeframe
 	Orders            []Order
