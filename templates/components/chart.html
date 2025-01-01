@@ -569,30 +569,9 @@
     }
   }
 
-  function cancelOrder(orderID) {
-    fetch('/cancel-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        order_id: orderID
-      })
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Order cancelled:', data);
-        // Refresh the chart
-        drawCandlestickChart(stockData, start, end);
-      })
-      .catch(error => {
-        console.error('Error cancelling order:', error);
-      });
-  }
-
   function cancelAlert(alertID) {
     fetch('/delete-alert', {
-      method: 'POST',
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'
       },
@@ -601,7 +580,7 @@
       .then(response => response.json())
       .then(data => {
         console.log('Alert cancelled:', data)
-        current_alerts = current_alerts.filter(alert => alert.id !== alertId)
+        current_alerts = current_alerts.filter(alert => alert.id !== alertID)
         drawCandlestickChart(stockData, start, end)
       })
       .catch(error => {
