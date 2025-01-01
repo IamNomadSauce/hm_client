@@ -94,6 +94,49 @@ func CreateAlert(baseURL string, alert model.Alert) error {
 	return nil
 }
 
+func DeleteAlert(baseURL string, alertID int) error {
+	log.Printf("API:DeleteAlert ID: %d", alertID)
+	url := baseURL + "/delete-alert"
+
+	// Create the request payload
+	payload := struct {
+		AlertID int `json:"alert_id"`
+	}{
+		AlertID: alertID,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshaling request payload: %v", err)
+	}
+	log.Printf("Sending payload: %s", string(jsonData))
+
+	req, err := http.NewRequest(http.MethodDelete, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("error creating request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 func CreateTradeGroup(baseURL string, order model.TradeBlock) error {
 	log.Printf("API:CreateTradeGroup\n%+v", order)
 	url := baseURL + "/new_trade_group"

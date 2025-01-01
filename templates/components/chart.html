@@ -116,6 +116,8 @@
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
   var all_alerts = exchange.Alerts;
+  
+  console.log("Alerts", all_alerts)
 
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
   var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
@@ -129,8 +131,6 @@
   var draw_boxes = []
   var draw_lines = []
   var activeLineIndex = -1;
-
-
 
   console.log("Current Exchange", exchange)
   console.log("Selected Product", selectedProduct.product_id)
@@ -452,7 +452,6 @@
         }
       });
       ctx.stroke();
-      ctx.setLineDash([]); // Reset line style
 
       // Draw R:R for each target
       trades.forEach((trade, i) => {
@@ -592,7 +591,7 @@
   }
 
   function cancelAlert(alertID) {
-    fetch('/cancel-alert', {
+    fetch('/delete-alert', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -602,6 +601,7 @@
       .then(response => response.json())
       .then(data => {
         console.log('Alert cancelled:', data)
+        current_alerts = current_alerts.filter(alert => alert.id !== alertId)
         drawCandlestickChart(stockData, start, end)
       })
       .catch(error => {

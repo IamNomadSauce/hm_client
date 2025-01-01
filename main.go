@@ -27,6 +27,7 @@ func main() {
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/bracket-order", TradeGroupHandler)
 	http.HandleFunc("/create-alert", createAlertHandler)
+	http.HandleFunc("/delete-alert", deleteAlertHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -57,6 +58,53 @@ func main() {
 	}
 
 	fmt.Println("Received Data:", string(body))
+}
+
+func deleteAlertHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Delete Alert")
+
+	// Only allow DELETE method
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse request body
+	var request struct {
+		AlertID int `json:"alert_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate alert ID
+	if request.AlertID <= 0 {
+		http.Error(w, "Invalid alert ID", http.StatusBadRequest)
+		return
+	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	url := os.Getenv("URL")
+
+	err = api.DeleteAlert(url, request.AlertID)
+	if err != nil {
+		log.Printf("Error deleting alert: %v", err)
+		http.Error(w, "Failed to delete alert", http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "success",
+		"message": "Alert deleted successfully",
+	})
 }
 
 func createAlertHandler(w http.ResponseWriter, r *http.Request) {
