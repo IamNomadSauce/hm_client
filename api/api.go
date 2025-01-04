@@ -58,11 +58,11 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	return exchanges, nil
 }
 
-func CreateAlert(baseURL string, alert model.Alert) error {
-	log.Printf("API:CreateAlert\n%+v", alert)
-	url := baseURL + "/create-alert"
+func CreateTrigger(baseURL string, trigger model.Trigger) error {
+	log.Printf("API:CreateTrigger\n%+v", trigger)
+	url := baseURL + "/create-trigger"
 
-	jsonData, err := json.Marshal(alert)
+	jsonData, err := json.Marshal(trigger)
 	if err != nil {
 		return fmt.Errorf("Error marshaling request payload: %v", err)
 	}
@@ -94,15 +94,15 @@ func CreateAlert(baseURL string, alert model.Alert) error {
 	return nil
 }
 
-func DeleteAlert(baseURL string, alertID int) error {
-	log.Printf("API:DeleteAlert ID: %d", alertID)
-	url := baseURL + "/delete-alert"
+func DeleteTrigger(baseURL string, triggerID int) error {
+	log.Printf("API:DeleteTrigger ID: %d", triggerID)
+	url := baseURL + "/delete-trigger"
 
 	// Create the request payload
 	payload := struct {
-		AlertID int `json:"alert_id"`
+		TriggerID int `json:"trigger"`
 	}{
-		AlertID: alertID,
+		TriggerID: triggerID,
 	}
 
 	jsonData, err := json.Marshal(payload)

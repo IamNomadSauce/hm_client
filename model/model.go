@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-type Alert struct {
+type Trigger struct {
 	ID        int     `json:"id"`
 	ProductID string  `json:"product_id"`
 	Type      string  `json:"type"`
@@ -32,7 +32,7 @@ type Timeframe struct {
 
 type Exchange struct {
 	ID                int
-	Alerts            []Alert
+	Triggers          []Trigger
 	Name              string
 	Timeframes        []Timeframe
 	Orders            []Order

@@ -9,7 +9,7 @@
     <div class="line-menu-item" data-action="entry">Trade Entry</div>
     <div class="line-menu-item" data-action="pt">Profit Target</div>
     <div class="line-menu-item" data-action="stop">Stop Loss</div>
-    <div class="line-menu-item" data-action="alert">Alert</div>
+    <div class="line-menu-item" data-action="trigger">Trigger</div>
     <div class="line-menu-item" data-action="delete">Delete</div>
     <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
   </div>
@@ -85,7 +85,7 @@
     pointer-events: auto;
   }
 
-  .alert-menu {
+  .trigger-menu {
     background: rgba(0, 0, 0, 0.9);
     color: white;
     padding: 10px;
@@ -115,14 +115,14 @@
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
-  var all_alerts = exchange.Alerts;
+  var triggers = exchange.Triggers || [];
   
-  console.log("Alerts", all_alerts)
+  console.log("Triggers", all_triggers)
 
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
   var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
   var current_trades = all_trades.filter(trade => trade.product_id === selectedProduct.product_id)
-  var current_alerts = all_alerts.filter(alert => alert.product_id === selectedProduct.product_id)
+  var current_triggers = all_triggers.filter(trigger => trigger.product_id === selectedProduct.product_id)
 
   var mouseX = 0;
   var mouseY = 0;
@@ -152,7 +152,7 @@
       // Convert price back to Y coordinate
       const y = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
-      if (line.type === 'alert') {
+      if (line.type === 'trigger') {
         ctx.setLineDash([5, 5])
       } else {
         ctx.setLineDash([])
@@ -166,11 +166,11 @@
 
       ctx.fillStyle = 'white';
       ctx.font = '12px Arial';
-      if (line.type === 'alert') {
+      if (line.type === 'trigger') {
         const lastCandle = stockData[stockData.length - 1]
         const currentPrice = lastCandle.Close
-        const alertType = line.price > currentPrice ? 'Alert Above' : 'Alert Below'
-        ctx.fillText(`${alertType}: ${line.price.toFixed(8)}`, width - 200, y - 5)
+        const triggerType = line.price > currentPrice ? 'Trigger Above' : 'Trigger Below'
+        ctx.fillText(`${triggerType}: ${line.price.toFixed(8)}`, width - 200, y - 5)
       } else {
         ctx.fillText(`${line.type ? line.type + ' - ' : ''}${line.price.toFixed(2)}`, width - 120, y - 5);
       }
@@ -299,14 +299,14 @@
       });
     });
 
-    // Draw Current Alerts
-    current_alerts.forEach(alert => {
-      const alertY = height - margin - ((alert.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+    // Draw Current Triggers
+    current_triggers.forEach(trigger => {
+      const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
-      // Draw the alert line
+      // Draw the trigger line
       ctx.beginPath();
-      ctx.moveTo(margin, alertY);
-      ctx.lineTo(width - margin, alertY);
+      ctx.moveTo(margin, triggerY);
+      ctx.lineTo(width - margin, triggerY);
       ctx.setLineDash([5, 5]);
       ctx.strokeStyle = '#ff00ff';
       ctx.stroke();
@@ -318,30 +318,30 @@
       const rect = canvas.getBoundingClientRect();
       const mouseY = e.clientY - rect.top;
 
-      // Find alert line near mouse
-      const nearAlert = current_alerts.find(alert => {
-        const alertY = height - margin - ((alert.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        return Math.abs(mouseY - alertY) < 5;
+      // Find trigger line near mouse
+      const nearTrigger = current_triggers.find(trigger => {
+        const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        return Math.abs(mouseY - triggerY) < 5;
       });
 
-      if (nearAlert) {
-        let existingMenu = document.querySelector('.alert-menu');
+      if (nearTrigger) {
+        let existingMenu = document.querySelector('.trigger-menu');
         if (!existingMenu) {
-          const alertY = height - margin - ((nearAlert.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+          const triggerY = height - margin - ((nearTrigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
           const menu = document.createElement('div');
-          menu.className = 'alert-menu';
+          menu.className = 'trigger-menu';
           menu.style.position = 'absolute';
           menu.style.left = `${e.pageX - 20}px`; // Offset to the right
-          menu.style.top = `${alertY + rect.top - 50}px`;
+          menu.style.top = `${triggerY + rect.top - 50}px`;
           menu.style.zIndex = '1000';
           menu.dataset.hovering = 'false';
 
           menu.innerHTML = `
-                <div><strong>Alert Details</strong></div>
-                <div>Type: ${nearAlert.type}</div>
-                <div>Price: ${nearAlert.price}</div>
-                <div>Status: ${nearAlert.status}</div>
-                <div class="cancel-button" onclick="cancelAlert(${nearAlert.id})">Cancel Alert</div>
+                <div><strong>Trigger Details</strong></div>
+                <div>Type: ${nearTrigger.type}</div>
+                <div>Price: ${nearTrigger.price}</div>
+                <div>Status: ${nearTrigger.status}</div>
+                <div class="cancel-button" onclick="cancelTrigger(${nearTrigger.id})">Cancel Trigger</div>
             `;
 
           menu.addEventListener('mouseenter', () => {
@@ -356,7 +356,7 @@
           document.body.appendChild(menu);
         }
       } else {
-        const menu = document.querySelector('.alert-menu');
+        const menu = document.querySelector('.trigger-menu');
         if (menu && menu.dataset.hovering !== 'true') {
           menu.remove();
         }
@@ -569,22 +569,22 @@
     }
   }
 
-  function cancelAlert(alertID) {
-    fetch('/delete-alert', {
+  function cancelTrigger(triggerID) {
+    fetch('/delete-trigger', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ alert_id: alertID })
+      body: JSON.stringify({ trigger_id: triggerID })
     })
       .then(response => response.json())
       .then(data => {
-        console.log('Alert cancelled:', data)
-        current_alerts = current_alerts.filter(alert => alert.id !== alertID)
+        console.log('Trigger cancelled:', data)
+        current_triggers = current_triggers.filter(triggers => triggers.id !== triggerID)
         drawCandlestickChart(stockData, start, end)
       })
       .catch(error => {
-        console.error('Error cancelling alert:', error);
+        console.error('Error cancelling trigger:', error);
       })
   }
 
@@ -762,14 +762,14 @@
         const line = draw_lines[activeLineIndex];
 
         switch (action) {
-          case 'alert':
+          case 'trigger':
             const lastCandle = stockData[stockData.length - 1]
             const currentPrice = lastCandle.Close
 
-            line.type = 'alert';
+            line.type = 'trigger';
             line.color = '%ff00ff';
 
-            const alertData = {
+            const triggerData = {
               product_id: selectedProduct.product_id,
               type: line.price > currentPrice ? 'price_above' : 'price_below',
               price: parseFloat(line.price),
@@ -777,20 +777,20 @@
               xch_id: exchange.ID
             }
 
-            fetch('create-alert', {
+            fetch('create-trigger', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(alertData)
+              body: JSON.stringify(triggerData)
             })
               .then(response => response.json())
               .then(data => {
-                console.log('Alert Created: ', data)
-                line.alertId = data.id
+                console.log('Trigger Created: ', data)
+                line.triggerId = data.id
               })
               .catch(error => {
-                console.log('Error creating alert:', error)
+                console.log('Error creating trigger:', error)
               })
             break;
 

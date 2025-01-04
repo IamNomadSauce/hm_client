@@ -26,8 +26,8 @@ func main() {
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/bracket-order", TradeGroupHandler)
-	http.HandleFunc("/create-alert", createAlertHandler)
-	http.HandleFunc("/delete-alert", deleteAlertHandler)
+	http.HandleFunc("/create-trigger", createTriggerHandler)
+	http.HandleFunc("/delete-trigger", deleteTriggerHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -60,8 +60,8 @@ func main() {
 	fmt.Println("Received Data:", string(body))
 }
 
-func deleteAlertHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Delete Alert")
+func deleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Delete Trigger")
 
 	// Only allow DELETE method
 	if r.Method != http.MethodDelete {
@@ -71,7 +71,7 @@ func deleteAlertHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var request struct {
-		AlertID int `json:"alert_id"`
+		TriggerID int `json:"trigger_id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -79,9 +79,9 @@ func deleteAlertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate alert ID
-	if request.AlertID <= 0 {
-		http.Error(w, "Invalid alert ID", http.StatusBadRequest)
+	// Validate trigger ID
+	if request.TriggerID <= 0 {
+		http.Error(w, "Invalid trigger ID", http.StatusBadRequest)
 		return
 	}
 
@@ -92,10 +92,10 @@ func deleteAlertHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := os.Getenv("URL")
 
-	err = api.DeleteAlert(url, request.AlertID)
+	err = api.DeleteTrigger(url, request.TriggerID)
 	if err != nil {
-		log.Printf("Error deleting alert: %v", err)
-		http.Error(w, "Failed to delete alert", http.StatusInternalServerError)
+		log.Printf("Error deleting trigger: %v", err)
+		http.Error(w, "Failed to delete trigger", http.StatusInternalServerError)
 		return
 	}
 
@@ -103,21 +103,21 @@ func deleteAlertHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  "success",
-		"message": "Alert deleted successfully",
+		"message": "Trigger deleted successfully",
 	})
 }
 
-func createAlertHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Create Alert")
+func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Create Trigger")
 
-	var alert model.Alert
-	if err := json.NewDecoder(r.Body).Decode(&alert); err != nil {
+	var trigger model.Trigger
+	if err := json.NewDecoder(r.Body).Decode(&trigger); err != nil {
 		log.Printf("Error decoding request body: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Creating New Alert: %v", alert)
+	log.Printf("Creating New Trigger: %v", trigger)
 
 	err := godotenv.Load()
 	if err != nil {
@@ -126,9 +126,9 @@ func createAlertHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := os.Getenv("URL")
 
-	err = api.CreateAlert(url, alert)
+	err = api.CreateTrigger(url, trigger)
 	if err != nil {
-		log.Printf("Error creating alert %v", err)
+		log.Printf("Error creating trigger %v", err)
 		http.Error(w, "Failled to create bracket order", http.StatusInternalServerError)
 		return
 	}
@@ -136,7 +136,7 @@ func createAlertHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
-		"message": "New alert created successfully",
+		"message": "New trigger created successfully",
 	})
 }
 
