@@ -116,7 +116,7 @@
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
   var all_triggers = exchange.Triggers || [];
-  
+
   console.log("Triggers", all_triggers)
 
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
@@ -144,35 +144,54 @@
   console.log("All Trades", all_trades)
   // console.log("Current Trades", current_trades)
 
-
-  function connectToSSE() {
-    const eventSource = new EventSource('/trigger/stream');
+  function connectToBackend() {
+    const backendURL = "http://192.168.0.22:31337";
+    console.log("Connecting to SSE at:", backendURL);
+    
+    const eventSource = new EventSource(`${backendURL}/trigger/stream`);
+    
+    eventSource.onopen = (event) => {
+        console.log("SSE Connection opened:", event);
+    };
 
     eventSource.addEventListener('price', (event) => {
-      const priceUpdate = JSON.parse(event.data)
-      console.log('Price Update:', priceUpdate)
-      updatePriceDisplay(priceUpdate)
-    })
+        try {
+            const priceUpdate = JSON.parse(event.data);
+            console.log("Price Update Received:", {
+                product: priceUpdate.product_id,
+                price: priceUpdate.price.toFixed(8),
+                time: new Date(priceUpdate.timestamp * 1000).toLocaleTimeString()
+            });
+            
+            // Debug the updateChartPrice function call
+            console.log("Attempting to update chart with:", priceUpdate);
+            updateChartPrice(priceUpdate);
+        } catch (err) {
+            console.error("Error processing price update:", err, "Raw data:", event.data);
+        }
+    });
 
-    eventSfource.addEventListener('trigger', (event) => {
-      const trigger = JSON.parse(event.data)
-      console.log('Trigger Update:', trigger)
-      showTriggerNotification(trigger)
-    })
+    eventSource.addEventListener('message', (event) => {
+        // Debug raw messages
+        console.log("Raw SSE message received:", event.data);
+    });
 
     eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error)
-      eventSource.close()
-      setTimeout(connectToSSE, 5000)
-    }
-  }
+        console.error("SSE connection error:", error);
+        if (eventSource.readyState === EventSource.CLOSED) {
+            console.log("Connection closed, attempting to reconnect...");
+            setTimeout(connectToBackend, 5000);
+        }
+    };
 
-  function updatePriceDisplay(priceUPdate) {
-    const priceElement = document.querySelector(`[data-product-id="${priceUpdate.product_id}"]`)
-    if (priceElement) {
-      priceElement.textContent = priceUpdate.price.toFixed(2)
-    }
-  }
+    // Add window unload handler
+    window.addEventListener('unload', () => {
+        console.log("Page unloading, closing SSE connection");
+        eventSource.close();
+    });
+}
+
+
 
 
   function showTriggerNotification(trigger) {
@@ -184,7 +203,7 @@
       </div>
     `
     document.body.appendChild(notification)
-    
+
     setTimeout(() => notification.remove(), 5000)
   }
 
@@ -942,7 +961,18 @@
   });
 
   drawCandlestickChart(stockData, start, end);
-  connectToSSE()
+  document.addEventListener('DOMContentLoaded', () => {
+    connectToBackend();
+
+    // Initialize Bootstrap tabs if they exist
+    const tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
+    if (tabElements.length > 0) {
+      tabElements.forEach(el => {
+        new bootstrap.Tab(el);
+      });
+    }
+  });
+
 
 </script>
 {{end}}
