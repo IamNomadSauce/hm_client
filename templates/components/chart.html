@@ -145,6 +145,48 @@
   // console.log("Current Trades", current_trades)
 
 
+  function connectToSSE() {
+    const eventSource = new EventSource('/trigger/stream');
+
+    eventSource.addEventListener('price', (event) => {
+      const priceUpdate = JSON.parse(event.data)
+      console.log('Price Update:', priceUpdate)
+      updatePriceDisplay(priceUpdate)
+    })
+
+    eventSfource.addEventListener('trigger', (event) => {
+      const trigger = JSON.parse(event.data)
+      console.log('Trigger Update:', trigger)
+      showTriggerNotification(trigger)
+    })
+
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error)
+      eventSource.close()
+      setTimeout(connectToSSE, 5000)
+    }
+  }
+
+  function updatePriceDisplay(priceUPdate) {
+    const priceElement = document.querySelector(`[data-product-id="${priceUpdate.product_id}"]`)
+    if (priceElement) {
+      priceElement.textContent = priceUpdate.price.toFixed(2)
+    }
+  }
+
+
+  function showTriggerNotification(trigger) {
+    const notification = document.createElement('div')
+    notification.className = 'trigger-notification'
+    notification.innerHTML = `
+      <div class="notification-content">
+        <strong>${trigger.product_id}</strong>
+      </div>
+    `
+    document.body.appendChild(notification)
+    
+    setTimeout(() => notification.remove(), 5000)
+  }
 
   function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
     let activeLineIndex = -1;
@@ -900,6 +942,7 @@
   });
 
   drawCandlestickChart(stockData, start, end);
+  connectToSSE()
 
 </script>
 {{end}}
