@@ -147,49 +147,85 @@
   function connectToBackend() {
     const backendURL = "http://192.168.0.22:31337";
     console.log("Connecting to SSE at:", backendURL);
-    
+
     const eventSource = new EventSource(`${backendURL}/trigger/stream`);
-    
+
     eventSource.onopen = (event) => {
-        console.log("SSE Connection opened:", event);
+      console.log("SSE Connection opened:", event);
     };
 
-    eventSource.addEventListener('price', (event) => {
-        try {
-            const priceUpdate = JSON.parse(event.data);
-            console.log("Price Update Received:", {
-                product: priceUpdate.product_id,
-                price: priceUpdate.price.toFixed(8),
-                time: new Date(priceUpdate.timestamp * 1000).toLocaleTimeString()
-            });
-            
-            // Debug the updateChartPrice function call
-            console.log("Attempting to update chart with:", priceUpdate);
-            updateChartPrice(priceUpdate);
-        } catch (err) {
-            console.error("Error processing price update:", err, "Raw data:", event.data);
-        }
-    });
+    eventSource.onmessage = (event) => {
+      try {
+        // Extract the event type and data from the raw message
+        const lines = event.data.split('\n');
+        const eventType = lines[0].replace('event: ', '');
+        const data = JSON.parse(lines[1]);
 
-    eventSource.addEventListener('message', (event) => {
-        // Debug raw messages
-        console.log("Raw SSE message received:", event.data);
-    });
+        if (eventType === 'price') {
+          // console.log("Price Update:", {
+          //   product: data.product_id,
+          //   price: parseFloat(data.price).toFixed(8),
+          //   time: new Date(data.timestamp * 1000).toLocaleTimeString()
+          // });
+          updateChartPrice(data);
+        }
+      } catch (err) {
+        console.error("Error processing message:", err);
+      }
+    };
 
     eventSource.onerror = (error) => {
-        console.error("SSE connection error:", error);
-        if (eventSource.readyState === EventSource.CLOSED) {
-            console.log("Connection closed, attempting to reconnect...");
-            setTimeout(connectToBackend, 5000);
-        }
+      console.error("SSE connection error:", error);
+      setTimeout(() => {
+        console.log("Attempting to reconnect...");
+        connectToBackend();
+      }, 5000);
     };
+  }
 
-    // Add window unload handler
-    window.addEventListener('unload', () => {
-        console.log("Page unloading, closing SSE connection");
-        eventSource.close();
-    });
-}
+
+
+  function updateChartPrice(priceUpdate) {
+    // console.log("Update Chart Price")
+
+    if (priceUpdate.product_id !== selectedProduct.product_id) {
+      return;
+    }
+
+    const latestPrice = priceUpdate.price;
+    const canvas = document.getElementById('candlestickChart');
+    const ctx = canvas.getContext('2d');
+
+    // Draw base chart first
+    drawCandlestickChart(stockData, start, end);
+
+    // Calculate price line position
+    const width = canvas.width;
+    const height = canvas.height;
+    const margin = 50;
+
+    const minPrice = Math.min(...stockData.slice(start, end).map(d => d.Low));
+    const maxPrice = Math.max(...stockData.slice(start, end).map(d => d.High));
+
+    const priceY = height - margin - ((latestPrice - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+    // Draw price line
+    ctx.beginPath();
+    ctx.moveTo(margin, priceY);
+    ctx.lineTo(width - margin, priceY);
+    ctx.strokeStyle = '#00ff00';
+    ctx.setLineDash([5, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Add price label
+    ctx.fillStyle = '#00ff00';
+    ctx.font = '12px Arial';
+    ctx.fillText(`${latestPrice.toFixed(2)}`, width - 100, priceY - 5);
+  }
+
+
+
 
 
 
