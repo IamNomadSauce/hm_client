@@ -160,6 +160,7 @@
         const lines = event.data.split('\n');
         const eventType = lines[0].replace('event: ', '');
         const data = JSON.parse(lines[1]);
+        console.log(eventType)
 
         if (eventType === 'price') {
           // console.log("Price Update:", {
@@ -181,9 +182,47 @@
         connectToBackend();
       }, 5000);
     };
+
+    eventSource.addEventListener('candle', (event) => {
+      try {
+        const candleUpdate = JSON.parse(event.data)
+        console.log("Raw Candle From Stream", event.data)
+        console.log("Candle Update:", {
+          product: candleUpdate.product_id,
+          open: candleUpdate.Open,
+          high: candleUpdate.High,
+          low: candleUpdate.Low,
+          close: candleUpdate.Close,
+          volume: candleUpdate.Volume,
+          time: new Date(candleUpdate.Timestamp * 1000).toLocaleTimeString(),
+        })
+        updateChart(candleUpdate)
+      } catch (err) {
+        console.error("Error processing candle update:", err)
+      }
+    })
   }
 
+  function updateChartPrice(priceUpdate) {
+    if (candleUpdate.product_id !== selectedProduct.product_id) {
+      return
+    }
 
+    stockData.push({
+      Timestamp: candleUpdate.timestamp,
+      Open: candleUpdate.open,
+      High: candleUpdate.high,
+      Low: candleUpdate.low,
+      Close: candleUpdate.close,
+      Volume: candleUpdate.volume
+    })
+
+    if (stockData.length > end) {
+      stockData.shift()
+    }
+
+    drawCandlestickChart(stockData, start, end)
+  }
 
   function updateChartPrice(priceUpdate) {
     // console.log("Update Chart Price")
@@ -221,7 +260,7 @@
     // Add price label
     ctx.fillStyle = '#00ff00';
     ctx.font = '12px Arial';
-    ctx.fillText(`${latestPrice.toFixed(2)}`, width - 100, priceY - 5);
+    ctx.fillText(`${latestPrice.toFixed(5)}`, width - 100, priceY - 5);
   }
 
 
