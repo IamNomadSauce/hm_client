@@ -160,7 +160,10 @@
         const lines = event.data.split('\n');
         const eventType = lines[0].replace('event: ', '');
         const data = JSON.parse(lines[1]);
-        console.log(eventType)
+
+        if (eventType != "price") {
+          console.log(eventType, data)
+        }
 
         if (eventType === 'price') {
           // console.log("Price Update:", {

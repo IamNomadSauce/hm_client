@@ -96,11 +96,9 @@ func CreateTrigger(baseURL string, trigger model.Trigger) error {
 
 func DeleteTrigger(baseURL string, triggerID int) error {
 	log.Printf("API:DeleteTrigger ID: %d", triggerID)
-	url := baseURL + "/delete-trigger"
 
-	// Create the request payload
 	payload := struct {
-		TriggerID int `json:"trigger"`
+		TriggerID int `json:"trigger_id"`
 	}{
 		TriggerID: triggerID,
 	}
@@ -111,26 +109,21 @@ func DeleteTrigger(baseURL string, triggerID int) error {
 	}
 	log.Printf("Sending payload: %s", string(jsonData))
 
-	req, err := http.NewRequest(http.MethodDelete, url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(http.MethodDelete, baseURL+"/delete-trigger", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("error reading response body: %v", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
 	}
 
