@@ -156,27 +156,23 @@
 
     eventSource.onmessage = (event) => {
       try {
-        // Extract the event type and data from the raw message
+        // The raw event data contains both event type and JSON data
         const lines = event.data.split('\n');
         const eventType = lines[0].replace('event: ', '');
-        const data = JSON.parse(lines[1]);
-
-        if (eventType != "price") {
-          console.log(eventType, data)
-        }
+        const jsonData = lines[1];
+        const data = JSON.parse(jsonData);
 
         if (eventType === 'price') {
-          // console.log("Price Update:", {
-          //   product: data.product_id,
-          //   price: parseFloat(data.price).toFixed(8),
-          //   time: new Date(data.timestamp * 1000).toLocaleTimeString()
-          // });
           updateChartPrice(data);
+        } else {
+          console.log("Other event:", eventType, data);
         }
       } catch (err) {
-        console.error("Error processing message:", err);
+        console.error("Error processing message:", err, "Raw data:", event.data);
       }
     };
+
+
 
     eventSource.onerror = (error) => {
       console.error("SSE connection error:", error);
