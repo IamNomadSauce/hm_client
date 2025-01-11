@@ -156,22 +156,25 @@
 
     eventSource.onmessage = (event) => {
       try {
-        // The raw event data contains both event type and JSON data
-        const lines = event.data.split('\n');
-        const eventType = lines[0].replace('event: ', '');
-        const jsonData = lines[1];
-        const data = JSON.parse(jsonData);
+        const message = JSON.parse(event.data);
 
-        if (eventType === 'price') {
-          updateChartPrice(data);
-        } else {
-          console.log("Other event:", eventType, data);
+        switch (message.event) {
+          case 'price':
+            updateChartPrice(message.data);
+            break;
+
+          case 'candle':
+            console.log(message.data)
+            updateChart(message.data);
+            break;
+
+          default:
+            console.log("Unknown event type:", message);
         }
       } catch (err) {
         console.error("Error processing message:", err, "Raw data:", event.data);
       }
     };
-
 
 
     eventSource.onerror = (error) => {
@@ -262,6 +265,32 @@
     ctx.fillText(`${latestPrice.toFixed(5)}`, width - 100, priceY - 5);
   }
 
+  function updateChart(candleUpdate) {
+    if (candleUpdate.ProductID !== selectedProduct.product_id) {
+      return;
+    }
+
+    // Create new candle object in the format expected by stockData
+    const newCandle = {
+      Timestamp: candleUpdate.Timestamp,
+      Open: candleUpdate.Open,
+      High: candleUpdate.High,
+      Low: candleUpdate.Low,
+      Close: candleUpdate.Close,
+      Volume: candleUpdate.Volume
+    };
+
+    // Add new candle to stockData
+    stockData.push(newCandle);
+
+    // Remove oldest candle if we're beyond our display window
+    if (stockData.length > end) {
+      stockData.shift();
+    }
+
+    // Redraw the chart
+    drawCandlestickChart(stockData, start, end);
+  }
 
 
 
