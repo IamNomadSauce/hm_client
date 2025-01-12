@@ -149,33 +149,33 @@
   };
 
   const orderHoverHandler = function (e, chartState) {
-  const rect = canvas.getBoundingClientRect();
-  const mouseY = e.clientY - rect.top;
+    const rect = canvas.getBoundingClientRect();
+    const mouseY = e.clientY - rect.top;
 
-  current_orders.forEach(order => {
-    const orderY = chartState.height - chartState.margin -
-      ((order.Price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-      (chartState.height - 2 * chartState.margin);
+    current_orders.forEach(order => {
+      const orderY = chartState.height - chartState.margin -
+        ((order.Price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+        (chartState.height - 2 * chartState.margin);
 
-    if (Math.abs(mouseY - orderY) < 5) {
-      // Check if a menu already exists
-      let existingMenu = document.querySelector('.order-menu');
+      if (Math.abs(mouseY - orderY) < 5) {
+        // Check if a menu already exists
+        let existingMenu = document.querySelector('.order-menu');
 
-      if (!existingMenu) {
-        // Remove any existing menus
-        document.querySelectorAll('.order-menu').forEach(el => el.remove());
+        if (!existingMenu) {
+          // Remove any existing menus
+          document.querySelectorAll('.order-menu').forEach(el => el.remove());
 
-        // Create a new menu
-        const menu = document.createElement('div');
-        menu.className = 'order-menu';
-        menu.style.position = 'absolute';
-        menu.style.left = `${e.pageX - 150}px`;
-        menu.style.top = `${e.pageY - 10}px`;
-        menu.style.zIndex = '1000';
-        menu.style.pointerEvents = 'auto';
+          // Create a new menu
+          const menu = document.createElement('div');
+          menu.className = 'order-menu';
+          menu.style.position = 'absolute';
+          menu.style.left = `${e.pageX - 150}px`;
+          menu.style.top = `${e.pageY - 10}px`;
+          menu.style.zIndex = '1000';
+          menu.style.pointerEvents = 'auto';
 
-        // Populate menu content
-        menu.innerHTML = `
+          // Populate menu content
+          menu.innerHTML = `
           <div><strong>Order Details</strong></div>
           <div>Side: ${order.Side}</div>
           <div>Product: ${order.ProductID}</div>
@@ -185,27 +185,27 @@
           <div class="cancel-button" onclick="cancelOrder('${order.OrderID}')">Cancel Order</div>
         `;
 
-        // Add hover behavior to prevent premature removal
-        let isMouseOverMenu = false;
+          // Add hover behavior to prevent premature removal
+          let isMouseOverMenu = false;
 
-        // Keep track of hover state for the menu
-        menu.addEventListener('mouseenter', () => {
-          console.log("Menu enter");
-          isMouseOverMenu = true;
-        });
+          // Keep track of hover state for the menu
+          menu.addEventListener('mouseenter', () => {
+            console.log("Menu enter");
+            isMouseOverMenu = true;
+          });
 
-        // Remove menu on mouse leave
-        menu.addEventListener('mouseleave', function () {
-          console.log("Menu leave");
-          this.remove(); // Remove the menu when the mouse leaves it
-        });
+          // Remove menu on mouse leave
+          menu.addEventListener('mouseleave', function () {
+            console.log("Menu leave");
+            this.remove(); // Remove the menu when the mouse leaves it
+          });
 
-        // Append the menu to the body
-        document.body.appendChild(menu);
+          // Append the menu to the body
+          document.body.appendChild(menu);
+        }
       }
-    }
-  });
-};
+    });
+  };
 
 
 
@@ -217,28 +217,64 @@
 
     Object.values(groups).forEach(trades => {
       trades.forEach(trade => {
-        const entryY = chartState.height - chartState.margin - ((trade.entry_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-        const stopY = chartState.height - chartState.margin - ((trade.stop_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-        const ptY = chartState.height - chartState.margin - ((trade.pt_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+        const entryY = chartState.height - chartState.margin -
+          ((trade.entry_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+          (chartState.height - 2 * chartState.margin);
+        const stopY = chartState.height - chartState.margin -
+          ((trade.stop_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+          (chartState.height - 2 * chartState.margin);
+        const ptY = chartState.height - chartState.margin -
+          ((trade.pt_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+          (chartState.height - 2 * chartState.margin);
 
         if (isMouseNearLine(mouseY, entryY) || isMouseNearLine(mouseY, stopY) || isMouseNearLine(mouseY, ptY)) {
-          const menu = document.createElement('div');
-          menu.className = 'trade-menu';
-          menu.style.left = `${e.pageX + 10}px`;
-          menu.style.top = `${e.pageY + 10}px`;
-          menu.innerHTML = `
-                    <div><strong>Trade Group ${trade.group_id}</strong></div>
-                    <div>Side: ${trade.side}</div>
-                    <div>Entry: ${trade.entry_price.toFixed(8)}</div>
-                    <div>Stop: ${trade.stop_price.toFixed(8)}</div>
-                    <div>Target: ${trade.pt_price.toFixed(8)}</div>
-                    <div>Size: ${trade.size}</div>
-                `;
-          document.body.appendChild(menu);
+          let existingMenu = document.querySelector('.trade-menu');
+
+          if (!existingMenu) {
+            document.querySelectorAll('.trade-menu').forEach(el => el.remove());
+
+            const menu = document.createElement('div');
+            menu.className = 'trade-menu';
+            menu.style.position = 'absolute';
+            menu.style.left = `${e.pageX - 150}px`;
+            menu.style.top = `${e.pageY - 10}px`;
+            menu.style.zIndex = '1000';
+            menu.style.pointerEvents = 'auto';
+
+            const groupTrades = groups[trade.group_id];
+            menu.innerHTML = `
+                        <div><strong>Trade Group ${trade.group_id}</strong></div>
+                        <div>Side: ${trade.side}</div>
+                        <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
+                        <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
+                        <div>Size: ${trade.size}</div>
+                        <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
+                        <div>Targets:</div>
+                        ${groupTrades.map(t => {
+              const rr = ((Math.abs(t.pt_price - t.entry_price)) /
+                (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
+              return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
+                                    <span style="color: #ffff00"> R:R ${rr}</span></div>`;
+            }).join('')}
+                    `;
+
+            menu.addEventListener('mouseenter', () => {
+              console.log("Trade Menu enter");
+              menu.dataset.hovering = 'true';
+            });
+
+            menu.addEventListener('mouseleave', function () {
+              console.log("Trade Menu leave");
+              this.remove();
+            });
+
+            document.body.appendChild(menu);
+          }
         }
       });
     });
   };
+
 
 
 
@@ -577,8 +613,9 @@
       });
     }
 
-    // Group trades
+    // Draw trade groups
     let tradeGroups = {};
+
     if (current_trades) {
       current_trades.forEach(trade => {
         if (!tradeGroups[trade.group_id]) {
@@ -587,13 +624,39 @@
         tradeGroups[trade.group_id].push(trade);
       });
 
-      // Draw trade groups
       Object.values(tradeGroups).forEach(trades => {
+        // Calculate Y positions for entry/stop/targets
         const entryY = height - margin - ((trades[0].entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         const stopY = height - margin - ((trades[0].stop_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        const ptYs = trades.map(trade => height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin));
+        const ptYs = trades.map(trade =>
+          height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
+        );
 
-        // Draw connecting lines
+        // Draw entry line
+        ctx.beginPath();
+        ctx.moveTo(margin, entryY);
+        ctx.lineTo(width - margin, entryY);
+        ctx.strokeStyle = trades[0].entry_status === 'FILLED' ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.5)';
+        ctx.stroke();
+
+        // Draw stop loss line
+        ctx.beginPath();
+        ctx.moveTo(margin, stopY);
+        ctx.lineTo(width - margin, stopY);
+        ctx.strokeStyle = trades[0].stop_status === 'FILLED' ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 0, 0, 0.5)';
+        ctx.stroke();
+
+        // Draw profit target lines
+        trades.forEach((trade, i) => {
+          const ptY = ptYs[i];
+          ctx.beginPath();
+          ctx.moveTo(margin, ptY);
+          ctx.lineTo(width - margin, ptY);
+          ctx.strokeStyle = trade.pt_status === 'FILLED' ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 255, 0, 0.5)';
+          ctx.stroke();
+        });
+
+        // Draw connecting lines between targets
         ctx.beginPath();
         ctx.setLineDash([5, 5]);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -611,14 +674,15 @@
           const ptY = ptYs[i];
           const riskAmount = Math.abs(trade.entry_price - trade.stop_price);
           const rewardAmount = Math.abs(trade.pt_price - trade.entry_price);
-          const rr = (rewardAmount / riskAmount).toFixed(2);
+          const rrRatio = (rewardAmount / riskAmount).toFixed(2);
 
           ctx.fillStyle = 'white';
           ctx.font = '12px Arial';
-          ctx.fillText(`R:R ${rr}`, width - 80, ptY - 5);
+          ctx.fillText(`R:R ${rrRatio}`, width - 80, ptY - 5);
         });
       });
     }
+
 
     // Add event listeners with chart state
     const chartState = { ctx, width, height, margin, minPrice, maxPrice };
@@ -901,6 +965,7 @@
   //       }
   //     });
   //   });
+
   //   let tradeGroups = {};
   //   current_trades.forEach(trade => {
   //     if (!tradeGroups[trade.group_id]) {
