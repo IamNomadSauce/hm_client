@@ -149,56 +149,108 @@
   };
 
   const orderHoverHandler = function (e, chartState) {
-    const rect = canvas.getBoundingClientRect();
-    const mouseY = e.clientY - rect.top;
+  const rect = canvas.getBoundingClientRect();
+  const mouseY = e.clientY - rect.top;
 
-    current_orders.forEach(order => {
-      const orderY = chartState.height - chartState.margin - ((order.Price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-      if (Math.abs(mouseY - orderY) < 5) {
+  current_orders.forEach(order => {
+    const orderY = chartState.height - chartState.margin -
+      ((order.Price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+      (chartState.height - 2 * chartState.margin);
+
+    if (Math.abs(mouseY - orderY) < 5) {
+      // Check if a menu already exists
+      let existingMenu = document.querySelector('.order-menu');
+
+      if (!existingMenu) {
+        // Remove any existing menus
+        document.querySelectorAll('.order-menu').forEach(el => el.remove());
+
+        // Create a new menu
         const menu = document.createElement('div');
         menu.className = 'order-menu';
         menu.style.position = 'absolute';
-        menu.style.left = `${e.pageX}px`;
-        menu.style.top = `${e.pageY}px`;
+        menu.style.left = `${e.pageX - 150}px`;
+        menu.style.top = `${e.pageY - 10}px`;
+        menu.style.zIndex = '1000';
+        menu.style.pointerEvents = 'auto';
+
+        // Populate menu content
         menu.innerHTML = `
-                <div><strong>Order Details</strong></div>
-                <div>Side: ${order.Side}</div>
-                <div>Price: ${order.Price}</div>
-                <div>Size: ${order.Size}</div>
-                <div>Status: ${order.Status}</div>
-                <div class="cancel-button" onclick="cancelOrder('${order.OrderID}')">Cancel Order</div>
-            `;
+          <div><strong>Order Details</strong></div>
+          <div>Side: ${order.Side}</div>
+          <div>Product: ${order.ProductID}</div>
+          <div>Price: ${order.Price}</div>
+          <div>Size: ${order.Size}</div>
+          <div>Status: ${order.Status}</div>
+          <div class="cancel-button" onclick="cancelOrder('${order.OrderID}')">Cancel Order</div>
+        `;
+
+        // Add hover behavior to prevent premature removal
+        let isMouseOverMenu = false;
+
+        // Keep track of hover state for the menu
+        menu.addEventListener('mouseenter', () => {
+          console.log("Menu enter");
+          isMouseOverMenu = true;
+        });
+
+        // Remove menu on mouse leave
+        menu.addEventListener('mouseleave', function () {
+          console.log("Menu leave");
+          this.remove(); // Remove the menu when the mouse leaves it
+        });
+
+        // Append the menu to the body
         document.body.appendChild(menu);
       }
-    });
-  };
+    }
+  });
+};
 
-  const tradeHoverHandler = function (e, chartState, tradeGroups) {
+
+
+
+
+  const tradeHoverHandler = function (e, chartState, groups) {
     const rect = canvas.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
 
-    Object.values(tradeGroups).forEach(trades => {
+    Object.values(groups).forEach(trades => {
       trades.forEach(trade => {
         const entryY = chartState.height - chartState.margin - ((trade.entry_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
         const stopY = chartState.height - chartState.margin - ((trade.stop_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
         const ptY = chartState.height - chartState.margin - ((trade.pt_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
 
         if (isMouseNearLine(mouseY, entryY) || isMouseNearLine(mouseY, stopY) || isMouseNearLine(mouseY, ptY)) {
-          displayTradeMenu(e.pageX, e.pageY, trade, trades);
+          const menu = document.createElement('div');
+          menu.className = 'trade-menu';
+          menu.style.left = `${e.pageX + 10}px`;
+          menu.style.top = `${e.pageY + 10}px`;
+          menu.innerHTML = `
+                    <div><strong>Trade Group ${trade.group_id}</strong></div>
+                    <div>Side: ${trade.side}</div>
+                    <div>Entry: ${trade.entry_price.toFixed(8)}</div>
+                    <div>Stop: ${trade.stop_price.toFixed(8)}</div>
+                    <div>Target: ${trade.pt_price.toFixed(8)}</div>
+                    <div>Size: ${trade.size}</div>
+                `;
+          document.body.appendChild(menu);
         }
       });
     });
   };
 
+
+
   function displayTradeMenu(x, y, trade, trades) {
     // Remove any existing menus first
     document.querySelectorAll('.trade-menu').forEach(el => el.remove());
-    
+
     const menu = document.createElement('div');
     menu.className = 'trade-menu';
     menu.style.left = `${x + 10}px`;
     menu.style.top = `${y + 10}px`;
-    
+
     menu.innerHTML = `
         <div><strong>Trade Group ${trade.group_id}</strong></div>
         <div>Side: ${trade.side}</div>
@@ -208,15 +260,15 @@
         <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
         <div>Targets:</div>
         ${trades.map(t => {
-            const rr = ((Math.abs(t.pt_price - t.entry_price)) / 
-                (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
-            return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
+      const rr = ((Math.abs(t.pt_price - t.entry_price)) /
+        (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
+      return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
                     <span style="color: #ffff00"> R:R ${rr}</span></div>`;
-        }).join('')}
+    }).join('')}
     `;
-    
+
     document.body.appendChild(menu);
-}
+  }
 
 
 
@@ -579,10 +631,44 @@
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
 
+
+
+    // Add mouseleave handler to clean up all menus
+    canvas.addEventListener('mouseleave', function (event) {
+      console.log("Canvas Leave");
+
+      // Get mouse position
+      const mouseX = event.clientX;
+      const mouseY = event.clientY;
+
+      // Get canvas and menu boundaries
+      const canvasRect = canvas.getBoundingClientRect();
+      const menu = document.querySelector('.order-menu');
+      const menuRect = menu ? menu.getBoundingClientRect() : null;
+
+      // Check if mouse is still inside canvas or menu
+      const isMouseInCanvas =
+        mouseX >= canvasRect.left &&
+        mouseX <= canvasRect.right &&
+        mouseY >= canvasRect.top &&
+        mouseY <= canvasRect.bottom;
+
+      const isMouseInMenu =
+        menuRect &&
+        mouseX >= menuRect.left &&
+        mouseX <= menuRect.right &&
+        mouseY >= menuRect.top &&
+        mouseY <= menuRect.bottom;
+
+      if (!isMouseInCanvas && !isMouseInMenu) {
+        console.log("Mouse has left both canvas and menu");
+        document.querySelectorAll('.order-menu').forEach(el => el.remove());
+      }
+    });
+
+
     return { ctx, width, height, margin, minPrice, maxPrice };
   }
-
-
 
   // --------------------------------------------------------------------------------------------------------
 
@@ -933,6 +1019,7 @@
   // }
 
   // Move these functions outside drawToolbar and fix typos
+
   function isMouseNearLine(mouseY, lineY, threshold = 5) {
     return Math.abs(mouseY - lineY) < threshold;
   }
@@ -1077,6 +1164,7 @@
   });
 
   canvas.addEventListener('mouseleave', function () {
+    console.log("Canvas Leave2")
     isDragging = false;
     canvas.style.cursor = 'crosshair';
   });
