@@ -190,13 +190,13 @@
 
           // Keep track of hover state for the menu
           menu.addEventListener('mouseenter', () => {
-            console.log("Menu enter");
+            // console.log("Menu enter");
             isMouseOverMenu = true;
           });
 
           // Remove menu on mouse leave
           menu.addEventListener('mouseleave', function () {
-            console.log("Menu leave");
+            // console.log("Menu leave");
             this.remove(); // Remove the menu when the mouse leaves it
           });
 
@@ -259,12 +259,12 @@
                     `;
 
             menu.addEventListener('mouseenter', () => {
-              console.log("Trade Menu enter");
+              // console.log("Trade Menu enter");
               menu.dataset.hovering = 'true';
             });
 
             menu.addEventListener('mouseleave', function () {
-              console.log("Trade Menu leave");
+              // console.log("Trade Menu leave");
               this.remove();
             });
 
@@ -274,6 +274,173 @@
       });
     });
   };
+
+  const lineHoverHandler = function (e, chartState) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseY = e.clientY - rect.top;
+
+    let isNearLine = false;
+    draw_lines.forEach((line, index) => {
+      const lineY = chartState.height - chartState.margin -
+        ((line.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+        (chartState.height - 2 * chartState.margin);
+
+      if (isMouseNearLine(mouseY, lineY)) {
+        let existingMenu = document.querySelector('.line-menu');
+
+        if (!existingMenu) {
+          document.querySelectorAll('.line-menu').forEach(el => el.remove());
+
+          const menu = document.createElement('div');
+          menu.className = 'line-menu';
+          menu.style.position = 'absolute';
+          menu.style.left = `${e.pageX - 150}px`;
+          menu.style.top = `${e.pageY - 10}px`;
+          menu.style.display = 'block';
+          menu.style.zIndex = '1000';
+          menu.style.pointerEvents = 'auto';
+
+          menu.innerHTML = `
+                    <div class="line-menu-item" data-action="entry">Trade Entry</div>
+                    <div class="line-menu-item" data-action="pt">Profit Target</div>
+                    <div class="line-menu-item" data-action="stop">Stop Loss</div>
+                    <div class="line-menu-item" data-action="trigger">Trigger</div>
+                    <div class="line-menu-item" data-action="delete">Delete</div>
+                    <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
+                `;
+
+          menu.addEventListener('mouseenter', () => {
+            menu.dataset.hovering = 'true';
+          });
+
+          menu.addEventListener('mouseleave', () => {
+            menu.dataset.hovering = 'false';
+            menu.remove();
+          });
+
+          // Add click handlers to menu items
+          menu.querySelectorAll('.line-menu-item').forEach(item => {
+            item.addEventListener('click', function (e) {
+              const action = this.dataset.action;
+              handleLineAction(action, draw_lines[activeLineIndex]);
+              menu.remove();
+              drawCandlestickChart(stockData, start, end);
+            });
+          });
+
+          document.body.appendChild(menu);
+        }
+
+        canvas.style.cursor = 'pointer';
+        isNearLine = true;
+        activeLineIndex = index;
+      }
+    });
+
+    if (!isNearLine) {
+      canvas.style.cursor = 'default';
+      activeLineIndex = -1;
+      const menu = document.querySelector('.line-menu');
+      if (menu && menu.dataset.hovering !== 'true') {
+        menu.remove();
+      }
+    }
+  };
+
+
+  function handleLineAction(action, line) {
+    switch (action) {
+      case 'trigger':
+        const lastCandle = stockData[stockData.length - 1];
+        const currentPrice = lastCandle.Close;
+
+        line.type = 'trigger';
+        line.color = '#ff00ff';
+
+        const triggerData = {
+          product_id: selectedProduct.product_id,
+          type: line.price > currentPrice ? 'price_above' : 'price_below',
+          price: parseFloat(line.price),
+          status: 'active',
+          xch_id: exchange.ID
+        };
+
+        fetch('create-trigger', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(triggerData)
+        })
+          .then(response => response.json())
+          .then(data => {
+            console.log('Trigger Created: ', data);
+            line.triggerId = data.id;
+          })
+          .catch(error => {
+            console.log('Error creating trigger:', error);
+          });
+        break;
+
+      case 'entry':
+        line.type = 'entry';
+        line.color = '#00ff00';
+        window.currentTrade = {
+          entry: line.price,
+          productId: selectedProduct.product_id
+        };
+        break;
+
+      case 'pt':
+        line.type = 'pt';
+        line.color = '#ffff00';
+        if (window.currentTrade && window.currentTrade.entry) {
+          window.currentTrade.target = line.price;
+        }
+        break;
+
+      case 'stop':
+        line.type = 'stop';
+        line.color = '#ff0000';
+        if (window.currentTrade && window.currentTrade.entry) {
+          window.currentTrade.stop = line.price;
+        }
+        break;
+
+      case 'delete':
+        draw_lines.splice(activeLineIndex, 1);
+        break;
+
+      case 'create':
+        const entryLine = draw_lines.find(l => l.type === 'entry');
+        const stopLine = draw_lines.find(l => l.type === 'stop');
+        const targetLine = draw_lines.find(l => l.type === 'pt');
+
+        if (!entryLine || !stopLine || !targetLine) {
+          alert('Please set entry, stop loss, and profit target levels before creating trade');
+          return;
+        }
+
+        const tradeSetup = {
+          entry: entryLine.price,
+          size: 500,
+          stop: stopLine.price,
+          target: targetLine.price,
+          productId: selectedProduct.product_id
+        };
+        createTradeGroup(tradeSetup);
+        break;
+    }
+  }
+
+  function hideLineMenu() {
+    const menu = document.querySelector('.line-menu');
+    if (menu) {
+      menu.style.display = 'none';
+    }
+  }
+
+
 
 
 
@@ -343,18 +510,25 @@
 
     eventSource.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
+        // Check if the event is a trigger event
+        if (event.data.startsWith('event: trigger')) {
+          const jsonStr = event.data.split('\n')[1]; // Get the JSON part
+          const message = JSON.parse(jsonStr);
+          // Handle trigger event
+          console.log('Trigger event:', message);
+          return;
+        }
 
+        // Handle other events
+        const message = JSON.parse(event.data);
         switch (message.event) {
           case 'price':
             updateChartPrice(message.data);
             break;
-
           case 'candle':
-            console.log(message.data)
+            console.log(message.data);
             updateChart(message.data);
             break;
-
           default:
             console.log("Unknown event type:", message);
         }
@@ -362,6 +536,7 @@
         console.error("Error processing message:", err, "Raw data:", event.data);
       }
     };
+
 
 
     eventSource.onerror = (error) => {
@@ -561,6 +736,7 @@
     canvas.removeEventListener('mousemove', fillHoverHandler);
     canvas.removeEventListener('mousemove', orderHoverHandler);
     canvas.removeEventListener('mousemove', tradeHoverHandler);
+    canvas.removeEventListener('mousemove', lineHoverHandler);
 
     // Draw candlesticks
     visibleData.forEach((d, i) => {
@@ -683,12 +859,37 @@
       });
     }
 
+    // Draw triggers
+    if (current_triggers) {
+      current_triggers.forEach(trigger => {
+        const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+        // Draw the trigger line
+        ctx.beginPath();
+        ctx.moveTo(margin, triggerY);
+        ctx.lineTo(width - margin, triggerY);
+        ctx.setLineDash([5, 5]);  // Create dashed line
+        ctx.strokeStyle = '#ff00ff';  // Magenta color for triggers
+        ctx.stroke();
+        ctx.setLineDash([]);  // Reset line style
+
+        // Add label
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        const triggerType = trigger.type === 'price_above' ? 'Trigger Above' : 'Trigger Below';
+        ctx.fillText(`${triggerType}: ${trigger.price.toFixed(8)}`, width - 200, triggerY - 5);
+      });
+    }
+
+
 
     // Add event listeners with chart state
     const chartState = { ctx, width, height, margin, minPrice, maxPrice };
     canvas.addEventListener('mousemove', (e) => fillHoverHandler(e, chartState));
     canvas.addEventListener('mousemove', (e) => orderHoverHandler(e, chartState));
     canvas.addEventListener('mousemove', (e) => tradeHoverHandler(e, chartState, tradeGroups));
+    canvas.addEventListener('mousemove', (e) => lineHoverHandler(e, chartState));
+
 
 
 
@@ -699,7 +900,7 @@
 
     // Add mouseleave handler to clean up all menus
     canvas.addEventListener('mouseleave', function (event) {
-      console.log("Canvas Leave");
+      // console.log("Canvas Leave");
 
       // Get mouse position
       const mouseX = event.clientX;
@@ -725,7 +926,7 @@
         mouseY <= menuRect.bottom;
 
       if (!isMouseInCanvas && !isMouseInMenu) {
-        console.log("Mouse has left both canvas and menu");
+        // console.log("Mouse has left both canvas and menu");
         document.querySelectorAll('.order-menu').forEach(el => el.remove());
       }
     });
@@ -734,7 +935,373 @@
     return { ctx, width, height, margin, minPrice, maxPrice };
   }
 
-  // --------------------------------------------------------------------------------------------------------
+  function isMouseNearLine(mouseY, lineY, threshold = 5) {
+    return Math.abs(mouseY - lineY) < threshold;
+  }
+
+  var chartState = null;
+
+  function showLineMenu(x, y) {
+    const menu = document.getElementById('lineMenu');
+    const line = draw_lines[activeLineIndex];
+
+    // Calculate line's Y position using stored chartState
+    if (chartState) {
+      const lineY = chartState.height - chartState.margin -
+        ((line.price - chartState.minPrice) /
+          (chartState.maxPrice - chartState.minPrice)) *
+        (chartState.height - 2 * chartState.margin);
+
+      menu.style.display = 'block';
+      menu.style.left = `${x}px`;
+      menu.style.top = `${lineY}px`;
+    }
+  }
+
+  function cancelTrigger(triggerID) {
+    fetch('/delete-trigger', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ trigger_id: triggerID })
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Trigger cancelled:', data)
+        current_triggers = current_triggers.filter(triggers => triggers.id !== triggerID)
+        drawCandlestickChart(stockData, start, end)
+      })
+      .catch(error => {
+        console.error('Error cancelling trigger:', error);
+      })
+  }
+
+  function hideLineMenu() {
+    const menu = document.getElementById('lineMenu');
+    menu.style.display = 'none';
+  }
+
+  // Fix calculatePrice function
+  function calculatePrice(y, height, margin, minPrice, maxPrice) {
+    return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
+  }
+  function drawCrosshair(ctx, width, height, margin, minPrice, maxPrice) {
+    // Draw vertical line
+    ctx.beginPath();
+    ctx.moveTo(mouseX, margin);
+    ctx.lineTo(mouseX, height - margin);
+    ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+    ctx.stroke();
+
+    // Draw horizontal line
+    ctx.beginPath();
+    ctx.moveTo(margin, mouseY);
+    ctx.lineTo(width - margin, mouseY);
+    ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+    ctx.stroke();
+
+    // Calculate price - fixed formula to match the candlestick scaling
+    var price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
+    ctx.fillStyle = 'white';
+    ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
+  }
+
+
+  // Initial parameters for zoom and pan
+  var end = stockData.length
+  var start = Math.max(0, end - 250); // Display first 30 data points
+  var zoomFactor = 10;
+
+  // Initial draw
+  drawCandlestickChart(stockData, start, end);
+
+  // Add event listeners for zooming and panning
+  document.getElementById('chartContainer').addEventListener('wheel', function (event) {
+    event.preventDefault();
+    if (event.deltaY < 0) { // Zoom in
+      if (end - start > zoomFactor) {
+        start += zoomFactor;
+        end -= zoomFactor;
+      }
+    } else { // Zoom out
+      start = Math.max(0, start - zoomFactor);
+      end = Math.min(stockData.length, end + zoomFactor);
+    }
+    drawCandlestickChart(stockData, start, end);
+  });
+
+  var isDragging = false;
+  var startX;
+
+  var canvas = document.getElementById('candlestickChart');
+
+  // Update mousedown event to store price instead of coordinates
+  canvas.addEventListener('mousedown', function (event) {
+    var rect = canvas.getBoundingClientRect();
+    mouseX = event.clientX - rect.left;
+    mouseY = event.clientY - rect.top;
+
+    if (currentTool) {
+      if (currentTool === 'line') {
+        const chartState = drawCandlestickChart(stockData, start, end);
+        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+        draw_lines.push({
+          price: price
+        });
+        console.log("Draw_Lines", draw_lines);
+        drawCandlestickChart(stockData, start, end);
+      }
+      drawingStart = { x: mouseX, y: mouseY };
+    } else {
+      isDragging = true;
+      startX = event.clientX;
+      canvas.style.cursor = 'grabbing';
+    }
+  });
+
+  // Fix the calculatePrice function
+  function calculatePrice(y, height, margin, minPrice, maxPrice) {
+    return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
+  }
+
+  canvas.addEventListener('mouseup', function () {
+    console.log("MouseUp")
+    if (currentTool) {
+      drawingStart = null
+      if (currentTool === 'box') {
+        console.log(" - _Box end", mouseX, mouseY)
+      }
+    } else {
+      isDragging = false;
+      canvas.style.cursor = 'crosshair';
+    }
+  });
+
+  canvas.addEventListener('mouseleave', function () {
+    // console.log("Canvas Leave2")
+    isDragging = false;
+    canvas.style.cursor = 'crosshair';
+  });
+
+  canvas.addEventListener('click', function (event) {
+    console.log("Line Clicked", draw_lines)
+    if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
+      showLineMenu(event.pageX, event.pageY);
+      console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
+      console.log("Line type", draw_lines[activeLineIndex].type)
+      if (draw_lines[activeLineIndex].type) {
+        console.log("Line type:", draw_lines[activeLineIndex].type);
+      }
+    }
+  });
+
+
+
+
+  canvas.addEventListener('mousemove', function (event) {
+    var rect = canvas.getBoundingClientRect();
+    mouseX = event.clientX - rect.left;
+    mouseY = event.clientY - rect.top;
+
+
+    if (isDragging) {
+      var dx = event.clientX - startX;
+      var panFactor = Math.floor(dx / 10);
+      if (panFactor !== 0) {
+        start = Math.max(0, start - panFactor);
+        end = Math.min(stockData.length, end - panFactor);
+        startX = event.clientX;
+        drawCandlestickChart(stockData, start, end);
+      }
+    } else {
+      drawCandlestickChart(stockData, start, end);
+    }
+  });
+
+  // Redraw on window resize
+  window.addEventListener('resize', function () {
+    chartState = drawCandlestickChart(stockData, start, end);
+  });
+
+  document.getElementById('line').addEventListener('click', function () {
+    console.log("Line Selected")
+    if (currentTool == 'line' || currentTool == 'box') {
+      currentTool = null
+    }
+    else {
+
+      currentTool = 'line'
+    }
+  })
+  document.getElementById('box').addEventListener('click', function () {
+    if (currentTool == 'line' || currentTool == 'box') {
+      currentTool = null
+    }
+    else {
+      console.log("Box Selected")
+      currentTool = 'box'
+    }
+  })
+
+  // Add this after your existing event listeners
+  document.querySelectorAll('.line-menu-item').forEach(item => {
+    item.addEventListener('click', function (e) {
+      const action = this.dataset.action;
+      if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
+        const line = draw_lines[activeLineIndex];
+
+        switch (action) {
+          case 'trigger':
+            const lastCandle = stockData[stockData.length - 1]
+            const currentPrice = lastCandle.Close
+
+            line.type = 'trigger';
+            line.color = '%ff00ff';
+
+            const triggerData = {
+              product_id: selectedProduct.product_id,
+              type: line.price > currentPrice ? 'price_above' : 'price_below',
+              price: parseFloat(line.price),
+              status: 'active',
+              xch_id: exchange.ID
+            }
+
+            fetch('create-trigger', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(triggerData)
+            })
+              .then(response => response.json())
+              .then(data => {
+                console.log('Trigger Created: ', data)
+                line.triggerId = data.id
+              })
+              .catch(error => {
+                console.log('Error creating trigger:', error)
+              })
+            break;
+
+          case 'entry':
+            line.type = 'entry';
+            line.color = '#00ff00';
+            console.log("Entry line at price:", line.price);
+            window.currentTrade = {
+              entry: line.price,
+              productId: selectedProduct.product_id
+            };
+            break;
+
+          case 'pt':
+            line.type = 'pt';
+            line.color = '#ffff00';
+            console.log("Profit target at price:", line.price);
+            if (window.currentTrade && window.currentTrade.entry) {
+              window.currentTrade.target = line.price;
+            }
+            break;
+
+          case 'stop':
+            line.type = 'stop';
+            line.color = '#ff0000';
+            console.log("Stop loss at price:", line.price);
+            if (window.currentTrade && window.currentTrade.entry) {
+              window.currentTrade.stop = line.price;
+            }
+            break;
+
+          case 'delete':
+            draw_lines.splice(activeLineIndex, 1);
+            console.log("Line deleted at price:", line.price);
+            break;
+
+          case 'create':
+            const entryLine = draw_lines.find(line => line.type === 'entry')
+            const stopLine = draw_lines.find(line => line.type === 'stop')
+            const targetLine = draw_lines.find(line => line.type === 'pt')
+
+            if (!entryLine || !stopLine || !targetLine) {
+              alert('Please set entry, stop loss, and profit target levels before creating trade')
+              return
+            }
+
+            const tradeSetup = {
+              entry: entryLine.price,
+              size: 500,
+              stop: stopLine.price,
+              target: targetLine.price,
+              productId: selectedProduct.product_id
+            }
+            createTradeGroup(tradeSetup)
+            console.log("Trade group created", tradeSetup)
+            break;
+        }
+      }
+
+      hideLineMenu();
+      drawCandlestickChart(stockData, start, end);
+    });
+  });
+
+
+  function createTradeGroup(trade) {
+    const side = trade.target > trade.entry ? 'BUY' : 'SELL';
+    const riskAmount = Math.abs(trade.entry - trade.stop);
+    const rewardAmount = Math.abs(trade.target - trade.entry);
+    const riskRewardRatio = parseFloat((rewardAmount / riskAmount).toFixed(2));
+
+    const ptLines = draw_lines.filter(line => line.type === "pt");
+    const profitTargets = ptLines.map(line => parseFloat(line.price))
+
+    const tradeData = {
+      product_id: trade.productId,
+      side: side,
+      size: parseFloat(trade.size || "0"),
+      entry_price: parseFloat(trade.entry),
+      stop_price: parseFloat(trade.stop),
+      profit_targets: profitTargets,
+      risk_reward: riskRewardRatio,
+      xch_id: exchange.ID
+    };
+
+    fetch('/bracket-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(tradeData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Trade group created:', data);
+      })
+      .catch(error => {
+        console.error('Error creating trade:', error);
+      });
+  }
+
+  // Add click outside handler
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#lineMenu') && !e.target.closest('#candlestickChart')) {
+      hideLineMenu();
+    }
+  });
+
+  drawCandlestickChart(stockData, start, end);
+  document.addEventListener('DOMContentLoaded', () => {
+    connectToBackend();
+
+    // Initialize Bootstrap tabs if they exist
+    const tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
+    if (tabElements.length > 0) {
+      tabElements.forEach(el => {
+        new bootstrap.Tab(el);
+      });
+    }
+  });
+
 
   // function drawCandlestickChart(data, start, end) {
   //   var canvas = document.getElementById('candlestickChart');
@@ -1082,376 +1649,6 @@
   //   chartState = { ctx, width, height, margin, minPrice, maxPrice };
   //   return chartState;
   // }
-
-  // Move these functions outside drawToolbar and fix typos
-
-  function isMouseNearLine(mouseY, lineY, threshold = 5) {
-    return Math.abs(mouseY - lineY) < threshold;
-  }
-
-  var chartState = null;
-
-  function showLineMenu(x, y) {
-    const menu = document.getElementById('lineMenu');
-    const line = draw_lines[activeLineIndex];
-
-    // Calculate line's Y position using stored chartState
-    if (chartState) {
-      const lineY = chartState.height - chartState.margin -
-        ((line.price - chartState.minPrice) /
-          (chartState.maxPrice - chartState.minPrice)) *
-        (chartState.height - 2 * chartState.margin);
-
-      menu.style.display = 'block';
-      menu.style.left = `${x}px`;
-      menu.style.top = `${lineY}px`;
-    }
-  }
-
-  function cancelTrigger(triggerID) {
-    fetch('/delete-trigger', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ trigger_id: triggerID })
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Trigger cancelled:', data)
-        current_triggers = current_triggers.filter(triggers => triggers.id !== triggerID)
-        drawCandlestickChart(stockData, start, end)
-      })
-      .catch(error => {
-        console.error('Error cancelling trigger:', error);
-      })
-  }
-
-  function hideLineMenu() {
-    const menu = document.getElementById('lineMenu');
-    menu.style.display = 'none';
-  }
-
-  // Fix calculatePrice function
-  function calculatePrice(y, height, margin, minPrice, maxPrice) {
-    return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
-  }
-  function drawCrosshair(ctx, width, height, margin, minPrice, maxPrice) {
-    // Draw vertical line
-    ctx.beginPath();
-    ctx.moveTo(mouseX, margin);
-    ctx.lineTo(mouseX, height - margin);
-    ctx.strokeStyle = 'rgba(100,100,100,0.5)';
-    ctx.stroke();
-
-    // Draw horizontal line
-    ctx.beginPath();
-    ctx.moveTo(margin, mouseY);
-    ctx.lineTo(width - margin, mouseY);
-    ctx.strokeStyle = 'rgba(100,100,100,0.5)';
-    ctx.stroke();
-
-    // Calculate price - fixed formula to match the candlestick scaling
-    var price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
-    ctx.fillStyle = 'white';
-    ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
-  }
-
-
-  // Initial parameters for zoom and pan
-  var end = stockData.length
-  var start = Math.max(0, end - 250); // Display first 30 data points
-  var zoomFactor = 10;
-
-  // Initial draw
-  drawCandlestickChart(stockData, start, end);
-
-  // Add event listeners for zooming and panning
-  document.getElementById('chartContainer').addEventListener('wheel', function (event) {
-    event.preventDefault();
-    if (event.deltaY < 0) { // Zoom in
-      if (end - start > zoomFactor) {
-        start += zoomFactor;
-        end -= zoomFactor;
-      }
-    } else { // Zoom out
-      start = Math.max(0, start - zoomFactor);
-      end = Math.min(stockData.length, end + zoomFactor);
-    }
-    drawCandlestickChart(stockData, start, end);
-  });
-
-  var isDragging = false;
-  var startX;
-
-  var canvas = document.getElementById('candlestickChart');
-
-  // Update mousedown event to store price instead of coordinates
-  canvas.addEventListener('mousedown', function (event) {
-    var rect = canvas.getBoundingClientRect();
-    mouseX = event.clientX - rect.left;
-    mouseY = event.clientY - rect.top;
-
-    if (currentTool) {
-      if (currentTool === 'line') {
-        const chartState = drawCandlestickChart(stockData, start, end);
-        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-        draw_lines.push({
-          price: price
-        });
-        console.log("Draw_Lines", draw_lines);
-        drawCandlestickChart(stockData, start, end);
-      }
-      drawingStart = { x: mouseX, y: mouseY };
-    } else {
-      isDragging = true;
-      startX = event.clientX;
-      canvas.style.cursor = 'grabbing';
-    }
-  });
-
-  // Fix the calculatePrice function
-  function calculatePrice(y, height, margin, minPrice, maxPrice) {
-    return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
-  }
-
-  canvas.addEventListener('mouseup', function () {
-    console.log("MouseUp")
-    if (currentTool) {
-      drawingStart = null
-      if (currentTool === 'box') {
-        console.log(" - _Box end", mouseX, mouseY)
-      }
-    } else {
-      isDragging = false;
-      canvas.style.cursor = 'crosshair';
-    }
-  });
-
-  canvas.addEventListener('mouseleave', function () {
-    console.log("Canvas Leave2")
-    isDragging = false;
-    canvas.style.cursor = 'crosshair';
-  });
-
-  canvas.addEventListener('click', function (event) {
-    console.log("Line Clicked", draw_lines)
-    if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
-      showLineMenu(event.pageX, event.pageY);
-      console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
-      console.log("Line type", draw_lines[activeLineIndex].type)
-      if (draw_lines[activeLineIndex].type) {
-        console.log("Line type:", draw_lines[activeLineIndex].type);
-      }
-    }
-  });
-
-
-
-
-  canvas.addEventListener('mousemove', function (event) {
-    var rect = canvas.getBoundingClientRect();
-    mouseX = event.clientX - rect.left;
-    mouseY = event.clientY - rect.top;
-
-
-    if (isDragging) {
-      var dx = event.clientX - startX;
-      var panFactor = Math.floor(dx / 10);
-      if (panFactor !== 0) {
-        start = Math.max(0, start - panFactor);
-        end = Math.min(stockData.length, end - panFactor);
-        startX = event.clientX;
-        drawCandlestickChart(stockData, start, end);
-      }
-    } else {
-      drawCandlestickChart(stockData, start, end);
-    }
-  });
-
-  // Redraw on window resize
-  window.addEventListener('resize', function () {
-    chartState = drawCandlestickChart(stockData, start, end);
-  });
-
-  document.getElementById('line').addEventListener('click', function () {
-    console.log("Line Selected")
-    if (currentTool == 'line' || currentTool == 'box') {
-      currentTool = null
-    }
-    else {
-
-      currentTool = 'line'
-    }
-  })
-  document.getElementById('box').addEventListener('click', function () {
-    if (currentTool == 'line' || currentTool == 'box') {
-      currentTool = null
-    }
-    else {
-      console.log("Box Selected")
-      currentTool = 'box'
-    }
-  })
-
-  // Add this after your existing event listeners
-  document.querySelectorAll('.line-menu-item').forEach(item => {
-    item.addEventListener('click', function (e) {
-      const action = this.dataset.action;
-      if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
-        const line = draw_lines[activeLineIndex];
-
-        switch (action) {
-          case 'trigger':
-            const lastCandle = stockData[stockData.length - 1]
-            const currentPrice = lastCandle.Close
-
-            line.type = 'trigger';
-            line.color = '%ff00ff';
-
-            const triggerData = {
-              product_id: selectedProduct.product_id,
-              type: line.price > currentPrice ? 'price_above' : 'price_below',
-              price: parseFloat(line.price),
-              status: 'active',
-              xch_id: exchange.ID
-            }
-
-            fetch('create-trigger', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(triggerData)
-            })
-              .then(response => response.json())
-              .then(data => {
-                console.log('Trigger Created: ', data)
-                line.triggerId = data.id
-              })
-              .catch(error => {
-                console.log('Error creating trigger:', error)
-              })
-            break;
-
-          case 'entry':
-            line.type = 'entry';
-            line.color = '#00ff00';
-            console.log("Entry line at price:", line.price);
-            window.currentTrade = {
-              entry: line.price,
-              productId: selectedProduct.product_id
-            };
-            break;
-
-          case 'pt':
-            line.type = 'pt';
-            line.color = '#ffff00';
-            console.log("Profit target at price:", line.price);
-            if (window.currentTrade && window.currentTrade.entry) {
-              window.currentTrade.target = line.price;
-            }
-            break;
-
-          case 'stop':
-            line.type = 'stop';
-            line.color = '#ff0000';
-            console.log("Stop loss at price:", line.price);
-            if (window.currentTrade && window.currentTrade.entry) {
-              window.currentTrade.stop = line.price;
-            }
-            break;
-
-          case 'delete':
-            draw_lines.splice(activeLineIndex, 1);
-            console.log("Line deleted at price:", line.price);
-            break;
-
-          case 'create':
-            const entryLine = draw_lines.find(line => line.type === 'entry')
-            const stopLine = draw_lines.find(line => line.type === 'stop')
-            const targetLine = draw_lines.find(line => line.type === 'pt')
-
-            if (!entryLine || !stopLine || !targetLine) {
-              alert('Please set entry, stop loss, and profit target levels before creating trade')
-              return
-            }
-
-            const tradeSetup = {
-              entry: entryLine.price,
-              size: 500,
-              stop: stopLine.price,
-              target: targetLine.price,
-              productId: selectedProduct.product_id
-            }
-            createTradeGroup(tradeSetup)
-            console.log("Trade group created", tradeSetup)
-            break;
-        }
-      }
-
-      hideLineMenu();
-      drawCandlestickChart(stockData, start, end);
-    });
-  });
-
-
-  function createTradeGroup(trade) {
-    const side = trade.target > trade.entry ? 'BUY' : 'SELL';
-    const riskAmount = Math.abs(trade.entry - trade.stop);
-    const rewardAmount = Math.abs(trade.target - trade.entry);
-    const riskRewardRatio = parseFloat((rewardAmount / riskAmount).toFixed(2));
-
-    const ptLines = draw_lines.filter(line => line.type === "pt");
-    const profitTargets = ptLines.map(line => parseFloat(line.price))
-
-    const tradeData = {
-      product_id: trade.productId,
-      side: side,
-      size: parseFloat(trade.size || "0"),
-      entry_price: parseFloat(trade.entry),
-      stop_price: parseFloat(trade.stop),
-      profit_targets: profitTargets,
-      risk_reward: riskRewardRatio,
-      xch_id: exchange.ID
-    };
-
-    fetch('/bracket-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(tradeData)
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Trade group created:', data);
-      })
-      .catch(error => {
-        console.error('Error creating trade:', error);
-      });
-  }
-
-  // Add click outside handler
-  document.addEventListener('click', function (e) {
-    if (!e.target.closest('#lineMenu') && !e.target.closest('#candlestickChart')) {
-      hideLineMenu();
-    }
-  });
-
-  drawCandlestickChart(stockData, start, end);
-  document.addEventListener('DOMContentLoaded', () => {
-    connectToBackend();
-
-    // Initialize Bootstrap tabs if they exist
-    const tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
-    if (tabElements.length > 0) {
-      tabElements.forEach(el => {
-        new bootstrap.Tab(el);
-      });
-    }
-  });
-
 
 </script>
 {{end}}
