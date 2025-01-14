@@ -117,6 +117,27 @@
   var all_trades = exchange.Trades;
   var all_triggers = exchange.Triggers || [];
 
+  var chartState = null;
+
+  function updateChartState(ctx, width, height, margin, minPrice, maxPrice) {
+    chartState = {
+      ctx, 
+      width, 
+      height, 
+      margin, 
+      minPrice, 
+      maxPrice
+    }
+  }
+
+  var mouseX = 0;
+  var mouseY = 0;
+  var currentTool = null
+  var drawingStart = null
+  var draw_boxes = []
+  var draw_lines = []
+  var activeLineIndex = -1;
+
   console.log("Triggers", all_triggers)
 
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
@@ -206,10 +227,6 @@
       }
     });
   };
-
-
-
-
 
   const tradeHoverHandler = function (e, chartState, groups) {
     const rect = canvas.getBoundingClientRect();
@@ -347,7 +364,6 @@
     }
   };
 
-
   function handleLineAction(action, line) {
     switch (action) {
       case 'trigger':
@@ -440,11 +456,6 @@
     }
   }
 
-
-
-
-
-
   function displayTradeMenu(x, y, trade, trades) {
     // Remove any existing menus first
     document.querySelectorAll('.trade-menu').forEach(el => el.remove());
@@ -474,17 +485,6 @@
   }
 
 
-
-
-
-
-  var mouseX = 0;
-  var mouseY = 0;
-  var currentTool = null
-  var drawingStart = null
-  var draw_boxes = []
-  var draw_lines = []
-  var activeLineIndex = -1;
 
   console.log("Current Exchange", exchange)
   console.log("Selected Product", selectedProduct.product_id)
@@ -526,8 +526,8 @@
             updateChartPrice(message.data);
             break;
           case 'candle':
-            console.log(message.data);
-            updateChart(message.data);
+            // console.log(message.data);
+            // updateChart(message.data);
             break;
           default:
             console.log("Unknown event type:", message);
@@ -884,7 +884,8 @@
 
 
     // Add event listeners with chart state
-    const chartState = { ctx, width, height, margin, minPrice, maxPrice };
+    updateChartState(ctx, width, height, margin, minPrice, maxPrice)
+
     canvas.addEventListener('mousemove', (e) => fillHoverHandler(e, chartState));
     canvas.addEventListener('mousemove', (e) => orderHoverHandler(e, chartState));
     canvas.addEventListener('mousemove', (e) => tradeHoverHandler(e, chartState, tradeGroups));
@@ -939,7 +940,6 @@
     return Math.abs(mouseY - lineY) < threshold;
   }
 
-  var chartState = null;
 
   function showLineMenu(x, y) {
     const menu = document.getElementById('lineMenu');
@@ -1007,7 +1007,6 @@
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
   }
 
-
   // Initial parameters for zoom and pan
   var end = stockData.length
   var start = Math.max(0, end - 250); // Display first 30 data points
@@ -1044,7 +1043,7 @@
 
     if (currentTool) {
       if (currentTool === 'line') {
-        const chartState = drawCandlestickChart(stockData, start, end);
+        chartState = drawCandlestickChart(stockData, start, end);
         const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
         draw_lines.push({
           price: price
@@ -1095,9 +1094,6 @@
       }
     }
   });
-
-
-
 
   canvas.addEventListener('mousemove', function (event) {
     var rect = canvas.getBoundingClientRect();
@@ -1245,7 +1241,6 @@
     });
   });
 
-
   function createTradeGroup(trade) {
     const side = trade.target > trade.entry ? 'BUY' : 'SELL';
     const riskAmount = Math.abs(trade.entry - trade.stop);
@@ -1301,354 +1296,6 @@
       });
     }
   });
-
-
-  // function drawCandlestickChart(data, start, end) {
-  //   var canvas = document.getElementById('candlestickChart');
-  //   var ctx = canvas.getContext('2d');
-
-  //   // Set canvas size to match container
-  //   canvas.width = canvas.offsetWidth;
-  //   canvas.height = canvas.offsetHeight;
-
-  //   // Clear the canvas
-  //   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  //   // Define chart dimensions and margins
-  //   var width = canvas.width;
-  //   var height = canvas.height;
-  //   var margin = 50;
-  //   var visibleData = data.slice(start, end);
-  //   var candleWidth = (width - 2 * margin) / visibleData.length;
-
-  //   // Find the min and max values for scaling
-  //   var minPrice = Math.min(...visibleData.map(d => d.Low));
-  //   var maxPrice = Math.max(...visibleData.map(d => d.High));
-
-  //   let exchange = "{{.SelectedExchange.Name}}"
-  //   let orders = "{{.SelectedExchange.Orders}}"
-  //   // console.log("Product", "{{.SelectedProduct}}")
-  //   // console.log("Orders", "{{.SelectedExchange.Orders}}")
-
-  //   let isNearLine = false;
-  //   draw_lines.forEach((line, index) => {
-  //     const lineY = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //     if (isMouseNearLine(mouseY, lineY)) {
-  //       // console.log("Mouse Hover", line, mouseY)
-  //       canvas.style.cursor = 'pointer';
-  //       isNearLine = true;
-  //       activeLineIndex = index;
-  //     }
-  //   });
-
-  //   if (!isNearLine) {
-  //     canvas.style.cursor = 'default';
-  //     activeLineIndex = -1;
-  //   }
-
-  //   // Draw each candlestick
-  //   visibleData.forEach((d, i) => {
-  //     var x = margin + i * candleWidth;
-  //     var openY = height - margin - ((d.Open - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //     var closeY = height - margin - ((d.Close - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //     var highY = height - margin - ((d.High - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //     var lowY = height - margin - ((d.Low - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-  //     // Draw the high-low line
-  //     ctx.beginPath();
-  //     ctx.moveTo(x + candleWidth / 2, highY);
-  //     ctx.lineTo(x + candleWidth / 2, lowY);
-  //     ctx.strokeStyle = 'gray';
-  //     ctx.stroke();
-
-  //     // Draw the open-close rectangle
-  //     ctx.beginPath();
-  //     ctx.rect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
-  //     ctx.fillStyle = d.Close >= d.Open ? 'gray' : 'gray';
-  //     ctx.strokeStyle = 'black'
-  //     ctx.fill();
-  //     ctx.stroke();
-  //   });
-
-  //   // Draw Current Fills
-  //   current_fills.forEach(fill => {
-  //     // Use fill.time instead of fill.timestamp
-  //     const fillTime = new Date(fill.time).getTime() / 1000; // Convert to seconds
-  //     const firstCandleTime = visibleData[0].Timestamp; // Already in seconds
-  //     const timeRange = visibleData[visibleData.length - 1].Timestamp - firstCandleTime;
-
-  //     // Calculate x position based on time
-  //     const xPosition = margin + ((fillTime - firstCandleTime) / timeRange) * (width - 2 * margin);
-
-  //     // Calculate y position based on price
-  //     const fillY = height - margin - ((fill.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-  //     // Draw dot for fill
-  //     ctx.beginPath();
-  //     ctx.arc(xPosition, fillY, 4, 0, 2 * Math.PI);
-  //     ctx.fillStyle = fill.side.toLowerCase() === 'buy' ? 'lime' : 'red';
-  //     ctx.fill();
-
-  //     // Add hover detection for fills
-  //     canvas.addEventListener('mousemove', function (e) {
-  //       const rect = canvas.getBoundingClientRect();
-  //       const mouseX = e.clientX - rect.left;
-  //       const mouseY = e.clientY - rect.top;
-
-  //       // Check if mouse is near the fill dot
-  //       const distance = Math.sqrt(Math.pow(xPosition - mouseX, 2) + Math.pow(fillY - mouseY, 2));
-  //       if (distance < 8) {
-  //         // Draw tooltip
-  //         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-  //         ctx.fillRect(mouseX + 10, mouseY - 40, 120, 60);
-  //         ctx.fillStyle = 'white';
-  //         ctx.font = '12px Arial';
-  //         ctx.fillText(`Fill Price: ${fill.price}`, mouseX + 15, mouseY - 20);
-  //         ctx.fillText(`Size: ${fill.size}`, mouseX + 15, mouseY);
-  //       }
-  //     });
-  //   });
-
-  //   // Draw Current Triggers
-  //   current_triggers.forEach(trigger => {
-  //     const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-  //     // Draw the trigger line
-  //     ctx.beginPath();
-  //     ctx.moveTo(margin, triggerY);
-  //     ctx.lineTo(width - margin, triggerY);
-  //     ctx.setLineDash([5, 5]);
-  //     ctx.strokeStyle = '#ff00ff';
-  //     ctx.stroke();
-  //     ctx.setLineDash([]);
-  //   });
-
-  //   // Add mouseleave handler to canvas
-  //   canvas.addEventListener('mousemove', function (e) {
-  //     const rect = canvas.getBoundingClientRect();
-  //     const mouseY = e.clientY - rect.top;
-
-  //     // Find trigger line near mouse
-  //     const nearTrigger = current_triggers.find(trigger => {
-  //       const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //       return Math.abs(mouseY - triggerY) < 5;
-  //     });
-
-  //     if (nearTrigger) {
-  //       let existingMenu = document.querySelector('.trigger-menu');
-  //       if (!existingMenu) {
-  //         const triggerY = height - margin - ((nearTrigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //         const menu = document.createElement('div');
-  //         menu.className = 'trigger-menu';
-  //         menu.style.position = 'absolute';
-  //         menu.style.left = `${e.pageX - 20}px`; // Offset to the right
-  //         menu.style.top = `${triggerY + rect.top - 50}px`;
-  //         menu.style.zIndex = '1000';
-  //         menu.dataset.hovering = 'false';
-
-  //         menu.innerHTML = `
-  //               <div><strong>Trigger Details</strong></div>
-  //               <div>Type: ${nearTrigger.type}</div>
-  //               <div>Price: ${nearTrigger.price}</div>
-  //               <div>Status: ${nearTrigger.status}</div>
-  //               <div class="cancel-button" onclick="cancelTrigger(${nearTrigger.id})">Cancel Trigger</div>
-  //           `;
-
-  //         menu.addEventListener('mouseenter', () => {
-  //           menu.dataset.hovering = 'true';
-  //         });
-
-  //         menu.addEventListener('mouseleave', () => {
-  //           menu.dataset.hovering = 'false';
-  //           menu.remove();
-  //         });
-
-  //         document.body.appendChild(menu);
-  //       }
-  //     } else {
-  //       const menu = document.querySelector('.trigger-menu');
-  //       if (menu && menu.dataset.hovering !== 'true') {
-  //         menu.remove();
-  //       }
-  //     }
-  //   });
-
-  //   // Draw Current Orders
-  //   current_orders.forEach(order => {
-  //     const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-  //     // Draw the order line
-  //     ctx.beginPath();
-  //     ctx.moveTo(margin, orderY);
-  //     ctx.lineTo(width - margin, orderY);
-  //     ctx.strokeStyle = order.Side.toLowerCase() === 'buy' ? 'rgba(0, 255, 0, 0.5)' : 'rgba(255, 0, 0, 0.5)';
-  //     ctx.stroke();
-
-  //     // Create a hit zone for the order line
-  //     ctx.beginPath();
-  //     ctx.rect(margin, orderY - 5, width - 2 * margin, 10);
-
-  //     // Add hover detection
-  //     let menuVisible = false;
-  //     canvas.addEventListener('mousemove', function (e) {
-  //       const rect = canvas.getBoundingClientRect();
-  //       const mouseY = e.clientY - rect.top;
-
-  //       if (Math.abs(mouseY - orderY) < 5) {
-  //         if (!menuVisible) {
-  //           // Remove any existing menus
-  //           document.querySelectorAll('.order-menu').forEach(el => el.remove());
-
-  //           const menu = document.createElement('div');
-  //           menu.className = 'order-menu';
-  //           menu.style.position = 'absolute';
-  //           menu.style.left = `${e.pageX}px`;
-  //           menu.style.top = `${e.pageY}px`;
-  //           menu.style.zIndex = '1000';
-
-  //           menu.innerHTML = `
-  //                   <div><strong>Order Details</strong></div>
-  //                   <div>Side: ${order.Side}</div>
-  //                   <div>Product: ${order.ProductID}</div>
-  //                   <div>Price: ${order.Price}</div>
-  //                   <div>Size: ${order.Size}</div>
-  //                   <div>Status: ${order.Status}</div>
-  //                   <div class="cancel-button" onclick="cancelOrder('${order.OrderID}')">Cancel Order</div>
-  //               `;
-
-  //           // Add hover handlers to the menu
-  //           menu.addEventListener('mouseenter', () => {
-  //             menuVisible = true;
-  //           });
-
-  //           menu.addEventListener('mouseleave', () => {
-  //             menuVisible = false;
-  //             menu.remove();
-  //           });
-
-  //           document.body.appendChild(menu);
-  //           menuVisible = true;
-  //         }
-  //       }
-  //     });
-  //   });
-
-  //   let tradeGroups = {};
-  //   current_trades.forEach(trade => {
-  //     if (!tradeGroups[trade.group_id]) {
-  //       tradeGroups[trade.group_id] = [];
-  //     }
-  //     tradeGroups[trade.group_id].push(trade);
-  //   });
-
-  //   Object.values(tradeGroups).forEach(trades => {
-  //     // Draw group background/border
-  //     const entryY = height - margin - ((trades[0].entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //     const stopY = height - margin - ((trades[0].stop_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //     const ptYs = trades.map(trade => height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin));
-
-  //     // Draw connecting lines between targets
-  //     ctx.beginPath();
-  //     ctx.setLineDash([5, 5]); // Create dashed line
-  //     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-  //     ptYs.forEach((ptY, i) => {
-  //       if (i > 0) {
-  //         ctx.moveTo(margin, ptYs[i - 1]);
-  //         ctx.lineTo(width - margin, ptY);
-  //       }
-  //     });
-  //     ctx.stroke();
-
-  //     // Draw R:R for each target
-  //     trades.forEach((trade, i) => {
-  //       const ptY = ptYs[i];
-  //       const riskAmount = Math.abs(trade.entry_price - trade.stop_price);
-  //       const rewardAmount = Math.abs(trade.pt_price - trade.entry_price);
-  //       const rr = (rewardAmount / riskAmount).toFixed(2);
-
-  //       ctx.fillStyle = 'white';
-  //       ctx.font = '12px Arial';
-  //       ctx.fillText(`R:R ${rr}`, width - 80, ptY - 5);
-  //     });
-  //     trades.forEach(trade => {
-  //       // Draw entry line
-  //       const entryY = height - margin - ((trade.entry_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //       ctx.beginPath();
-  //       ctx.moveTo(margin, entryY);
-  //       ctx.lineTo(width - margin, entryY);
-  //       ctx.strokeStyle = trade.entry_status === 'FILLED' ? 'rgba(0, 255, 0, 0.8)' : 'rgba(0, 255, 0, 0.5)';
-  //       ctx.stroke();
-
-  //       // Draw stop loss line
-  //       const stopY = height - margin - ((trade.stop_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //       ctx.beginPath();
-  //       ctx.moveTo(margin, stopY);
-  //       ctx.lineTo(width - margin, stopY);
-  //       ctx.strokeStyle = trade.stop_status === 'FILLED' ? 'rgba(255, 0, 0, 0.8)' : 'rgba(255, 0, 0, 0.5)';
-  //       ctx.stroke();
-
-  //       // Draw profit target line
-  //       const ptY = height - margin - ((trade.pt_price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-  //       ctx.beginPath();
-  //       ctx.moveTo(margin, ptY);
-  //       ctx.lineTo(width - margin, ptY);
-  //       ctx.strokeStyle = trade.pt_status === 'FILLED' ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 255, 0, 0.5)';
-  //       ctx.stroke();
-
-  //       canvas.addEventListener('mousemove', function (e) {
-  //         const rect = canvas.getBoundingClientRect();
-  //         const mouseX = e.clientX - rect.left;
-  //         const mouseY = e.clientY - rect.top;
-
-  //         // Remove any existing menus
-  //         document.querySelectorAll('.trade-menu').forEach(el => el.remove());
-
-  //         if (isMouseNearLine(mouseY, entryY) ||
-  //           isMouseNearLine(mouseY, stopY) ||
-  //           isMouseNearLine(mouseY, ptY)) {
-
-  //           const menu = document.createElement('div');
-  //           menu.className = 'trade-menu';
-  //           menu.style.left = `${e.pageX + 10}px`;
-  //           menu.style.top = `${e.pageY + 10}px`;
-
-  //           const groupTrades = tradeGroups[trade.group_id];
-  //           menu.innerHTML = `
-  //   <div><strong>Trade Group ${trade.group_id}</strong></div>
-  //   <div>Side: ${trade.side}</div>
-  //   <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
-  //   <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
-  //   <div>Size: ${trade.size}</div>
-  //   <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
-  //   <div>Targets:</div>
-  //   ${groupTrades.map(t => {
-  //             const rr = ((Math.abs(t.pt_price - t.entry_price)) /
-  //               (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
-  //             return `
-  //           <div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
-  //           <span style="color: #ffff00"> R:R ${rr}</span></div>
-  //       `;
-  //           }).join('')}
-  //         `;
-  //           document.body.appendChild(menu);
-  //         }
-  //       });
-  //     });
-  //   });
-
-  //   // Add mouseleave handler to remove menus
-  //   canvas.addEventListener('mouseleave', function () {
-  //     document.querySelectorAll('.trade-menu').forEach(el => el.remove());
-  //   });
-
-
-  //   drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
-  //   drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
-
-  //   // Return chart state
-  //   chartState = { ctx, width, height, margin, minPrice, maxPrice };
-  //   return chartState;
-  // }
 
 </script>
 {{end}}
