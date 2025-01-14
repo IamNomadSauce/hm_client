@@ -116,6 +116,15 @@
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
   var all_triggers = exchange.Triggers || [];
+  let tradeGroups = {};
+
+  var end = stockData.length
+  var start = Math.max(0, end - 250); 
+  var zoomFactor = 10;
+
+
+  const canvas = document.getElementById('candlestickChart');
+  const ctx = canvas.getContext('2d');
 
   var chartState = null;
 
@@ -596,8 +605,6 @@
     }
 
     const latestPrice = priceUpdate.price;
-    const canvas = document.getElementById('candlestickChart');
-    const ctx = canvas.getContext('2d');
 
     // Draw base chart first
     drawCandlestickChart(stockData, start, end);
@@ -712,9 +719,49 @@
     }
   }
 
+  function handleMouseMove(e, chartState, tradeGroups) {
+    fillHoverHandler(e, chartState)
+    orderHoverHandler(e, chartState)
+    tradeHoverHandler(e, chartState, tradeGroups)
+    lineHoverHandler(e, chartState)
+  }
+
+
+  canvas.addEventListener('mousemove', (e) => handleMouseMove(e, chartState, tradeGroups))
+
+  canvas.addEventListener('mouseleave', function (event) {
+    // console.log("Canvas Leave");
+
+    // Get mouse position
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+
+    // Get canvas and menu boundaries
+    const canvasRect = canvas.getBoundingClientRect();
+    const menu = document.querySelector('.order-menu');
+    const menuRect = menu ? menu.getBoundingClientRect() : null;
+
+    // Check if mouse is still inside canvas or menu
+    const isMouseInCanvas =
+      mouseX >= canvasRect.left &&
+      mouseX <= canvasRect.right &&
+      mouseY >= canvasRect.top &&
+      mouseY <= canvasRect.bottom;
+
+    const isMouseInMenu =
+      menuRect &&
+      mouseX >= menuRect.left &&
+      mouseX <= menuRect.right &&
+      mouseY >= menuRect.top &&
+      mouseY <= menuRect.bottom;
+
+    if (!isMouseInCanvas && !isMouseInMenu) {
+      // console.log("Mouse has left both canvas and menu");
+      document.querySelectorAll('.order-menu').forEach(el => el.remove());
+    }
+  });
+
   function drawCandlestickChart(data, start, end) {
-    const canvas = document.getElementById('candlestickChart');
-    const ctx = canvas.getContext('2d');
 
     // Set canvas size and clear
     canvas.width = canvas.offsetWidth;
@@ -731,13 +778,7 @@
     // Price range
     const minPrice = Math.min(...visibleData.map(d => d.Low));
     const maxPrice = Math.max(...visibleData.map(d => d.High));
-
-    // Remove existing event listeners
-    canvas.removeEventListener('mousemove', fillHoverHandler);
-    canvas.removeEventListener('mousemove', orderHoverHandler);
-    canvas.removeEventListener('mousemove', tradeHoverHandler);
-    canvas.removeEventListener('mousemove', lineHoverHandler);
-
+    
     // Draw candlesticks
     visibleData.forEach((d, i) => {
       const x = margin + i * candleWidth;
@@ -790,7 +831,7 @@
     }
 
     // Draw trade groups
-    let tradeGroups = {};
+    tradeGroups = {};
 
     if (current_trades) {
       current_trades.forEach(trade => {
@@ -881,57 +922,11 @@
       });
     }
 
-
-
     // Add event listeners with chart state
     updateChartState(ctx, width, height, margin, minPrice, maxPrice)
 
-    canvas.addEventListener('mousemove', (e) => fillHoverHandler(e, chartState));
-    canvas.addEventListener('mousemove', (e) => orderHoverHandler(e, chartState));
-    canvas.addEventListener('mousemove', (e) => tradeHoverHandler(e, chartState, tradeGroups));
-    canvas.addEventListener('mousemove', (e) => lineHoverHandler(e, chartState));
-
-
-
-
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
-
-
-
-    // Add mouseleave handler to clean up all menus
-    canvas.addEventListener('mouseleave', function (event) {
-      // console.log("Canvas Leave");
-
-      // Get mouse position
-      const mouseX = event.clientX;
-      const mouseY = event.clientY;
-
-      // Get canvas and menu boundaries
-      const canvasRect = canvas.getBoundingClientRect();
-      const menu = document.querySelector('.order-menu');
-      const menuRect = menu ? menu.getBoundingClientRect() : null;
-
-      // Check if mouse is still inside canvas or menu
-      const isMouseInCanvas =
-        mouseX >= canvasRect.left &&
-        mouseX <= canvasRect.right &&
-        mouseY >= canvasRect.top &&
-        mouseY <= canvasRect.bottom;
-
-      const isMouseInMenu =
-        menuRect &&
-        mouseX >= menuRect.left &&
-        mouseX <= menuRect.right &&
-        mouseY >= menuRect.top &&
-        mouseY <= menuRect.bottom;
-
-      if (!isMouseInCanvas && !isMouseInMenu) {
-        // console.log("Mouse has left both canvas and menu");
-        document.querySelectorAll('.order-menu').forEach(el => el.remove());
-      }
-    });
-
 
     return { ctx, width, height, margin, minPrice, maxPrice };
   }
@@ -1007,10 +1002,6 @@
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
   }
 
-  // Initial parameters for zoom and pan
-  var end = stockData.length
-  var start = Math.max(0, end - 250); // Display first 30 data points
-  var zoomFactor = 10;
 
   // Initial draw
   drawCandlestickChart(stockData, start, end);
@@ -1032,8 +1023,6 @@
 
   var isDragging = false;
   var startX;
-
-  var canvas = document.getElementById('candlestickChart');
 
   // Update mousedown event to store price instead of coordinates
   canvas.addEventListener('mousedown', function (event) {
@@ -1139,8 +1128,6 @@
       currentTool = 'box'
     }
   })
-
-  // Add this after your existing event listeners
   document.querySelectorAll('.line-menu-item').forEach(item => {
     item.addEventListener('click', function (e) {
       const action = this.dataset.action;
@@ -1277,7 +1264,6 @@
       });
   }
 
-  // Add click outside handler
   document.addEventListener('click', function (e) {
     if (!e.target.closest('#lineMenu') && !e.target.closest('#candlestickChart')) {
       hideLineMenu();
