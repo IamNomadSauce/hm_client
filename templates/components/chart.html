@@ -14,6 +14,15 @@
     <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
   </div>
 
+  <div id="triggerMenu", class="trigger-menu" style="display: none;">
+    <div class="trigger-menu-item" data-action="entry">Delete</div>
+    <div class="trigger-menu-item" data-action="entry">Trade Entry</div>
+    <div class="trigger-menu-item" data-action="entry">Trade Entry</div>
+    <div class="trigger-menu-item" data-action="entry">Trade Entry</div>
+    <div class="trigger-menu-item" data-action="entry">Trade Entry</div>
+
+  </div>
+
 </div>
 
 <style>
@@ -520,21 +529,27 @@
     eventSource.onmessage = (event) => {
       try {
         // Check if the event is a trigger event
-        if (event.data.startsWith('event: trigger')) {
-          const jsonStr = event.data.split('\n')[1]; // Get the JSON part
-          const message = JSON.parse(jsonStr);
-          // Handle trigger event
-          console.log('Trigger event:', message);
-          return;
-        }
+        // if (event.data.startsWith('event: trigger')) {
+        //   const jsonStr = event.data.split('\n')[1]; // Get the JSON part
+        //   const message = JSON.parse(jsonStr);
+        //   // Handle trigger event
+        //   console.log('Trigger event:', message);
+        //   return;
+        // }
+        // const jsonStr = event.data.split('\n')[1]; // Get the JSON part
+        // const eventData = JSON.parse(jsonStr);
+        // console.log(eventData)
 
         // Handle other events
         const message = JSON.parse(event.data);
+        // console.log(message)
         switch (message.event) {
           case 'price':
+            // console.log("Price:", message)
             updateChartPrice(message.data);
             break;
           case 'candle':
+            console.log("Candle:", message)
             // console.log(message.data);
             // updateChart(message.data);
             break;
@@ -725,7 +740,6 @@
     tradeHoverHandler(e, chartState, tradeGroups)
     lineHoverHandler(e, chartState)
   }
-
 
   canvas.addEventListener('mousemove', (e) => handleMouseMove(e, chartState, tradeGroups))
 
