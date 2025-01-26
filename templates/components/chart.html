@@ -1,4 +1,5 @@
 {{define "chart"}}
+
 <div id="chartContainer" style="width: 100%; height: calc(100vh - 400px);">
   <div id="toolbar">
     <button id="line" class="btn btn-sm btn-secondary">Line</button>
@@ -121,6 +122,7 @@
   var stockData = {{.Candles }};
   var selectedProduct = {{.SelectedProduct }};
   var exchange = {{.SelectedExchange }};
+  var selectedTimeframe = {{.SelectedTimeframe }}
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
@@ -535,8 +537,10 @@
             updateChartPrice(message.data);
             break;
           case 'candle':
-            // console.log("Candle:", message) // Passes Test, need to filter out to only get the product_timeframe
-            // updateChart(message.data);
+            // console.log("Candle:", message, "\nSelected_Product:", selectedProduct, "\nExchange:",exchange, selectedTimeframe) // Passes Test, need to filter out to only get the product_timeframe
+            let parsed_product = `${selectedProduct.product_id}_${selectedTimeframe.TF}_${exchange.Name}`.toLowerCase().replace("-", "_")
+            console.log(parsed_product, message.data.ProductID)
+            updateChart(message.data);
             break;
           case 'trigger':
             console.log("Trigger:", message);
@@ -655,12 +659,7 @@
   function updateChart(candleUpdate) {
     // Convert underscores to dashes in ProductID
     const formattedProductID = candleUpdate.ProductID.replace(/_/g, '-');
-
-    console.log("Update Chart Candles", formattedProductID, selectedProduct.product_id);
-
-    if (formattedProductID !== selectedProduct.product_id) {
-      return;
-    }
+    console.log("|", candleUpdate.ProductID, "\n", selectedProduct)
 
     const newCandle = {
       Timestamp: candleUpdate.Timestamp,
@@ -671,14 +670,31 @@
       Volume: candleUpdate.Volume
     };
 
-    stockData.push(newCandle);
+    // Check if candle with same timestamp exists
+    const existingIndex = stockData.findIndex(candle => candle.Timestamp === candleUpdate.Timestamp);
+    // console.log(existingIndex)
 
-    if (stockData.length > end) {
-      stockData.shift();
+    if (existingIndex !== -1) {
+      // Update existing candle
+      stockData[existingIndex] = newCandle;
+    } else {
+      // Add new candle
+      stockData.push(newCandle);
+
+      // If we're at the end of the view, shift the window
+      if (end === stockData.length - 1) {
+        start++;
+        end++;
+      }
     }
 
+    // Sort candles by timestamp to ensure proper order
+    stockData.sort((a, b) => a.Timestamp - b.Timestamp);
+
+    // Redraw chart with updated data
     drawCandlestickChart(stockData, start, end);
   }
+
 
   function showTriggerNotification(trigger) {
     const notification = document.createElement('div')
