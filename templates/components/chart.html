@@ -539,8 +539,24 @@
             // updateChart(message.data);
             break;
           case 'trigger':
-            console.log("Trigger:", message)
+            console.log("Trigger:", message);
+            if (current_triggers) {
+              // Find and update the triggered trigger
+              const triggerIndex = current_triggers.findIndex(t => t.id === message.data.id);
+              if (triggerIndex !== -1) {
+                if (message.data.status === 'triggered') {
+                  // Remove triggered trigger from array
+                  current_triggers.splice(triggerIndex, 1);
+                } else {
+                  // Update trigger data
+                  current_triggers[triggerIndex] = message.data;
+                }
+                // Redraw the chart to reflect the changes
+                drawCandlestickChart(stockData, start, end);
+              }
+            }
             break;
+
         }
       } catch (err) {
         console.error("Error processing message:", err, "Raw data:", event.data);
@@ -904,16 +920,21 @@
     // Draw triggers
     if (current_triggers) {
       current_triggers.forEach(trigger => {
+        // Skip triggered triggers
+        if (trigger.status === 'triggered') {
+          return;
+        }
+
         const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
         // Draw the trigger line
         ctx.beginPath();
         ctx.moveTo(margin, triggerY);
         ctx.lineTo(width - margin, triggerY);
-        ctx.setLineDash([5, 5]);  // Create dashed line
-        ctx.strokeStyle = '#ff00ff';  // Magenta color for triggers
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#ff00ff';
         ctx.stroke();
-        ctx.setLineDash([]);  // Reset line style
+        ctx.setLineDash([]);
 
         // Add label
         ctx.fillStyle = 'white';
@@ -922,6 +943,8 @@
         ctx.fillText(`${triggerType}: ${trigger.price.toFixed(8)}`, width - 200, triggerY - 5);
       });
     }
+
+
 
     // Add event listeners with chart state
     updateChartState(ctx, width, height, margin, minPrice, maxPrice)
