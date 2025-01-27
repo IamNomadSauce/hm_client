@@ -116,6 +116,25 @@
   .cancel-button:hover {
     background: #ff6666;
   }
+
+  .trigger-menu {
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    border: 1px solid #666;
+    border-radius: 4px;
+  }
+
+  .trigger-menu-item {
+    padding: 5px;
+    cursor: pointer;
+    border-top: 1px solid #444;
+    margin-top: 5px;
+  }
+
+  .trigger-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 </style>
 
 <script>
@@ -504,6 +523,64 @@
     document.body.appendChild(menu);
   }
 
+  const triggerHoverHandler = function (e, chartState) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseY = e.clientY - rect.top;
+
+    if (current_triggers) {
+      current_triggers.forEach(trigger => {
+        const triggerY = chartState.height - chartState.margin -
+          ((trigger.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+          (chartState.height - 2 * chartState.margin);
+
+        if (isMouseNearLine(mouseY, triggerY)) {
+          // Remove any existing menus first
+          document.querySelectorAll('.trigger-menu').forEach(el => el.remove());
+
+          const menu = document.createElement('div');
+          menu.className = 'trigger-menu';
+          menu.style.position = 'absolute';
+          menu.style.left = `${e.pageX - 150}px`;
+          menu.style.top = `${e.pageY - 10}px`;
+          menu.style.backgroundColor = '#333';
+          menu.style.color = 'white';
+          menu.style.padding = '10px';
+          menu.style.border = '1px solid #666';
+          menu.style.borderRadius = '4px';
+          menu.style.display = 'block';  // Ensure it's visible
+          menu.style.zIndex = '1000';
+          menu.style.pointerEvents = 'auto';
+          menu.style.minWidth = '200px';
+
+          menu.innerHTML = `
+                    <div style="margin-bottom: 8px;"><strong>Trigger Details</strong></div>
+                    <div>Type: ${trigger.type}</div>
+                    <div>Price: ${trigger.price.toFixed(8)}</div>
+                    <div>Status: ${trigger.status}</div>
+                    <div class="trigger-menu-item" onclick="editTrigger(${trigger.id})">Edit</div>
+                    <div class="trigger-menu-item" onclick="deleteTrigger(${trigger.id})">Delete</div>
+                    <div class="trigger-menu-item" onclick="showTradeOptions(${trigger.id})">Upon Trigger...</div>
+                `;
+
+          menu.addEventListener('mouseenter', () => {
+            menu.dataset.hovering = 'true';
+          });
+
+          menu.addEventListener('mouseleave', function () {
+            menu.dataset.hovering = 'false';
+            menu.remove();
+          });
+
+          document.body.appendChild(menu);
+        }
+      });
+    }
+  };
+
+
+
+
+
 
 
   console.log("Current Exchange", exchange)
@@ -539,7 +616,7 @@
           case 'candle':
             // console.log("Candle:", message, "\nSelected_Product:", selectedProduct, "\nExchange:",exchange, selectedTimeframe) // Passes Test, need to filter out to only get the product_timeframe
             let parsed_product = `${selectedProduct.product_id}_${selectedTimeframe.TF}_${exchange.Name}`.toLowerCase().replace("-", "_")
-            console.log(parsed_product, message.data.ProductID)
+            // console.log(parsed_product, message.data.ProductID)
             updateChart(message.data);
             break;
           case 'trigger':
@@ -659,7 +736,7 @@
   function updateChart(candleUpdate) {
     // Convert underscores to dashes in ProductID
     const formattedProductID = candleUpdate.ProductID.replace(/_/g, '-');
-    console.log("|", candleUpdate.ProductID, "\n", selectedProduct)
+    // console.log("|", candleUpdate.ProductID, "\n", selectedProduct)
 
     const newCandle = {
       Timestamp: candleUpdate.Timestamp,
@@ -758,6 +835,7 @@
     orderHoverHandler(e, chartState)
     tradeHoverHandler(e, chartState, tradeGroups)
     lineHoverHandler(e, chartState)
+    triggerHoverHandler(e, chartState)
   }
 
   canvas.addEventListener('mousemove', (e) => handleMouseMove(e, chartState, tradeGroups))
