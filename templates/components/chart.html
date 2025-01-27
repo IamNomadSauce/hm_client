@@ -578,28 +578,28 @@
   };
 
   function deleteTrigger(triggerId) {
-    // Send delete request to backend
+    console.log("Chart: deleteTrigger", triggerId);
     fetch(`/delete-trigger/${triggerId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({ trigger_id: triggerId })  // Properly format the request body
     })
       .then(response => {
         if (response.ok) {
-          // Remove trigger from current_triggers array
           const index = current_triggers.findIndex(t => t.id === triggerId);
           if (index !== -1) {
             current_triggers.splice(index, 1);
           }
-          // Redraw chart to remove the trigger line
           drawCandlestickChart(stockData, start, end);
         } else {
-          console.error('Failed to delete trigger');
+          console.error('Chart: Failed to delete trigger');
         }
       })
       .catch(error => console.error('Error:', error));
   }
+
 
   console.log("Current Exchange", exchange)
   console.log("Selected Product", selectedProduct.product_id)

@@ -27,7 +27,7 @@ func main() {
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/bracket-order", TradeGroupHandler)
 	http.HandleFunc("/create-trigger", createTriggerHandler)
-	http.HandleFunc("/delete-trigger", deleteTriggerHandler)
+	http.HandleFunc("/delete-trigger/{id}", deleteTriggerHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -63,36 +63,33 @@ func main() {
 func deleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Delete Trigger")
 
+	// Get trigger ID from URL path
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	triggerId, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		http.Error(w, "Invalid trigger ID", http.StatusBadRequest)
+		return
+	}
+
 	// Only allow DELETE method
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Parse request body
-	var request struct {
-		TriggerID int `json:"trigger_id"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Validate trigger ID
-	if request.TriggerID <= 0 {
-		http.Error(w, "Invalid trigger ID", http.StatusBadRequest)
-		return
-	}
-
-	err := godotenv.Load()
+	err = godotenv.Load()
 	if err != nil {
 		log.Printf("Error loading .env file: %v", err)
 	}
 
 	url := os.Getenv("URL")
 
-	err = api.DeleteTrigger(url, request.TriggerID)
+	err = api.DeleteTrigger(url, triggerId)
 	if err != nil {
 		log.Printf("Error deleting trigger: %v", err)
 		http.Error(w, "Failed to delete trigger", http.StatusInternalServerError)
