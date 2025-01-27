@@ -547,7 +547,7 @@
           menu.style.padding = '10px';
           menu.style.border = '1px solid #666';
           menu.style.borderRadius = '4px';
-          menu.style.display = 'block';  // Ensure it's visible
+          menu.style.display = 'block';
           menu.style.zIndex = '1000';
           menu.style.pointerEvents = 'auto';
           menu.style.minWidth = '200px';
@@ -577,11 +577,29 @@
     }
   };
 
-
-
-
-
-
+  function deleteTrigger(triggerId) {
+    // Send delete request to backend
+    fetch(`/delete-trigger/${triggerId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(response => {
+        if (response.ok) {
+          // Remove trigger from current_triggers array
+          const index = current_triggers.findIndex(t => t.id === triggerId);
+          if (index !== -1) {
+            current_triggers.splice(index, 1);
+          }
+          // Redraw chart to remove the trigger line
+          drawCandlestickChart(stockData, start, end);
+        } else {
+          console.error('Failed to delete trigger');
+        }
+      })
+      .catch(error => console.error('Error:', error));
+  }
 
   console.log("Current Exchange", exchange)
   console.log("Selected Product", selectedProduct.product_id)
