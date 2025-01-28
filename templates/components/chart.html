@@ -135,6 +135,28 @@
   .trigger-menu-item:hover {
     background: rgba(255, 255, 255, 0.1);
   }
+
+  .trigger-submenu {
+    position: absolute;
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    border: 1px solid #666;
+    border-radius: 4px;
+    z-index: 1001;
+    min-width: 150px;
+  }
+
+  .trigger-submenu-item {
+    padding: 5px;
+    cursor: pointer;
+    border-top: 1px solid #444;
+    margin-top: 5px;
+  }
+
+  .trigger-submenu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 </style>
 
 <script>
@@ -599,6 +621,94 @@
       })
       .catch(error => console.error('Error:', error));
   }
+
+  function showTradeOptions(triggerId) {
+    const trigger = current_triggers.find(t => t.id === triggerId);
+    if (!trigger) return;
+
+    // Remove any existing submenus
+    document.querySelectorAll('.trigger-submenu').forEach(el => el.remove());
+
+    const parentMenu = document.querySelector('.trigger-menu');
+    const rect = parentMenu.getBoundingClientRect();
+
+    const submenu = document.createElement('div');
+    submenu.className = 'trigger-submenu';
+    submenu.style.left = `${rect.right}px`;
+    submenu.style.top = `${rect.top}px`;
+
+    submenu.innerHTML = `
+        <div class="trigger-submenu-item" onclick="handleTriggerAction('alert', ${triggerId})">Alert Only</div>
+        <div class="trigger-submenu-item" onclick="handleTriggerAction('trade', ${triggerId})">Enter Trade</div>
+    `;
+
+    submenu.addEventListener('mouseenter', () => {
+        submenu.dataset.hovering = 'true';
+        parentMenu.dataset.hovering = 'true';
+    });
+
+    submenu.addEventListener('mouseleave', () => {
+        submenu.dataset.hovering = 'false';
+        submenu.remove();
+    });
+
+    document.body.appendChild(submenu);
+}
+
+function handleTriggerAction(action, triggerId) {
+    const trigger = current_triggers.find(t => t.id === triggerId);
+    
+    switch(action) {
+        case 'alert':
+            // Update trigger to only alert
+            fetch(`/trigger/${triggerId}/action`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'alert' })
+            });
+            break;
+            
+        case 'trade':
+            // Show trade setup dialog
+            showTradeSetupDialog(trigger);
+            break;
+    }
+}
+
+function showTradeSetupDialog(trigger) {
+    const dialog = document.createElement('div');
+    dialog.className = 'edit-trigger-form';
+    dialog.style.position = 'absolute';
+    dialog.style.left = '50%';
+    dialog.style.top = '50%';
+    dialog.style.transform = 'translate(-50%, -50%)';
+    dialog.style.backgroundColor = '#333';
+    dialog.style.padding = '20px';
+    dialog.style.borderRadius = '8px';
+    dialog.style.zIndex = '2000';
+
+    dialog.innerHTML = `
+        <h3>Trade Setup</h3>
+        <div>
+            <label>Size:</label>
+            <input type="number" id="tradeSize" value="100">
+        </div>
+        <div>
+            <label>Stop Loss (%):</label>
+            <input type="number" id="stopLoss" value="1" step="0.1">
+        </div>
+        <div>
+            <label>Take Profit (%):</label>
+            <input type="number" id="takeProfit" value="2" step="0.1">
+        </div>
+        <div style="margin-top: 10px;">
+            <button onclick="createTriggerTrade(${trigger.id})">Create</button>
+            <button onclick="this.parentElement.parentElement.remove()">Cancel</button>
+        </div>
+    `;
+
+    document.body.appendChild(dialog);
+}
 
 
   console.log("Current Exchange", exchange)
