@@ -157,6 +157,35 @@
   .trigger-submenu-item:hover {
     background: rgba(255, 255, 255, 0.1);
   }
+
+  .setup-section {
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 4px;
+  }
+
+  .pt-item {
+    margin: 8px 0;
+    padding: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  .execute-btn {
+    width: 100%;
+    padding: 10px;
+    background: #198754;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    margin-top: 20px;
+    cursor: pointer;
+  }
+
+  .execute-btn:hover {
+    background: #157347;
+  }
 </style>
 
 <script>
@@ -425,6 +454,82 @@
     }
   };
 
+  function createTradeSetupSidebar() {
+    const sidebar = document.createElement('div');
+    sidebar.id = 'trade-setup-sidebar';
+    sidebar.style.cssText = `
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 250px;
+        background-color: #333;
+        color: white;
+        padding: 15px;
+        border-right: 1px solid #444;
+        overflow-y: auto;
+        z-index: 1000;
+    `;
+
+    function updateSidebarContent() {
+      const trigger = window.currentTradeSetup?.trigger;
+      const entryLine = draw_lines.find(l => l.type === 'entry');
+      const stopLine = draw_lines.find(l => l.type === 'stop');
+      const ptLines = draw_lines.filter(l => l.type === 'pt');
+
+      sidebar.innerHTML = `
+            <h3>Trade Setup</h3>
+            
+            ${trigger ? `
+                <div class="setup-section">
+                    <h4>Trigger Condition</h4>
+                    <div>Price ${trigger.type === 'price_above' ? 'Above' : 'Below'} ${trigger.price}</div>
+                </div>
+            ` : ''}
+
+            <div class="setup-section">
+                <h4>Entry</h4>
+                ${entryLine ? `
+                    <div>Price: ${entryLine.price.toFixed(8)}</div>
+                    <div>
+                        Size: <input type="number" id="tradeSize" value="100" 
+                        onchange="updateTradeSize(this.value)">
+                    </div>
+                ` : '<div>Not Set</div>'}
+            </div>
+
+            <div class="setup-section">
+                <h4>Stop Loss</h4>
+                ${stopLine ? `
+                    <div>Price: ${stopLine.price.toFixed(8)}</div>
+                    <div>Risk: ${calculateRisk(entryLine?.price, stopLine.price)}%</div>
+                ` : '<div>Not Set</div>'}
+            </div>
+
+            <div class="setup-section">
+                <h4>Profit Targets</h4>
+                ${ptLines.map((pt, i) => `
+                    <div class="pt-item">
+                        <div>Target ${i + 1}: ${pt.price.toFixed(8)}</div>
+                        <div>R:R ${calculateRR(entryLine?.price, stopLine?.price, pt.price)}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            ${entryLine && stopLine && ptLines.length > 0 ? `
+                <button class="execute-btn" onclick="executeTradeSetup()">
+                    Execute Trade Setup
+                </button>
+            ` : ''}
+        `;
+    }
+
+    document.body.appendChild(sidebar);
+    return updateSidebarContent;
+  }
+
+  const updateSidebar = createTradeSetupSidebar();
+
   function handleLineAction(action, line) {
     switch (action) {
       case 'trigger':
@@ -508,41 +613,52 @@
         createTradeGroup(tradeSetup);
         break;
     }
+    updateSidebar()
   }
 
-  function hideLineMenu() {
-    const menu = document.querySelector('.line-menu');
-    if (menu) {
-      menu.style.display = 'none';
+  function calculateRisk(entry, stop) {
+    if (!entry || !stop) return 0;
+    return (Math.abs(entry - stop) / entry * 100).toFixed(2)
+  }
+
+  function calculateRR(entry, stop, target) {
+    if (!entry || !stop || !target) return 0;
+    const risk = Math.abs(entry - stop)
+    const reward = Math.abs(target - entry)
+    return (reward / risk).toFixed(2)
+  }
+
+  function executeTradeSetup() {
+    const entryLine = draw_lines.find(l => l.type === 'entry')
+    const stopLine = draw_lines.find(l => l.type === 'stop')
+    const ptLines = draw_lines.find(l => l.type === 'pt')
+    const triggerLine = window.currentTradeSetup?.trigger
+
+    const tradeData = {
+      product_id: selectedProduct.product_id,
+      size: parseFloat(document.getElementById('tradeSize').value),
+      size: parseFloat(document.getElementById('tradeSize').value),
+      entry_price: entryLine.price,
+      stop_price: stopLine.price,
+      profit_targets: ptLines.map(pt => pt.price),
+      trigger_id: trigger?.id,
+      xch_id: exchange.ID
     }
-  }
 
-  function displayTradeMenu(x, y, trade, trades) {
-    // Remove any existing menus first
-    document.querySelectorAll('.trade-menu').forEach(el => el.remove());
-
-    const menu = document.createElement('div');
-    menu.className = 'trade-menu';
-    menu.style.left = `${x + 10}px`;
-    menu.style.top = `${y + 10}px`;
-
-    menu.innerHTML = `
-        <div><strong>Trade Group ${trade.group_id}</strong></div>
-        <div>Side: ${trade.side}</div>
-        <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
-        <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
-        <div>Size: ${trade.size}</div>
-        <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
-        <div>Targets:</div>
-        ${trades.map(t => {
-      const rr = ((Math.abs(t.pt_price - t.entry_price)) /
-        (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
-      return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
-                    <span style="color: #ffff00"> R:R ${rr}</span></div>`;
-    }).join('')}
-    `;
-
-    document.body.appendChild(menu);
+    fetch('/create-trade-setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSONL.stringify(tradeData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Trade setup created:', data)
+        draw_lines = []
+        window.currentTradeSetup = null
+        drawCandlestickChart(stockData, start, end)
+        updateSidebar()
+      })
+      .catch(error => console.error('Error', error))
   }
 
   const triggerHoverHandler = function (e, chartState) {
@@ -643,64 +759,64 @@
     `;
 
     submenu.addEventListener('mouseenter', () => {
-        submenu.dataset.hovering = 'true';
-        parentMenu.dataset.hovering = 'true';
+      submenu.dataset.hovering = 'true';
+      parentMenu.dataset.hovering = 'true';
     });
 
     submenu.addEventListener('mouseleave', () => {
-        submenu.dataset.hovering = 'false';
-        submenu.remove();
+      submenu.dataset.hovering = 'false';
+      submenu.remove();
     });
 
     document.body.appendChild(submenu);
-}
+  }
 
-function handleTriggerAction(action, triggerId) {
+  function handleTriggerAction(action, triggerId) {
     const trigger = current_triggers.find(t => t.id === triggerId);
-    
-    switch(action) {
-        case 'alert':
-            fetch(`/trigger/${triggerId}/action`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'alert' })
-            });
-            break;
-            
-        case 'trade':
-            // Enable line drawing mode for trade setup
-            currentTool = 'line';
-            window.currentTrade = {
-                triggerId: trigger.id,
-                entry: trigger.price,
-                productId: selectedProduct.product_id
-            };
-            
-            // Show instructions for trade setup
-            const instructions = document.createElement('div');
-            instructions.className = 'trade-setup-instructions';
-            instructions.style.position = 'fixed';
-            instructions.style.top = '10px';
-            instructions.style.left = '50%';
-            instructions.style.transform = 'translateX(-50%)';
-            instructions.style.backgroundColor = '#333';
-            instructions.style.color = 'white';
-            instructions.style.padding = '10px';
-            instructions.style.borderRadius = '4px';
-            instructions.style.zIndex = '2000';
-            instructions.innerHTML = `
+
+    switch (action) {
+      case 'alert':
+        fetch(`/trigger/${triggerId}/action`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'alert' })
+        });
+        break;
+
+      case 'trade':
+        // Enable line drawing mode for trade setup
+        currentTool = 'line';
+        window.currentTrade = {
+          triggerId: trigger.id,
+          entry: trigger.price,
+          productId: selectedProduct.product_id
+        };
+
+        // Show instructions for trade setup
+        const instructions = document.createElement('div');
+        instructions.className = 'trade-setup-instructions';
+        instructions.style.position = 'fixed';
+        instructions.style.top = '10px';
+        instructions.style.left = '50%';
+        instructions.style.transform = 'translateX(-50%)';
+        instructions.style.backgroundColor = '#333';
+        instructions.style.color = 'white';
+        instructions.style.padding = '10px';
+        instructions.style.borderRadius = '4px';
+        instructions.style.zIndex = '2000';
+        instructions.innerHTML = `
                 <div>Draw lines for:</div>
                 <div>1. Stop Loss (red)</div>
                 <div>2. Profit Target(s) (yellow)</div>
                 <div>Click Create Trade when done</div>
             `;
-            document.body.appendChild(instructions);
-            break;
+        document.body.appendChild(instructions);
+        break;
     }
-}
+  }
 
 
-function showTradeSetupDialog(trigger) {
+  function showTradeSetupDialog(trigger) {
     const dialog = document.createElement('div');
     dialog.className = 'edit-trigger-form';
     dialog.style.position = 'absolute';
@@ -733,7 +849,7 @@ function showTradeSetupDialog(trigger) {
     `;
 
     document.body.appendChild(dialog);
-}
+  }
 
 
   console.log("Current Exchange", exchange)
