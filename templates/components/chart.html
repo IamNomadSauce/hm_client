@@ -660,7 +660,6 @@ function handleTriggerAction(action, triggerId) {
     
     switch(action) {
         case 'alert':
-            // Update trigger to only alert
             fetch(`/trigger/${triggerId}/action`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -669,11 +668,37 @@ function handleTriggerAction(action, triggerId) {
             break;
             
         case 'trade':
-            // Show trade setup dialog
-            showTradeSetupDialog(trigger);
+            // Enable line drawing mode for trade setup
+            currentTool = 'line';
+            window.currentTrade = {
+                triggerId: trigger.id,
+                entry: trigger.price,
+                productId: selectedProduct.product_id
+            };
+            
+            // Show instructions for trade setup
+            const instructions = document.createElement('div');
+            instructions.className = 'trade-setup-instructions';
+            instructions.style.position = 'fixed';
+            instructions.style.top = '10px';
+            instructions.style.left = '50%';
+            instructions.style.transform = 'translateX(-50%)';
+            instructions.style.backgroundColor = '#333';
+            instructions.style.color = 'white';
+            instructions.style.padding = '10px';
+            instructions.style.borderRadius = '4px';
+            instructions.style.zIndex = '2000';
+            instructions.innerHTML = `
+                <div>Draw lines for:</div>
+                <div>1. Stop Loss (red)</div>
+                <div>2. Profit Target(s) (yellow)</div>
+                <div>Click Create Trade when done</div>
+            `;
+            document.body.appendChild(instructions);
             break;
     }
 }
+
 
 function showTradeSetupDialog(trigger) {
     const dialog = document.createElement('div');
@@ -723,6 +748,11 @@ function showTradeSetupDialog(trigger) {
   console.log("All Trades", all_trades)
   // console.log("Current Trades", current_trades)
 
+
+
+
+
+  // --------------------------------------
   function connectToBackend() {
     const backendURL = "http://192.168.0.22:31337";
     console.log("Connecting to SSE at:", backendURL);
