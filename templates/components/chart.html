@@ -209,6 +209,47 @@
   .trigger-details>div {
     margin: 4px 0;
   }
+
+  .risk-calculator {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 5px;
+  }
+
+  #riskSlider {
+    width: 100%;
+    margin: 10px 0;
+  }
+
+  .risk-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 10px;
+    background: #444;
+    border-radius: 5px;
+    outline: none;
+    margin: 10px 0;
+  }
+
+  .risk-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #666;
+    border-radius: 50%;
+    cursor: grab;
+    transition: background 0.2s;
+  }
+
+  .risk-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #666;
+    border-radius: 50%;
+    cursor: grab;
+  }
 </style>
 
 <script>
@@ -216,6 +257,7 @@
   var selectedProduct = {{.SelectedProduct }};
   var exchange = {{.SelectedExchange }};
   var selectedTimeframe = {{.SelectedTimeframe }}
+  var portfolioSize = {{.TotalValue }}
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
@@ -478,6 +520,41 @@
   };
 
   function createTradeSetupSidebar() {
+    let currentRiskPercentage = 0.5;
+
+    // Add CSS for slider
+    const style = document.createElement('style');
+    style.textContent = `
+        .risk-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #444;
+            outline: none;
+            margin: 10px 0;
+        }
+
+        .risk-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #666;
+            cursor: pointer;
+        }
+
+        .risk-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #666;
+            cursor: pointer;
+        }
+    `;
+    document.head.appendChild(style);
+
     // Create collapsed sidebar tab
     const tab = document.createElement('div');
     tab.id = 'trade-setup-tab';
@@ -491,7 +568,7 @@
         border-radius: 0 4px 0 0;
         cursor: pointer;
         z-index: 1001;
-    `;  // Removed display: none
+    `;
     tab.innerHTML = '◀ Trade Setup';
 
     // Create main sidebar
@@ -519,19 +596,38 @@
       tab.innerHTML = isExpanded ? '◀ Trade Setup' : '▶ Trade Setup';
     };
 
+    // Make updateRisk globally accessible
+    window.updateRisk = function (value) {
+      currentRiskPercentage = parseFloat(value);
+      updateSidebarContent();
+    };
+
     tab.addEventListener('click', window.toggleSidebar);
 
     function updateSidebarContent() {
-      console.log("Current Trade Setup:", window.currentTradeSetup);
-      console.log("Current Trigger:", window.currentTradeSetup?.trigger);
-
       const trigger = window.currentTradeSetup?.trigger;
       const entryLine = draw_lines.find(l => l.type === 'entry');
       const stopLine = draw_lines.find(l => l.type === 'stop');
       const ptLines = draw_lines.filter(l => l.type === 'pt');
 
-      // Show/hide tab based on active setup
-      tab.style.display = (trigger || entryLine || window.currentTrade) ? 'block' : 'none';
+      // Calculate risk if entry and stop are set
+      let riskAmount = 0;
+      let positionSize = 0;
+      let stopLossRiskPercent = 0;
+
+      if (entryLine && stopLine) {
+        const entryPrice = entryLine.price;
+        const stopPrice = stopLine.price;
+        const priceDiff = Math.abs(entryPrice - stopPrice);
+
+        // Calculate position sizing
+        riskAmount = portfolioSize * (currentRiskPercentage / 100);
+        positionSize = (riskAmount / priceDiff).toFixed(2);
+
+        // Calculate stop loss risk percentage (price-based risk)
+        stopLossRiskPercent = ((priceDiff / entryPrice) * 100).toFixed(2);
+      }
+
 
       sidebar.innerHTML = `
             <div style="text-align: right;">
@@ -547,23 +643,36 @@
                         <div>Type: ${trigger.type === 'price_above' ? 'Price Above' : 'Price Below'}</div>
                         <div>Price: ${trigger.price.toFixed(8)}</div>
                         <div>Status: ${trigger.status}</div>
-                        ${trigger.timeframe ? `
-                            <div>Timeframe: ${trigger.timeframe}</div>
-                            <div>Condition: ${trigger.condition}</div>
-                            <div>Candle Count: ${trigger.candle_count}</div>
-                        ` : ''}
                     </div>
                 </div>
             ` : ''}
 
             <div class="setup-section">
+                <h4>Risk Calculator</h4>
+                <div class="risk-calculator">
+                    <div>Portfolio Size: $${portfolioSize.toLocaleString()}</div>
+                    <div style="margin: 10px 0;">
+                        <label>Risk %: <span id="riskValue">${currentRiskPercentage}</span>%</label>
+                        <input type="range" 
+                               class="risk-slider"
+                               id="riskSlider" 
+                               min="0.1" 
+                               max="2" 
+                               step="0.1" 
+                               value="${currentRiskPercentage}"
+                               oninput="updateRisk(this.value)">
+                    </div>
+                    ${entryLine && stopLine ? `
+                        <div>Risk Amount: $${riskAmount.toFixed(2)}</div>
+                        <div>Position Size: ${positionSize} units</div>
+                    ` : '<div>Set entry and stop loss to calculate position size</div>'}
+                </div>
+            </div>
+
+            <div class="setup-section">
                 <h4>Entry</h4>
                 ${entryLine ? `
                     <div>Price: ${entryLine.price.toFixed(8)}</div>
-                    <div>
-                        Size: <input type="number" id="tradeSize" value="100" 
-                        onchange="updateTradeSize(this.value)">
-                    </div>
                 ` : '<div>Not Set</div>'}
             </div>
 
@@ -571,7 +680,7 @@
                 <h4>Stop Loss</h4>
                 ${stopLine ? `
                     <div>Price: ${stopLine.price.toFixed(8)}</div>
-                    <div>Risk: ${calculateRisk(entryLine?.price, stopLine.price)}%</div>
+                    <div>Risk: ${currentRiskPercentage}%</div>
                 ` : '<div>Not Set</div>'}
             </div>
 
@@ -593,11 +702,32 @@
         `;
     }
 
-    document.body.appendChild(tab);
+    document.body.appendChild(tab); 5
     document.body.appendChild(sidebar);
-    return updateSidebarContent;
+
+    // Initial render
+    updateSidebarContent();
+    // Return refresh function
+    return () => {
+      updateSidebarContent();
+      sidebar.style.left = '0px'; // Keep sidebar open on updates
+    };
   }
 
+
+
+
+
+  function updateRisk(value) {
+    window.updateRisk = function (value) {
+      currentRiskPercentage = parseFloat(value);
+      // Force full sidebar refresh
+      const updateFn = createTradeSetupSidebar();
+      updateFn();
+      // Update chart to reflect any changes
+      drawCandlestickChart(stockData, start, end);
+    };
+  }
 
 
   const updateSidebar = createTradeSetupSidebar();
