@@ -186,6 +186,29 @@
   .execute-btn:hover {
     background: #157347;
   }
+
+  #trade-setup-tab {
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  }
+
+  #trade-setup-tab:hover {
+    background-color: #444;
+  }
+
+  #trade-setup-sidebar {
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  }
+
+  .trigger-details {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+  }
+
+  .trigger-details>div {
+    margin: 4px 0;
+  }
 </style>
 
 <script>
@@ -455,11 +478,28 @@
   };
 
   function createTradeSetupSidebar() {
+    // Create collapsed sidebar tab
+    const tab = document.createElement('div');
+    tab.id = 'trade-setup-tab';
+    tab.style.cssText = `
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        background-color: #333;
+        color: white;
+        padding: 10px;
+        border-radius: 0 4px 0 0;
+        cursor: pointer;
+        z-index: 1001;
+    `;  // Removed display: none
+    tab.innerHTML = '◀ Trade Setup';
+
+    // Create main sidebar
     const sidebar = document.createElement('div');
     sidebar.id = 'trade-setup-sidebar';
     sidebar.style.cssText = `
         position: fixed;
-        left: 0;
+        left: -250px;
         top: 0;
         bottom: 0;
         width: 250px;
@@ -469,21 +509,50 @@
         border-right: 1px solid #444;
         overflow-y: auto;
         z-index: 1000;
+        transition: left 0.3s ease;
     `;
 
+    // Make toggleSidebar globally accessible
+    window.toggleSidebar = function () {
+      const isExpanded = sidebar.style.left === '0px';
+      sidebar.style.left = isExpanded ? '-250px' : '0px';
+      tab.innerHTML = isExpanded ? '◀ Trade Setup' : '▶ Trade Setup';
+    };
+
+    tab.addEventListener('click', window.toggleSidebar);
+
     function updateSidebarContent() {
+      console.log("Current Trade Setup:", window.currentTradeSetup);
+      console.log("Current Trigger:", window.currentTradeSetup?.trigger);
+
       const trigger = window.currentTradeSetup?.trigger;
       const entryLine = draw_lines.find(l => l.type === 'entry');
       const stopLine = draw_lines.find(l => l.type === 'stop');
       const ptLines = draw_lines.filter(l => l.type === 'pt');
 
+      // Show/hide tab based on active setup
+      tab.style.display = (trigger || entryLine || window.currentTrade) ? 'block' : 'none';
+
       sidebar.innerHTML = `
+            <div style="text-align: right;">
+                <span onclick="toggleSidebar()" style="cursor: pointer; padding: 5px;">✕</span>
+            </div>
             <h3>Trade Setup</h3>
             
             ${trigger ? `
                 <div class="setup-section">
-                    <h4>Trigger Condition</h4>
-                    <div>Price ${trigger.type === 'price_above' ? 'Above' : 'Below'} ${trigger.price}</div>
+                    <h4>Trigger Conditions</h4>
+                    <div class="trigger-details">
+                        <div>Product: ${trigger.product_id}</div>
+                        <div>Type: ${trigger.type === 'price_above' ? 'Price Above' : 'Price Below'}</div>
+                        <div>Price: ${trigger.price.toFixed(8)}</div>
+                        <div>Status: ${trigger.status}</div>
+                        ${trigger.timeframe ? `
+                            <div>Timeframe: ${trigger.timeframe}</div>
+                            <div>Condition: ${trigger.condition}</div>
+                            <div>Candle Count: ${trigger.candle_count}</div>
+                        ` : ''}
+                    </div>
                 </div>
             ` : ''}
 
@@ -508,12 +577,12 @@
 
             <div class="setup-section">
                 <h4>Profit Targets</h4>
-                ${ptLines.map((pt, i) => `
+                ${ptLines.length > 0 ? ptLines.map((pt, i) => `
                     <div class="pt-item">
                         <div>Target ${i + 1}: ${pt.price.toFixed(8)}</div>
                         <div>R:R ${calculateRR(entryLine?.price, stopLine?.price, pt.price)}</div>
                     </div>
-                `).join('')}
+                `).join('') : '<div>Not Set</div>'}
             </div>
 
             ${entryLine && stopLine && ptLines.length > 0 ? `
@@ -524,9 +593,12 @@
         `;
     }
 
+    document.body.appendChild(tab);
     document.body.appendChild(sidebar);
     return updateSidebarContent;
   }
+
+
 
   const updateSidebar = createTradeSetupSidebar();
 
@@ -792,6 +864,11 @@
           productId: selectedProduct.product_id
         };
 
+        // Add trigger to currentTradeSetup
+        window.currentTradeSetup = {
+          trigger: trigger
+        };
+
         // Show instructions for trade setup
         const instructions = document.createElement('div');
         instructions.className = 'trade-setup-instructions';
@@ -814,6 +891,7 @@
         break;
     }
   }
+
 
 
   function showTradeSetupDialog(trigger) {
