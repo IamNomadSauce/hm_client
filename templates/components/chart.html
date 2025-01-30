@@ -664,7 +664,6 @@
                     </div>
                     ${entryLine && stopLine ? `
                         <div>Risk Amount: $${riskAmount.toFixed(2)}</div>
-                        <div>Position Size: ${positionSize} units</div>
                     ` : '<div>Set entry and stop loss to calculate position size</div>'}
                 </div>
             </div>
@@ -673,6 +672,7 @@
                 <h4>Entry</h4>
                 ${entryLine ? `
                     <div>Price: ${entryLine.price.toFixed(8)}</div>
+                    <div>Position Size: ${positionSize} units</div>
                 ` : '<div>Not Set</div>'}
             </div>
 
