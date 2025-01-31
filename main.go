@@ -25,7 +25,7 @@ func main() {
 	http.HandleFunc("/finance", financeHandler)
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
-	http.HandleFunc("/bracket-order", TradeGroupHandler)
+	http.HandleFunc("/create-trade", newTradeHandler)
 	http.HandleFunc("/create-trigger", createTriggerHandler)
 	http.HandleFunc("/delete-trigger/{id}", deleteTriggerHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
@@ -137,7 +137,7 @@ func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func TradeGroupHandler(w http.ResponseWriter, r *http.Request) {
+func newTradeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Bracket Order Handler")
 
 	if r.Method != http.MethodPost {
@@ -161,7 +161,7 @@ func TradeGroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := os.Getenv("URL")
 
-	err = api.CreateTradeGroup(url, TradeGroup)
+	err = api.CreateNewTrade(url, TradeGroup)
 	if err != nil {
 		log.Printf("Error creating bracket order: %v", err)
 		http.Error(w, "Failed to create bracket order", http.StatusInternalServerError)

@@ -685,7 +685,8 @@
             </div>
 
             <div class="setup-section">
-                <h4>Profit Targets</h4>
+                <h4>Profit Targets</h4>,
+      
                 ${ptLines.length > 0 ? ptLines.map((pt, i) => `
                     <div class="pt-item">
                         <div>Target ${i + 1}: ${pt.price.toFixed(8)}</div>
@@ -1845,7 +1846,8 @@
       stop_price: parseFloat(trade.stop),
       profit_targets: profitTargets,
       risk_reward: riskRewardRatio,
-      xch_id: exchange.ID
+      xch_id: exchange.ID,
+      
     };
 
     fetch('/bracket-order', {

@@ -130,9 +130,9 @@ func DeleteTrigger(baseURL string, triggerID int) error {
 	return nil
 }
 
-func CreateTradeGroup(baseURL string, order model.TradeBlock) error {
+func CreateNewTrade(baseURL string, order model.TradeBlock) error {
 	log.Printf("API:CreateTradeGroup\n%+v", order)
-	url := baseURL + "/new_trade_group"
+	url := baseURL + "/new_trade"
 
 	jsonData, err := json.Marshal(order)
 	if err != nil {
