@@ -4,6 +4,7 @@
   <div id="toolbar">
     <button id="line" class="btn btn-sm btn-secondary">Line</button>
     <button id="box" class="btn btn-sm btn-secondary">Box</button>
+    <button id="trigger" class="btn btn-sm btn-secondary">Trigger</button>
   </div>
   <canvas id="candlestickChart"></canvas>
   <div id="lineMenu" class="line-menu" style="display: none;">
@@ -249,6 +250,34 @@
     background: #666;
     border-radius: 50%;
     cursor: grab;
+  }
+
+  .trigger-chain-item {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    margin: 8px 0;
+    border-radius: 4px;
+  }
+
+  .trigger-order {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+
+  .trigger-settings {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+  }
+
+  .trigger-chain-item input,
+  .trigger-chain-item select {
+    background: #444;
+    color: white;
+    border: 1px solid #666;
+    padding: 3px;
+    border-radius: 3px;
+    margin: 2px 0;
   }
 </style>
 
@@ -606,6 +635,7 @@
 
     function updateSidebarContent() {
       const trigger = window.currentTradeSetup?.trigger;
+      console.log("")
       const entryLine = draw_lines.find(l => l.type === 'entry');
       const stopLine = draw_lines.find(l => l.type === 'stop');
       const ptLines = draw_lines.filter(l => l.type === 'pt');
@@ -635,17 +665,23 @@
             </div>
             <h3>Trade Setup</h3>
             
-            ${trigger ? `
-                <div class="setup-section">
-                    <h4>Trigger Conditions</h4>
-                    <div class="trigger-details">
-                        <div>Product: ${trigger.product_id}</div>
-                        <div>Type: ${trigger.type === 'price_above' ? 'Price Above' : 'Price Below'}</div>
-                        <div>Price: ${trigger.price.toFixed(8)}</div>
-                        <div>Status: ${trigger.status}</div>
-                    </div>
+            <div class="setup-section">
+                <h4>Trigger Conditions</h4>
+                ${window.currentTradeSetup?.chainedTriggers?.length > 0 ? `
+                    ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
+                        <div class="trigger-details">
+                            <div>Trigger ${index + 1}</div>
+                            <div>Type: ${trigger.type === 'price_above' ? 'Price Above' : 'Price Below'}</div>
+                            <div>Price: ${trigger.price.toFixed(8)}</div>
+                            <div>Status: ${trigger.status}</div>
+                            <button class="btn btn-sm btn-danger" onclick="removeTrigger(${index})">Remove</button>
+                        </div>
+                    `).join('')}
+                ` : '<div>No triggers set</div>'}
+                <div style="margin-top: 10px;">
+                    <small>Draw trigger lines on chart to add conditions</small>
                 </div>
-            ` : ''}
+            </div>
 
             <div class="setup-section">
                 <h4>Risk Calculator</h4>
@@ -669,7 +705,7 @@
             </div>
 
             <div class="setup-section">
-                <h4>Entry</h4>
+                <h4>Entry <h4><button class="btn btn-sm btn-dark">(+)</button>
                 ${entryLine ? `
                     <div>Price: ${entryLine.price.toFixed(8)}</div>
                     <div>Position Size: ${positionSize} units</div>
@@ -677,11 +713,12 @@
             </div>
 
             <div class="setup-section">
-                <h4>Stop Loss</h4>
-                ${stopLine ? `
-                    <div>Price: ${stopLine.price.toFixed(8)}</div>
-                    <div>Risk: ${currentRiskPercentage}%</div>
-                ` : '<div>Not Set</div>'}
+                  <h4>Stop Loss</h4>
+                  ${stopLine ? `
+                      <div>Price: ${stopLine.price.toFixed(8)}</div>
+                      <div>Risk: ${currentRiskPercentage}%</div>
+                  ` : '<div>Not Set</div>'}
+                
             </div>
 
             <div class="setup-section">
@@ -716,6 +753,54 @@
   }
 
 
+  function addChainedTrigger() {
+    if (!window.currentTradeSetup) {
+      window.currentTradeSetup = { chainedTriggers: [] };
+    }
+    if (!window.currentTradeSetup.chainedTriggers) {
+      window.currentTradeSetup.chainedTriggers = [];
+    }
+
+    window.currentTradeSetup.chainedTriggers.push({
+      type: 'price_above',
+      price: 0,
+      timeframe: '1m',
+      candles: 1
+    });
+
+    const updateSidebar = createTradeSetupSidebar();
+    updateSidebar();
+  }
+
+  function updateTriggerCondition(index, value) {
+    window.currentTradeSetup.chainedTriggers[index].type = value;
+    const updateSidebar = createTradeSetupSidebar();
+    updateSidebar();
+  }
+
+  function updateTriggerPrice(index, value) {
+    window.currentTradeSetup.chainedTriggers[index].price = parseFloat(value);
+    const updateSidebar = createTradeSetupSidebar();
+    updateSidebar();
+  }
+
+  function updateTriggerTimeframe(index, value) {
+    window.currentTradeSetup.chainedTriggers[index].timeframe = value;
+    const updateSidebar = createTradeSetupSidebar();
+    updateSidebar();
+  }
+
+  function updateTriggerCandles(index, value) {
+    window.currentTradeSetup.chainedTriggers[index].candles = parseInt(value);
+    const updateSidebar = createTradeSetupSidebar();
+    updateSidebar();
+  }
+
+  function removeTrigger(index) {
+    window.currentTradeSetup.chainedTriggers.splice(index, 1);
+    const updateSidebar = createTradeSetupSidebar();
+    updateSidebar();
+  }
 
 
 
@@ -750,6 +835,16 @@
           xch_id: exchange.ID
         };
 
+        // Initialize currentTradeSetup if it doesn't exist
+        if (!window.currentTradeSetup) {
+          window.currentTradeSetup = {
+            chainedTriggers: []
+          };
+        }
+
+        // Add trigger to trade setup
+        window.currentTradeSetup.chainedTriggers.push(triggerData);
+
         fetch('create-trigger', {
           method: 'POST',
           headers: {
@@ -761,6 +856,9 @@
           .then(data => {
             console.log('Trigger Created: ', data);
             line.triggerId = data.id;
+            // Update sidebar to show new trigger
+            const updateSidebar = createTradeSetupSidebar();
+            updateSidebar();
           })
           .catch(error => {
             console.log('Error creating trigger:', error);
@@ -864,7 +962,7 @@
       .catch(error => console.error('Error', error))
   }
 
-  const triggerHoverHandler = function (e, chartState) {
+  function triggerHoverHandler(e, chartState) {
     const rect = canvas.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
 
@@ -875,7 +973,6 @@
           (chartState.height - 2 * chartState.margin);
 
         if (isMouseNearLine(mouseY, triggerY)) {
-          // Remove any existing menus first
           document.querySelectorAll('.trigger-menu').forEach(el => el.remove());
 
           const menu = document.createElement('div');
@@ -900,6 +997,7 @@
                     <div>Status: ${trigger.status}</div>
                     <div class="trigger-menu-item" onclick="editTrigger(${trigger.id})">Edit</div>
                     <div class="trigger-menu-item" onclick="deleteTrigger(${trigger.id})">Delete</div>
+                    <div class="trigger-menu-item" onclick="handleTriggerAction('connect', ${trigger.id})">Connect to Trade</div>
                     <div class="trigger-menu-item" onclick="showTradeOptions(${trigger.id})">Upon Trigger...</div>
                 `;
 
@@ -916,7 +1014,8 @@
         }
       });
     }
-  };
+  }
+
 
   function deleteTrigger(triggerId) {
     console.log("Chart: deleteTrigger", triggerId);
@@ -978,12 +1077,19 @@
     const trigger = current_triggers.find(t => t.id === triggerId);
 
     switch (action) {
-      case 'alert':
-        fetch(`/trigger/${triggerId}/action`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'alert' })
-        });
+      case 'connect':
+        if (!window.currentTradeSetup) {
+          window.currentTradeSetup = {
+            chainedTriggers: []
+          };
+        }
+        // Add trigger to chainedTriggers if not already present
+        const exists = window.currentTradeSetup.chainedTriggers.some(t => t.id === trigger.id);
+        if (!exists) {
+          window.currentTradeSetup.chainedTriggers.push(trigger);
+          const updateSidebar = createTradeSetupSidebar();
+          updateSidebar();
+        }
         break;
 
       case 'trade':
@@ -1632,13 +1738,44 @@
     mouseY = event.clientY - rect.top;
 
     if (currentTool) {
-      if (currentTool === 'line') {
+      if (currentTool === 'line' || currentTool === 'trigger') {
         chartState = drawCandlestickChart(stockData, start, end);
         const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-        draw_lines.push({
-          price: price
-        });
-        console.log("Draw_Lines", draw_lines);
+        const line = { price: price };
+
+        if (currentTool === 'trigger') {
+          const lastCandle = stockData[stockData.length - 1];
+          const currentPrice = lastCandle.Close;
+
+          line.type = 'trigger';
+          line.color = '#ff00ff';
+
+          const triggerData = {
+            product_id: selectedProduct.product_id,
+            type: line.price > currentPrice ? 'price_above' : 'price_below',
+            price: parseFloat(line.price),
+            status: 'active',
+            xch_id: exchange.ID
+          };
+
+          fetch('create-trigger', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(triggerData)
+          })
+            .then(response => response.json())
+            .then(data => {
+              console.log('Trigger Created: ', data);
+              line.triggerId = data.id;
+            })
+            .catch(error => {
+              console.log('Error creating trigger:', error);
+            });
+        }
+
+        draw_lines.push(line);
         drawCandlestickChart(stockData, start, end);
       }
       drawingStart = { x: mouseX, y: mouseY };
@@ -1847,7 +1984,7 @@
       profit_targets: profitTargets,
       risk_reward: riskRewardRatio,
       xch_id: exchange.ID,
-      
+
     };
 
     fetch('/bracket-order', {
@@ -1871,6 +2008,16 @@
       hideLineMenu();
     }
   });
+
+  document.getElementById('trigger').addEventListener('click', function () {
+    if (currentTool === 'trigger') {
+      currentTool = null;
+    } else {
+      currentTool = 'trigger';
+      console.log("Trigger tool selected");
+    }
+  });
+
 
   drawCandlestickChart(stockData, start, end);
   document.addEventListener('DOMContentLoaded', () => {
