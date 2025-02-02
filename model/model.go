@@ -3,14 +3,18 @@ package model
 import "time"
 
 type Trigger struct {
-	ID        int     `json:"id"`
-	ProductID string  `json:"product_id"`
-	Type      string  `json:"type"`
-	Price     float64 `json:"price"`
-	Status    string  `json:"status"`
-	XchID     int     `json:"xch_id"`
-	CreatedAt string  `json:"created_at"`
-	UpdatedAt string  `json:"updated_at"`
+	ID             int     `json:"id"`
+	ProductID      string  `json:"product_id"`
+	Type           string  `json:"type"`
+	Price          float64 `json:"price"`
+	Timeframe      string  `json:"timeframe"`
+	CandleCount    int     `json:"candle_count"`
+	Condition      string  `json:"condition"`
+	Status         string  `json:"status"`
+	TriggeredCount int     `json:"triggered_count"`
+	XchID          int     `json:"xch_id"`
+	CreatedAt      string  `json:"created_at"`
+	UpdatedAt      string  `json:"updated_at"`
 }
 
 type Candle struct {

@@ -130,6 +130,38 @@ func DeleteTrigger(baseURL string, triggerID int) error {
 	return nil
 }
 
+func UpdateTrigger(baseURL string, triggerID int, updates map[string]interface{}) error {
+	log.Printf("API:UpdateTrigger ID: %d with updates: %+v", triggerID, updates)
+
+	url := fmt.Sprintf("%s/update-trigger/%d", baseURL, triggerID)
+
+	jsonData, err := json.Marshal(updates)
+	if err != nil {
+		return fmt.Errorf("error marshaling request payload: %v", err)
+	}
+	log.Printf("Sending payload: %s", string(jsonData))
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("error creating request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 func CreateNewTrade(baseURL string, order model.TradeBlock) error {
 	log.Printf("API:CreateTradeGroup\n%+v", order)
 	url := baseURL + "/new_trade"

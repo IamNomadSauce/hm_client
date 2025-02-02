@@ -348,6 +348,7 @@
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
   var all_triggers = exchange.Triggers || [];
+  console.log("INITIALIZING")
   let tradeGroups = {};
 
   var end = stockData.length
@@ -749,41 +750,38 @@
             <div class="setup-section">
                 <h4>Trigger Conditions</h4>
                 ${window.currentTradeSetup?.chainedTriggers?.length > 0 ? `
-                    ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
-                        <div class="trigger-details">
-                            <div class="trigger-header">
-                                <div class="trigger-order">
-                                    <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-                                    <span>Trigger ${index + 1}</span>
-                                    <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
-                                </div>
-                                <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
-                            </div>
-                            <select onchange="updateTriggerType(${trigger.id}, this.value)">
-                                <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
-                                <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-                                <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
-                                <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
-                                <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
-                                <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
-                            </select>
-                            <div class="trigger-settings">
-                                <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
-                                    <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
-                                    <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
-                                    <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
-                                    <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
-                                </select>
-                                <input type="number" 
-                                      value="${trigger.candles || 1}" 
-                                      min="1" 
-                                      onchange="updateTriggerCandles(${trigger.id}, this.value)"
-                                      placeholder="Candles">
-                            </div>
-                            <div>Price: ${trigger.price.toFixed(8)}</div>
-                        </div>
-                    `).join('')}
-                ` : '<div>No triggers set</div>'}
+    ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
+        <div class="trigger-details">
+            <div class="trigger-header">
+                <div class="trigger-order">
+                    <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <span>Trigger ${index + 1}</span>
+                    <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
+                </div>
+                <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
+            </div>
+            <div>Type: ${trigger.type}</div>
+            <div>Price: ${trigger.price.toFixed(8)}</div>
+            <div>Timeframe: ${trigger.timeframe || '1m'}</div>
+            <div>Candles: ${trigger.candles || 1}</div>
+            <div>Status: ${trigger.status}</div>
+            <div class="trigger-settings">
+                <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
+                    <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
+                    <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
+                    <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
+                    <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
+                </select>
+                <input type="number" 
+                       value="${trigger.candles || 1}" 
+                       min="1" 
+                       onchange="updateTriggerCandles(${trigger.id}, this.value)"
+                       placeholder="Candles">
+            </div>
+        </div>
+    `).join('')}
+` : '<div>No triggers set</div>'}
+
                 <div style="margin-top: 10px;">
                     <small>Draw trigger lines on chart to add conditions</small>
                 </div>
@@ -970,9 +968,22 @@
           .then(data => {
             console.log('Trigger Created: ', data);
             line.triggerId = data.id;
-            // Update sidebar to show new trigger
+            // Update sidebar and push content
             const updateSidebar = createTradeSetupSidebar();
             updateSidebar();
+
+            // Get chart container and adjust margin
+            const chartContainer = document.getElementById('chartContainer');
+            if (chartContainer) {
+              chartContainer.style.marginRight = '350px';
+              chartContainer.style.width = 'calc(100% - 350px)';
+              chartContainer.style.transition = 'all 0.3s ease';
+
+              // Redraw chart after transition
+              setTimeout(() => {
+                drawCandlestickChart(stockData, start, end);
+              }, 300);
+            }
           })
           .catch(error => {
             console.log('Error creating trigger:', error);
@@ -986,6 +997,16 @@
           entry: line.price,
           productId: selectedProduct.product_id
         };
+        // Add same margin adjustment for entry
+        const chartContainer = document.getElementById('chartContainer');
+        if (chartContainer) {
+          chartContainer.style.marginRight = '350px';
+          chartContainer.style.width = 'calc(100% - 350px)';
+          chartContainer.style.transition = 'all 0.3s ease';
+          setTimeout(() => {
+            drawCandlestickChart(stockData, start, end);
+          }, 300);
+        }
         break;
 
       case 'pt':
@@ -1144,53 +1165,88 @@
   function updateTriggerType(triggerId, newType) {
     const trigger = window.currentTradeSetup.chainedTriggers.find(t => t.id === triggerId);
     if (trigger) {
-      trigger.type = newType;
-
-      // Update trigger line on chart
-      const line = draw_lines.find(l => l.triggerId === triggerId);
-      if (line) {
-        line.type = newType;
-        drawCandlestickChart(stockData, start, end);
-      }
-
-      // Update backend
-      fetch(`/update-trigger/${triggerId}`, {
+      fetch('/update-trigger', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: newType })
-      });
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          trigger_id: triggerId,
+          updates: { type: newType }
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          // Update local trigger data
+          trigger.type = newType;
+
+          // Update trigger line on chart
+          const line = draw_lines.find(l => l.triggerId === triggerId);
+          if (line) {
+            line.type = newType;
+            drawCandlestickChart(stockData, start, end);
+          }
+
+          // Refresh sidebar
+          const updateSidebar = createTradeSetupSidebar();
+          updateSidebar();
+        })
+        .catch(error => console.error('Error updating trigger:', error));
     }
   }
 
   function updateTriggerTimeframe(triggerId, timeframe) {
     const trigger = window.currentTradeSetup.chainedTriggers.find(t => t.id === triggerId);
     if (trigger) {
-      trigger.timeframe = timeframe;
-      const updateSidebar = createTradeSetupSidebar();
-      updateSidebar();
-
-      fetch(`/update-trigger/${triggerId}`, {
+      fetch('/update-trigger', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeframe: timeframe })
-      });
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          trigger_id: triggerId,
+          updates: { timeframe: timeframe }
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          // Update local trigger data
+          trigger.timeframe = timeframe;
+
+          // Refresh sidebar
+          const updateSidebar = createTradeSetupSidebar();
+          updateSidebar();
+        })
+        .catch(error => console.error('Error updating trigger:', error));
     }
   }
 
   function updateTriggerCandles(triggerId, candles) {
     const trigger = window.currentTradeSetup.chainedTriggers.find(t => t.id === triggerId);
     if (trigger) {
-      trigger.candles = parseInt(candles);
-      const updateSidebar = createTradeSetupSidebar();
-      updateSidebar();
-
-      fetch(`/update-trigger/${triggerId}`, {
+      fetch('/update-trigger', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candles: parseInt(candles) })
-      });
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          trigger_id: triggerId,
+          updates: { candles: parseInt(candles) }
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          // Update local trigger data
+          trigger.candles = parseInt(candles);
+
+          // Refresh sidebar
+          const updateSidebar = createTradeSetupSidebar();
+          updateSidebar();
+        })
+        .catch(error => console.error('Error updating trigger:', error));
     }
   }
+
 
   function deleteTrigger(triggerId) {
     console.log("Chart: deleteTrigger", triggerId);
@@ -1249,7 +1305,9 @@
   }
 
   function handleTriggerAction(action, triggerId) {
+
     const trigger = current_triggers.find(t => t.id === triggerId);
+    console.log("Trigger:", trigger)
 
     switch (action) {
       case 'connect':
@@ -1259,20 +1317,33 @@
           };
         }
 
+        // Check if trigger already exists in chain
         const exists = window.currentTradeSetup.chainedTriggers.some(t => t.id === trigger.id);
         if (!exists) {
-          window.currentTradeSetup.chainedTriggers.push(trigger);
-          // Create new sidebar, replacing any existing one
+          // Create complete trigger object with all database fields
+          const triggerData = {
+            id: trigger.id,
+            product_id: trigger.product_id,
+            type: trigger.type,
+            price: trigger.price,
+            timeframe: trigger.timeframe || '1m',  // Use actual DB value
+            candles: trigger.candle_count || 1,    // Use actual DB value
+            condition: trigger.condition,
+            status: trigger.status
+          };
+
+          window.currentTradeSetup.chainedTriggers.push(triggerData);
+
+          // Force sidebar update
           const updateSidebar = createTradeSetupSidebar();
           updateSidebar();
 
           // Open sidebar if closed
-          if (document.getElementById('trade-setup-sidebar').style.left === '-250px') {
+          if (document.getElementById('trade-setup-sidebar').style.right === '-350px') {
             toggleSidebar();
           }
         }
         break;
-
 
       case 'trade':
         // Enable line drawing mode for trade setup
@@ -1310,8 +1381,6 @@
         break;
     }
   }
-
-
 
   function showTradeSetupDialog(trigger) {
     const dialog = document.createElement('div');

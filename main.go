@@ -28,6 +28,7 @@ func main() {
 	http.HandleFunc("/create-trade", newTradeHandler)
 	http.HandleFunc("/create-trigger", createTriggerHandler)
 	http.HandleFunc("/delete-trigger/{id}", deleteTriggerHandler)
+	http.HandleFunc("/update-trigger", updateTriggerHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	err := http.ListenAndServe(":8080", nil)
@@ -58,6 +59,86 @@ func main() {
 	}
 
 	fmt.Println("Received Data:", string(body))
+}
+
+func updateTriggerHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Update Trigger Handler")
+
+	if r.Method != http.MethodPut {
+		log.Println("Method Not Allowed")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var request struct {
+		TriggerID int                    `json:"trigger_id"`
+		Updates   map[string]interface{} `json:"updates"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if request.TriggerID <= 0 {
+		log.Println("Invalid Trigger ID")
+		http.Error(w, "Invalid trigger ID", http.StatusBadRequest)
+		return
+	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	baseURL := os.Getenv("URL")
+	url := fmt.Sprintf("%s/update-trigger", baseURL) // Construct proper URL
+
+	// Forward the same structure to the backend
+	payload := map[string]interface{}{
+		"trigger_id": request.TriggerID,
+		"updates":    request.Updates,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshaling payload: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Trigger:\n%+v", payload)
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		http.Error(w, "Failed to update trigger", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Forward the backend response
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Failed to update trigger", resp.StatusCode)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Trigger updated successfully",
+	})
 }
 
 func deleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
