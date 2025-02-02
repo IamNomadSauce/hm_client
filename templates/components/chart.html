@@ -687,13 +687,22 @@
       sidebar.style.right = isExpanded ? '-350px' : '0px';
       tab.innerHTML = isExpanded ? '▶ Trade Setup' : '◀ Trade Setup';
 
-      // Add margin to main content
+      // Get chart container
       const chartContainer = document.getElementById('chartContainer');
       if (chartContainer) {
+        // Set margin and width together
         chartContainer.style.marginRight = isExpanded ? '0' : '350px';
-        chartContainer.style.transition = 'margin-right 0.3s ease';
+        chartContainer.style.width = isExpanded ? '100%' : 'calc(100% - 350px)';
+        chartContainer.style.transition = 'all 0.3s ease';
+
+        // Redraw chart after transition to ensure proper sizing
+        setTimeout(() => {
+          drawCandlestickChart(stockData, start, end);
+        }, 300);
       }
     };
+
+
 
 
 
