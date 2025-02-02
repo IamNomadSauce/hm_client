@@ -696,6 +696,7 @@
     };
 
 
+
     // Make updateRisk globally accessible
     window.updateRisk = function (value) {
       currentRiskPercentage = parseFloat(value);
@@ -852,7 +853,7 @@
     // Return refresh function
     return () => {
       updateSidebarContent();
-      sidebar.style.left = '0px'; // Keep sidebar open on updates
+      sidebar.style.right = '0px'; // Changed from left to right
     };
   }
 
