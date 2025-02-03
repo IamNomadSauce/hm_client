@@ -752,33 +752,43 @@
                 ${window.currentTradeSetup?.chainedTriggers?.length > 0 ? `
     ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
         <div class="trigger-details">
-            <div class="trigger-header">
-                <div class="trigger-order">
-                    <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-                    <span>Trigger ${index + 1}</span>
-                    <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
-                </div>
-                <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
-            </div>
-            <div>Type: ${trigger.type}</div>
-            <div>Price: ${trigger.price.toFixed(8)}</div>
-            <div>Timeframe: ${trigger.timeframe || '1m'}</div>
-            <div>Candles: ${trigger.candles || 1}</div>
-            <div>Status: ${trigger.status}</div>
-            <div class="trigger-settings">
-                <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
-                    <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
-                    <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
-                    <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
-                    <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
-                </select>
-                <input type="number" 
-                       value="${trigger.candles || 1}" 
-                       min="1" 
-                       onchange="updateTriggerCandles(${trigger.id}, this.value)"
-                       placeholder="Candles">
-            </div>
+    <div class="trigger-header">
+        <div class="trigger-order">
+            <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+            <span>Trigger ${index + 1}</span>
+            <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
         </div>
+        <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
+    </div>
+    <div class="trigger-settings">
+        <select onchange="updateTriggerType(${trigger.id}, this.value)">
+            <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
+            <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
+            <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
+            <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
+            <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
+            <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
+        </select>
+    </div>
+    <div>Price: ${trigger.price.toFixed(8)}</div>
+    <div>Timeframe: ${trigger.timeframe || '1m'}</div>
+    <div>Candles: ${trigger.candles || 1}</div>
+    <div>Status: ${trigger.status}</div>
+    <div class="trigger-settings">
+        <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
+            <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
+            <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
+            <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
+            <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
+        </select>
+        <input type="number" 
+               value="${trigger.candles || 1}" 
+               min="1" 
+               onchange="updateTriggerCandles(${trigger.id}, this.value)"
+               placeholder="Candles">
+    </div>
+</div>
+
     `).join('')}
 ` : '<div>No triggers set</div>'}
 
@@ -1177,13 +1187,21 @@
       })
         .then(response => response.json())
         .then(data => {
-          // Update local trigger data
-          trigger.type = newType;
+          // Get fresh trigger data from all_triggers
+          const freshTrigger = all_triggers.find(t => t.id === triggerId);
 
-          // Update trigger line on chart
+          // Update local trigger data with fresh data
+          Object.assign(trigger, freshTrigger);
+
+          // Update trigger line on chart with fresh data
           const line = draw_lines.find(l => l.triggerId === triggerId);
           if (line) {
-            line.type = newType;
+            line.type = freshTrigger.type;
+            line.price = freshTrigger.price;
+            line.timeframe = freshTrigger.timeframe;
+            line.candles = freshTrigger.candle_count;
+
+            // Force chart redraw
             drawCandlestickChart(stockData, start, end);
           }
 
@@ -1194,6 +1212,9 @@
         .catch(error => console.error('Error updating trigger:', error));
     }
   }
+
+
+
 
   function updateTriggerTimeframe(triggerId, timeframe) {
     const trigger = window.currentTradeSetup.chainedTriggers.find(t => t.id === triggerId);
@@ -1866,14 +1887,14 @@
         ctx.moveTo(margin, triggerY);
         ctx.lineTo(width - margin, triggerY);
         ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = '#ff00ff';
+        ctx.strokeStyle = '#b87100';
         ctx.stroke();
         ctx.setLineDash([]);
 
         // Add label
         ctx.fillStyle = 'white';
         ctx.font = '12px Arial';
-        const triggerType = trigger.type === 'price_above' ? 'Trigger Above' : 'Trigger Below';
+        const triggerType = trigger.type 
         ctx.fillText(`${triggerType}: ${trigger.price.toFixed(8)}`, width - 200, triggerY - 5);
       });
     }
