@@ -26,6 +26,7 @@ func main() {
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/create-trade", newTradeHandler)
+	http.HandleFunc("/cancel-order", cancelOrderHandler)
 	http.HandleFunc("/create-trigger", createTriggerHandler)
 	http.HandleFunc("/delete-trigger/{id}", deleteTriggerHandler)
 	http.HandleFunc("/update-trigger", updateTriggerHandler)
@@ -59,6 +60,80 @@ func main() {
 	}
 
 	fmt.Println("Received Data:", string(body))
+}
+
+func cancelOrderHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Cancel Order Handler")
+
+	if r.Method != http.MethodPost {
+		log.Println("Method Not Allowed")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse request body
+	var request struct {
+		OrderID string `json:"order_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if request.OrderID == "" {
+		log.Println("Invalid Order ID")
+		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		return
+	}
+
+	// Load environment variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	// Construct URL and forward request to backend
+	baseURL := os.Getenv("URL")
+	url := fmt.Sprintf("%s/cancel-order", baseURL)
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		log.Printf("Error marshaling payload: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		http.Error(w, "Failed to cancel order", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Forward the backend response
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Failed to cancel order", resp.StatusCode)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Order cancelled successfully",
+	})
 }
 
 func updateTriggerHandler(w http.ResponseWriter, r *http.Request) {

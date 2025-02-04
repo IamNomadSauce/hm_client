@@ -2167,6 +2167,34 @@
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
   }
 
+  function cancelOrder(orderId) {
+    console.log("Canceling order:", orderId);
+
+    fetch('/cancel-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        order_id: orderId
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        // Remove the order from current_orders array
+        const index = current_orders.findIndex(o => o.OrderID === orderId);
+        if (index !== -1) {
+          current_orders.splice(index, 1);
+        }
+
+        // Redraw chart to reflect changes
+        drawCandlestickChart(stockData, start, end);
+
+        // Remove any open menus
+        document.querySelectorAll('.order-menu').forEach(el => el.remove());
+      })
+      .catch(error => console.error('Error canceling order:', error));
+  }
 
   // Initial draw
   drawCandlestickChart(stockData, start, end);
