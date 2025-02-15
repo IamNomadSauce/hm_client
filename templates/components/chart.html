@@ -1075,36 +1075,50 @@
   }
 
   function executeTradeSetup() {
+    console.log("Execute Trade Setup", draw_lines)
     const entryLine = draw_lines.find(l => l.type === 'entry')
     const stopLine = draw_lines.find(l => l.type === 'stop')
-    const ptLines = draw_lines.find(l => l.type === 'pt')
+    const profitTargets = draw_lines.filter(line => line.type == 'pt')
     const triggerLine = window.currentTradeSetup?.trigger
+    // const size = document.getElementById('tradeSize').value
+    
+    console.log("Entry:\n", entryLine)
+    console.log("StopLoss:\n", stopLine)
+    console.log("ProfitTargetsFiltered:\n", profitTargets)
+    console.log("Triggers:\n", triggerLine)
+    // console.log("Size:", size)
 
     const tradeData = {
       product_id: selectedProduct.product_id,
       size: parseFloat(document.getElementById('tradeSize').value),
-      size: parseFloat(document.getElementById('tradeSize').value),
+      // size: parseFloat(document.getElementById('tradeSize').value),
       entry_price: entryLine.price,
       stop_price: stopLine.price,
-      profit_targets: ptLines.map(pt => pt.price),
+      profit_targets: profitTargets.map(pt => pt.price),
       trigger_id: trigger?.id,
       xch_id: exchange.ID
     }
 
-    fetch('/create-trade-setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSONL.stringify(tradeData)
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Trade setup created:', data)
-        draw_lines = []
-        window.currentTradeSetup = null
-        drawCandlestickChart(stockData, start, end)
-        updateSidebar()
-      })
-      .catch(error => console.error('Error', error))
+    console.log("ExecuteTradeSetup", tradeData)
+
+    // fetch('/bracket-order', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify(tradeData)
+    // })
+    //   .then(response => response.json())
+    //   .then(data => {
+    //     console.log('Trade setup created:', data)
+    //     draw_lines = []
+    //     window.currentTradeSetup = null
+    //     drawCandlestickChart(stockData, start, end)
+    //     updateSidebar()
+    //   })
+    //   .catch(error => {
+    //     console.error('Error creating trade:', error);
+    //   });
   }
 
   function triggerHoverHandler(e, chartState) {
@@ -2168,7 +2182,7 @@
   }
 
   function cancelOrder(orderId) {
-    console.log("Canceling order:", orderId);
+    console.log("Canceling order:", all_orders[orderId]);
 
     fetch('/cancel-order', {
       method: 'POST',
@@ -2472,6 +2486,7 @@
       xch_id: exchange.ID,
 
     };
+    console.log("CreateTradeGroup tradeData", tradeData)
 
     fetch('/bracket-order', {
       method: 'POST',
