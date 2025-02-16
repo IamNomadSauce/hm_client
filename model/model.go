@@ -139,6 +139,7 @@ type TradeBlock struct {
 	EntryPrice    float64   `json:"entry_price"`
 	StopPrice     float64   `json:"stop_price"`
 	ProfitTargets []float64 `json:"profit_targets"`
-	RiskReward    float64   `json:"risk_reward"`
+	RiskReward    string    `json:"risk_reward"`
 	XchID         int       `json:"xch_id"`
+	Triggers      []Trigger `json:"triggers"`
 }

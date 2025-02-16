@@ -301,6 +301,8 @@ func newTradeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// log.Printf("Body: %+v", r.Body)
+
 	var TradeGroup model.TradeBlock
 	if err := json.NewDecoder(r.Body).Decode(&TradeGroup); err != nil {
 		log.Printf("Error decoding request body: %v", err)
@@ -315,12 +317,41 @@ func newTradeHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error loading .env file: %v", err)
 	}
 
-	url := os.Getenv("URL")
+	base_url := os.Getenv("URL")
+	url := base_url + "/new_trade"
 
-	err = api.CreateNewTrade(url, TradeGroup)
+	jsonData, err := json.Marshal(TradeGroup)
 	if err != nil {
-		log.Printf("Error creating bracket order: %v", err)
-		http.Error(w, "Failed to create bracket order", http.StatusInternalServerError)
+		log.Printf("Error marshaling request payload: %v", err)
+		return
+	}
+	log.Printf("Sending payload: %s", string(jsonData))
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error reading response body: %v", err)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		log.Printf("Unexpected status code: %d, response: %s", resp.StatusCode, string(body))
 		return
 	}
 
