@@ -715,12 +715,16 @@
 
     tab.addEventListener('click', window.toggleSidebar);
 
+    window.tradeSetupData = null
+
     function updateSidebarContent() {
       const trigger = window.currentTradeSetup?.trigger;
       console.log("")
       const entryLine = draw_lines.find(l => l.type === 'entry');
       const stopLine = draw_lines.find(l => l.type === 'stop');
       const ptLines = draw_lines.filter(l => l.type === 'pt');
+
+      // let tradeSetupData = null;
 
       // Calculate risk if entry and stop are set
       let riskAmount = 0;
@@ -738,6 +742,27 @@
 
         // Calculate stop loss risk percentage (price-based risk)
         stopLossRiskPercent = ((priceDiff / entryPrice) * 100).toFixed(2);
+
+        if (ptLines.length > 0) {
+          tradeSetupData = {
+            entry: {
+              price: entryLine.price,
+              size: positionSize
+            },
+            stopLoss: {
+              price: stopLine.price,
+              riskPercent: currentRiskPercentage,
+              riskAmount: riskAmount
+            },
+            profitTargets: ptLines.map(pt => ({
+              price: pt.price,
+              rr: calculateRR(entryLine.price, stopLine.price, pt.price)
+            })),
+            triggers: window.currentTradeSetup?.chainedTriggers || [],
+            product: selectedProduct.product_id,
+            exchange_id: exchange.ID
+          };
+        }
       }
 
 
@@ -848,7 +873,7 @@
             </div>
 
             ${entryLine && stopLine && ptLines.length > 0 ? `
-                <button class="execute-btn" onclick="executeTradeSetup()">
+                <button class="execute-btn" onclick="executeTradeSetup(tradeSetupData)">
                     Execute Trade Setup
                 </button>
             ` : ''}
@@ -1074,51 +1099,52 @@
     return (reward / risk).toFixed(2)
   }
 
-  function executeTradeSetup() {
-    console.log("Execute Trade Setup", draw_lines)
-    const entryLine = draw_lines.find(l => l.type === 'entry')
-    const stopLine = draw_lines.find(l => l.type === 'stop')
-    const profitTargets = draw_lines.filter(line => line.type == 'pt')
-    const triggerLine = window.currentTradeSetup?.trigger
+  function executeTradeSetup(tradeSetupData) {
+    // console.log("Execute Trade Setup", draw_lines)
+    console.log("Execute Trade Setup", tradeSetupData)
+    // const entryLine = draw_lines.find(l => l.type === 'entry')
+    // const stopLine = draw_lines.find(l => l.type === 'stop')
+    // const profitTargets = draw_lines.filter(line => line.type == 'pt')
+    // const triggerLine = window.currentTradeSetup?.trigger
     // const size = document.getElementById('tradeSize').value
-    
-    console.log("Entry:\n", entryLine)
-    console.log("StopLoss:\n", stopLine)
-    console.log("ProfitTargetsFiltered:\n", profitTargets)
-    console.log("Triggers:\n", triggerLine)
+
+    // console.log("Entry:\n", entryLine)
+    // console.log("StopLoss:\n", stopLine)
+    // console.log("ProfitTargetsFiltered:\n", profitTargets)
+    // console.log("Triggers:\n", triggerLine)
     // console.log("Size:", size)
 
-    const tradeData = {
-      product_id: selectedProduct.product_id,
-      size: parseFloat(document.getElementById('tradeSize').value),
-      // size: parseFloat(document.getElementById('tradeSize').value),
-      entry_price: entryLine.price,
-      stop_price: stopLine.price,
-      profit_targets: profitTargets.map(pt => pt.price),
-      trigger_id: trigger?.id,
-      xch_id: exchange.ID
-    }
+    // const tradeData = {
+    //   product_id: selectedProduct.product_id,
+    //   size: parseFloat(document.getElementById('tradeSize').value),
+    //   // size: parseFloat(document.getElementById('tradeSize').value),
+    //   entry_price: entryLine.price,
+    //   stop_price: stopLine.price,
+    //   profit_targets: profitTargets.map(pt => pt.price),
+    //   trigger_id: trigger?.id,
+    //   xch_id: exchange.ID
+    // }
 
-    console.log("ExecuteTradeSetup", tradeData)
+    // console.log("ExecuteTradeSetup", tradeData)
 
-    // fetch('/bracket-order', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify(tradeData)
-    // })
-    //   .then(response => response.json())
-    //   .then(data => {
-    //     console.log('Trade setup created:', data)
-    //     draw_lines = []
-    //     window.currentTradeSetup = null
-    //     drawCandlestickChart(stockData, start, end)
-    //     updateSidebar()
-    //   })
-    //   .catch(error => {
-    //     console.error('Error creating trade:', error);
-    //   });
+    fetch('/bracket-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(tradeData)
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Trade setup created:', data)
+        draw_lines = []
+        window.currentTradeSetup = null
+        drawCandlestickChart(stockData, start, end)
+        updateSidebar()
+      })
+      .catch(error => {
+        console.error('Error creating trade:', error);
+      });
   }
 
   function triggerHoverHandler(e, chartState) {
