@@ -26,6 +26,7 @@ func main() {
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/create-trade", newTradeHandler)
+	http.HandleFunc("/delete-trade-block", deleteTradeBlockHandler)
 	http.HandleFunc("/cancel-order", cancelOrderHandler)
 	http.HandleFunc("/create-trigger", createTriggerHandler)
 	http.HandleFunc("/delete-trigger/{id}", deleteTriggerHandler)
@@ -359,6 +360,76 @@ func newTradeHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
 		"message": "Bracket order created successfully",
+	})
+}
+
+func deleteTradeBlockHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Delete Trade Block Handler")
+
+	if r.Method != http.MethodPost {
+		log.Println("Method Not Allowed")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var request struct {
+		GroupID string `json:"group_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if request.GroupID == "" {
+		log.Println("Invalid Group ID")
+		http.Error(w, "Invalid group ID", http.StatusBadRequest)
+		return
+	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	baseURL := os.Getenv("URL")
+	url := fmt.Sprintf("%s/delete-trade-group", baseURL)
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		log.Printf("Error marshaling payload: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request: %v", err)
+		http.Error(w, "Failed to delete trade block", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.Header().Set("Content-Type", "application/json")
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Failed to delete trade block", resp.StatusCode)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Trade block deleted successfully",
 	})
 }
 
