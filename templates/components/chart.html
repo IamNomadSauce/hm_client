@@ -445,7 +445,7 @@
           <div>Price: ${order.Price}</div>
           <div>Size: ${order.Size}</div>
           <div>Status: ${order.Status}</div>
-          <div class="cancel-button" onclick="cancelOrder('${order.OrderID}')">Cancel Order</div>
+          <div class="cancel-button" onclick="cancelOrder('${order.OrderID}', ${order.XchID})">Cancel Order</div>
         `;
 
           // Add hover behavior to prevent premature removal
@@ -502,20 +502,21 @@
 
             const groupTrades = groups[trade.group_id];
             menu.innerHTML = `
-                        <div><strong>Trade Group ${trade.group_id}</strong></div>
-                        <div>Side: ${trade.side}</div>
-                        <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
-                        <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
-                        <div>Size: ${trade.size}</div>
-                        <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
-                        <div>Targets:</div>
-                        ${groupTrades.map(t => {
-              const rr = ((Math.abs(t.pt_price - t.entry_price)) /
-                (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
-              return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
-                                    <span style="color: #ffff00"> R:R ${rr}</span></div>`;
-            }).join('')}
-                    `;
+                <div><strong>Trade Block ${trade.group_id}</strong></div>
+                <div>Side: ${trade.side}</div>
+                <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
+                <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
+                <div>Size: ${trade.size}</div>
+                <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
+                <div>Targets:</div>
+                ${groupTrades.map(t => {
+                          const rr = ((Math.abs(t.pt_price - t.entry_price)) /
+                            (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
+                          return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
+                            <span style="color: #ffff00"> R:R ${rr}</span></div>`;
+                        }).join('')}
+                <div class="cancel-button" onclick="deleteTradeBlock('${trade.group_id}')">Delete Trade Block</div>
+            `;
 
             menu.addEventListener('mouseenter', () => {
               // console.log("Trade Menu enter");
@@ -2197,34 +2198,30 @@
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
   }
 
-  function cancelOrder(orderId) {
-    console.log("Canceling order:", all_orders[orderId]);
-
+  function cancelOrder(orderId, xchId) {
     fetch('/cancel-order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        order_id: orderId
+        order_id: orderId,
+        xch_id: xchId
       })
     })
       .then(response => response.json())
       .then(data => {
-        // Remove the order from current_orders array
         const index = current_orders.findIndex(o => o.OrderID === orderId);
         if (index !== -1) {
           current_orders.splice(index, 1);
         }
-
-        // Redraw chart to reflect changes
         drawCandlestickChart(stockData, start, end);
-
-        // Remove any open menus
         document.querySelectorAll('.order-menu').forEach(el => el.remove());
       })
       .catch(error => console.error('Error canceling order:', error));
   }
+
+
 
   // Initial draw
   drawCandlestickChart(stockData, start, end);
@@ -2518,6 +2515,25 @@
       .catch(error => {
         console.error('Error creating trade:', error);
       });
+  }
+
+  function deleteTradeBlock(groupId) {
+    fetch('/delete-trade-group', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        group_id: groupId
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      current_trades = current_trades.filter(t => t.group_id !== groupId)
+      drawCandlestickChart(stockData, start, end)
+      document.querySelectorAll('.trade-menu').forEach(el => el.remove())
+    })
+    .catch(error => console.error('Error deleting trade group:', error))
   }
 
   document.addEventListener('click', function (e) {
