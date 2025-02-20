@@ -719,8 +719,8 @@
     window.tradeSetupData = null
 
     function updateSidebarContent() {
+      console.log("Update Sidebar Content")
       const trigger = window.currentTradeSetup?.trigger;
-      console.log("")
       const entryLine = draw_lines.find(l => l.type === 'entry');
       const stopLine = draw_lines.find(l => l.type === 'stop');
       const ptLines = draw_lines.filter(l => l.type === 'pt');
@@ -731,6 +731,9 @@
       let riskAmount = 0;
       let positionSize = 0;
       let stopLossRiskPercent = 0;
+
+      riskAmount = portfolioSize * (currentRiskPercentage / 100);
+      console.log("Risk Amount", riskAmount)
 
       if (entryLine && stopLine) {
         const entryPrice = entryLine.price;
@@ -743,6 +746,8 @@
 
         // Calculate stop loss risk percentage (price-based risk)
         stopLossRiskPercent = ((priceDiff / entryPrice) * 100).toFixed(2);
+
+        console.log("Risk Calculations", portfolioSize, currentRiskPercentage, riskAmount)
 
         if (ptLines.length > 0) {
           tradeSetupData = {
@@ -778,42 +783,42 @@
                 ${window.currentTradeSetup?.chainedTriggers?.length > 0 ? `
     ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
         <div class="trigger-details">
-    <div class="trigger-header">
-        <div class="trigger-order">
-            <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-            <span>Trigger ${index + 1}</span>
-            <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
+          <div class="trigger-header">
+              <div class="trigger-order">
+                  <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                  <span>Trigger ${index + 1}</span>
+                  <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
+              </div>
+              <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
+          </div>
+          <div class="trigger-settings">
+              <select onchange="updateTriggerType(${trigger.id}, this.value)">
+                  <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
+                  <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
+                  <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
+                  <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
+                  <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
+                  <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
+              </select>
+          </div>
+          <div>Price: ${trigger.price.toFixed(8)}</div>
+          <div>Timeframe: ${trigger.timeframe || '1m'}</div>
+          <div>Candles: ${trigger.candles || 1}</div>
+          <div>Status: ${trigger.status}</div>
+          <div class="trigger-settings">
+              <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
+                  <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
+                  <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
+                  <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
+                  <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
+              </select>
+              <input type="number" 
+                    value="${trigger.candles || 1}" 
+                    min="1" 
+                    onchange="updateTriggerCandles(${trigger.id}, this.value)"
+                    placeholder="Candles">
+          </div>
         </div>
-        <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
-    </div>
-    <div class="trigger-settings">
-        <select onchange="updateTriggerType(${trigger.id}, this.value)">
-            <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
-            <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-            <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
-            <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
-            <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
-            <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
-        </select>
-    </div>
-    <div>Price: ${trigger.price.toFixed(8)}</div>
-    <div>Timeframe: ${trigger.timeframe || '1m'}</div>
-    <div>Candles: ${trigger.candles || 1}</div>
-    <div>Status: ${trigger.status}</div>
-    <div class="trigger-settings">
-        <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
-            <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
-            <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
-            <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
-            <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
-        </select>
-        <input type="number" 
-               value="${trigger.candles || 1}" 
-               min="1" 
-               onchange="updateTriggerCandles(${trigger.id}, this.value)"
-               placeholder="Candles">
-    </div>
-</div>
 
     `).join('')}
 ` : '<div>No triggers set</div>'}
@@ -829,7 +834,10 @@
                 <div class="risk-calculator">
                     <div>Portfolio Size: $${portfolioSize.toLocaleString()}</div>
                     <div style="margin: 10px 0;">
-                        <label>Risk %: <span id="riskValue">${currentRiskPercentage}</span>%</label>
+                      <div class="d-flex">
+                        <label class="pe-2">Risk %: <span id="riskValue">${currentRiskPercentage}</span>%</label>
+                        <div class="pe-2">$${riskAmount.toFixed(2)}</div>
+                      </div>
                         <input type="range" 
                                class="risk-slider"
                                id="riskSlider" 
@@ -840,16 +848,17 @@
                                oninput="updateRisk(this.value)">
                     </div>
                     ${entryLine && stopLine ? `
-                        <div>Risk Amount: $${riskAmount.toFixed(2)}</div>
                     ` : '<div>Set entry and stop loss to calculate position size</div>'}
                 </div>
             </div>
 
             <div class="setup-section">
-                <h4>Entry <h4><button class="btn btn-sm btn-dark">(+)</button>
+                <h4>Entry </h4>
                 ${entryLine ? `
                     <div>Price: ${entryLine.price.toFixed(8)}</div>
                     <div>Position Size: ${positionSize} units</div>
+                    <div>Total Value: $${(positionSize * entryLine.price).toFixed(2)}</div>
+                    
                 ` : '<div>Not Set</div>'}
             </div>
 
@@ -858,8 +867,8 @@
                   ${stopLine ? `
                       <div>Price: ${stopLine.price.toFixed(8)}</div>
                       <div>Risk: ${currentRiskPercentage}%</div>
+                      <div>Total Value2: $${(positionSize * stopLine.price).toFixed(2)}</div>
                   ` : '<div>Not Set</div>'}
-                
             </div>
 
             <div class="setup-section">
@@ -892,6 +901,7 @@
 
 
     // Initial render
+    console.log("Initial Sidebar Render")
     updateSidebarContent();
     // Return refresh function
     return () => {
