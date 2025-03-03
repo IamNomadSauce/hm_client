@@ -339,16 +339,17 @@
 </style>
 
 <script>
-  var stockData = {{.Candles }};
-  var selectedProduct = {{.SelectedProduct }};
+  var stockData = {{ .Candles }};
+  var selectedProduct = {{ .SelectedProduct }};
   var exchange = {{.SelectedExchange }};
-  var selectedTimeframe = {{.SelectedTimeframe }}
-  var portfolioSize = {{.TotalValue }}
+  var selectedTimeframe = {{ .SelectedTimeframe }}
+  var portfolioSize = {{ .TotalValue }}
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
   var all_triggers = exchange.Triggers || [];
-  console.log("INITIALIZING")
+  var trendlines = exchange.Trendlines
+  console.log("INITIALIZING", trendlines)
   let tradeGroups = {};
 
   var end = stockData.length
@@ -1698,6 +1699,7 @@
     eventSource.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log(message.event)
         switch (message.event) {
           case 'price':
             // console.log("Price:", message) // Passes Test

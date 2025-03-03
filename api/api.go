@@ -36,7 +36,7 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	var exchanges []model.Exchange
 	err = json.Unmarshal(raw_exchanges, &exchanges)
 	if err != nil {
-		fmt.Errorf("Error unmarshalling Exchanges %v", err)
+		log.Printf("Error unmarshalling Exchanges %v", err)
 		return nil, err
 	}
 

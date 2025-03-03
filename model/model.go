@@ -46,6 +46,17 @@ type Exchange struct {
 	AvailableProducts []Product
 	Portfolio         []Asset
 	Trades            []Trade
+	Trendlines        map[string][]Trendline
+}
+
+type Trendline struct {
+	ID         int
+	StartTime  int64
+	StartPrice float64
+	EndTime    int64
+	EndPrice   float64
+	Direction  string
+	Done       string
 }
 
 type Product struct {

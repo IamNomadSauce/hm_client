@@ -25,7 +25,7 @@ func main() {
 	http.HandleFunc("/finance", financeHandler)
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
-	http.HandleFunc("/create-trade", newTradeHandler)
+	http.HandleFunc("/create-trade", newTradeBlockHandler)
 	http.HandleFunc("/delete-trade-block", deleteTradeBlockHandler)
 	http.HandleFunc("/cancel-order", cancelOrderHandler)
 	http.HandleFunc("/create-trigger", createTriggerHandler)
@@ -294,7 +294,7 @@ func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func newTradeHandler(w http.ResponseWriter, r *http.Request) {
+func newTradeBlockHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Bracket Order Handler")
 
 	if r.Method != http.MethodPost {
@@ -593,15 +593,16 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// for _, exchange := range exchanges {
-	// 	fmt.Println("\n----------------------------")
-	// 	fmt.Println("Exchange:", exchange.Name)
-	// 	fmt.Println("Watchlist:", exchange.Watchlist)
-	// 	fmt.Println("Timeframes:", exchange.Timeframes)
-	// 	fmt.Println("AvailableProducts:", len(exchange.AvailableProducts))
-	// 	fmt.Println("Fills", len(exchange.Fills))
-	// 	fmt.Println("\n----------------------------")
-	// }
+	for _, exchange := range exchanges {
+		// 	fmt.Println("\n----------------------------")
+		// 	fmt.Println("Exchange:", exchange.Name)
+		// 	fmt.Println("Watchlist:", exchange.Watchlist)
+		// 	fmt.Println("Timeframes:", exchange.Timeframes)
+		// 	fmt.Println("AvailableProducts:", len(exchange.AvailableProducts))
+		// 	fmt.Println("Fills", len(exchange.Fills))
+		// 	fmt.Println("\n----------------------------")
+		log.Printf("Trendlines %+v", exchange.Trendlines)
+	}
 
 	selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
 	if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
