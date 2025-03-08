@@ -27,6 +27,7 @@
 
 </div>
 
+
 <style>
   #chartContainer {
     position: relative;
@@ -344,17 +345,28 @@
   var exchange = {{.SelectedExchange }};
   var selectedTimeframe = {{ .SelectedTimeframe }}
   var portfolioSize = {{ .TotalValue }}
+  var trendlines = exchange.Trendlines
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
   var all_triggers = exchange.Triggers || [];
-  var trendlines = exchange.Trendlines
+  var trendlines = exchange.Trendlines || [];
   console.log("INITIALIZING", trendlines)
+  // console.log("TRENDLINE", trendlines["XLM-USD_1d_Coinbase"])
+
+  trendlines_final = Object.entries(trendlines)
+  Object.entries(trendlines).forEach(([key, value]) => {
+    console.log(`Key: ${key}`)
+
+  })
+
+  console.log(trendlines_final)
   let tradeGroups = {};
 
   var end = stockData.length
   var start = Math.max(0, end - 250);
   var zoomFactor = 10;
+
 
 
   const canvas = document.getElementById('candlestickChart');
@@ -511,11 +523,11 @@
                 <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
                 <div>Targets:</div>
                 ${groupTrades.map(t => {
-                          const rr = ((Math.abs(t.pt_price - t.entry_price)) /
-                            (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
-                          return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
+              const rr = ((Math.abs(t.pt_price - t.entry_price)) /
+                (Math.abs(t.entry_price - t.stop_price))).toFixed(2);
+              return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
                             <span style="color: #ffff00"> R:R ${rr}</span></div>`;
-                        }).join('')}
+            }).join('')}
                 <div class="cancel-button" onclick="deleteTradeBlock('${trade.group_id}')">Delete Trade Block</div>
             `;
 
@@ -2539,13 +2551,13 @@
         group_id: groupId
       })
     })
-    .then(response => response.json())
-    .then(data => {
-      current_trades = current_trades.filter(t => t.group_id !== groupId)
-      drawCandlestickChart(stockData, start, end)
-      document.querySelectorAll('.trade-menu').forEach(el => el.remove())
-    })
-    .catch(error => console.error('Error deleting trade group:', error))
+      .then(response => response.json())
+      .then(data => {
+        current_trades = current_trades.filter(t => t.group_id !== groupId)
+        drawCandlestickChart(stockData, start, end)
+        document.querySelectorAll('.trade-menu').forEach(el => el.remove())
+      })
+      .catch(error => console.error('Error deleting trade group:', error))
   }
 
   document.addEventListener('click', function (e) {

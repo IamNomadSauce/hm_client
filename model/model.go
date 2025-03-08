@@ -50,13 +50,18 @@ type Exchange struct {
 }
 
 type Trendline struct {
-	ID         int
-	StartTime  int64
-	StartPrice float64
-	EndTime    int64
-	EndPrice   float64
-	Direction  string
-	Done       string
+	Start     Point  `json:"start"`
+	End       Point  `json:"end"`
+	Direction string `json:"type"`   // "up" or "down"
+	Status    string `json:"status"` // "current" or "done"
+}
+
+// Point represents a point in the trendline with time, price, inverse price, and trend start price.
+type Point struct {
+	Time       int64   `json:"time"`
+	Point      float64 `json:"point"`
+	Inv        float64 `json:"inv"`
+	TrendStart float64 `json:"trendStart"`
 }
 
 type Product struct {

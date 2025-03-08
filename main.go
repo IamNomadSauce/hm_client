@@ -593,16 +593,16 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, exchange := range exchanges {
-		// 	fmt.Println("\n----------------------------")
-		// 	fmt.Println("Exchange:", exchange.Name)
-		// 	fmt.Println("Watchlist:", exchange.Watchlist)
-		// 	fmt.Println("Timeframes:", exchange.Timeframes)
-		// 	fmt.Println("AvailableProducts:", len(exchange.AvailableProducts))
-		// 	fmt.Println("Fills", len(exchange.Fills))
-		// 	fmt.Println("\n----------------------------")
-		log.Printf("Trendlines %+v", exchange.Trendlines)
-	}
+	// for _, exchange := range exchanges {
+	// 	// 	fmt.Println("\n----------------------------")
+	// 	// 	fmt.Println("Exchange:", exchange.Name)
+	// 	// 	fmt.Println("Watchlist:", exchange.Watchlist)
+	// 	// 	fmt.Println("Timeframes:", exchange.Timeframes)
+	// 	// 	fmt.Println("AvailableProducts:", len(exchange.AvailableProducts))
+	// 	// 	fmt.Println("Fills", len(exchange.Fills))
+	// 	// 	fmt.Println("\n----------------------------")
+	// 	// log.Printf("Trendlines for %+v", exchange.Trendlines)
+	// }
 
 	selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
 	if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
@@ -688,7 +688,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Use a buffer to render the template first
 	var buf bytes.Buffer
-	err = tmpl.ExecuteTemplate(&buf, "base.html", data) // Use ExecuteTemplate with the correct template name
+	err = tmpl.ExecuteTemplate(&buf, "base.html", data)
 	if err != nil {
 		log.Printf("Error executing template: %v", err)
 		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
