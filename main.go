@@ -660,30 +660,60 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		totalValue += asset.Value
 	}
 
+	FilteredTrendlines := make(map[string][]model.Trendline)
+
+	log.Println("Exchange", selectedExchange.Name)
+	log.Printf("Asset: %s", selectedProduct.ProductID)
+	log.Println("Trendlines:")
+	for key, trendlines := range selectedExchange.Trendlines {
+
+		log.Println("\n---------------------------------------")
+		key_split := strings.Split(key, "_")
+
+		asset := key_split[0]
+		timeframe := key_split[1]
+		exchange := key_split[2]
+
+		log.Println("Key", key, "Asset: ", selectedProduct.ProductID, "Exchange:", selectedExchange.Name)
+		if asset == selectedProduct.ProductID && exchange == selectedExchange.Name {
+			log.Println(key, "Key Accepted:", "\n-------------------")
+			FilteredTrendlines[timeframe] = append(FilteredTrendlines[timeframe], trendlines...)
+
+		} else {
+			log.Printf("%s Not Filtered", key)
+		}
+	}
+	log.Printf("Filtered Trendlines: %d", len(FilteredTrendlines))
+	for k, _ := range FilteredTrendlines {
+		log.Println("Filtered key", k)
+	}
+
 	data := struct {
-		Exchanges         []model.Exchange
-		SelectedExchange  model.Exchange
-		SelectedIndex     int
-		ProductIndex      int
-		SelectedProduct   model.Product
-		TimeframeIndex    int
-		SelectedTimeframe model.Timeframe
-		Candles           []model.Candle
-		Colors            []string
-		TotalValue        float64
-		PortfolioData     []PortfolioItem
+		Exchanges          []model.Exchange
+		SelectedExchange   model.Exchange
+		SelectedIndex      int
+		ProductIndex       int
+		SelectedProduct    model.Product
+		TimeframeIndex     int
+		SelectedTimeframe  model.Timeframe
+		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
+		Candles            []model.Candle
+		Colors             []string
+		TotalValue         float64
+		PortfolioData      []PortfolioItem
 	}{
-		Exchanges:         exchanges,
-		SelectedExchange:  selectedExchange,
-		SelectedIndex:     selectedIndex,
-		ProductIndex:      productIndex,
-		SelectedProduct:   selectedProduct,
-		TimeframeIndex:    timeframeIndex,
-		SelectedTimeframe: selectedTimeframe,
-		Candles:           candles,
-		Colors:            colors,
-		TotalValue:        totalValue,
-		PortfolioData:     preparePortfolioData(selectedExchange.Portfolio),
+		Exchanges:          exchanges,
+		SelectedExchange:   selectedExchange,
+		SelectedIndex:      selectedIndex,
+		ProductIndex:       productIndex,
+		SelectedProduct:    selectedProduct,
+		TimeframeIndex:     timeframeIndex,
+		SelectedTimeframe:  selectedTimeframe,
+		FilteredTrendlines: FilteredTrendlines,
+		Candles:            candles,
+		Colors:             colors,
+		TotalValue:         totalValue,
+		PortfolioData:      preparePortfolioData(selectedExchange.Portfolio),
 	}
 
 	// Use a buffer to render the template first

@@ -118,7 +118,7 @@
         <div class="row mt-2">
           <div class="col">
             <div class="d-flex flex-wrap gap-2">
-              {{range $key, $val := .SelectedExchange.Trendlines}}
+              {{range $key, $val := .FilteredTrendlines}}
                 <button class="btn btn-sm btn-secondary">
                   {{$key}}
                 </button>
