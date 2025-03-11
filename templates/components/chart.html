@@ -345,22 +345,25 @@
   var exchange = {{.SelectedExchange }};
   var selectedTimeframe = {{ .SelectedTimeframe }}
   var portfolioSize = {{ .TotalValue }}
-  var trendlines = exchange.Trendlines
+  var filteredTrendlines = {{.FilteredTrendlines }}
+  var visibleTrendlines = new Set()
+  console.log("Trendlines:", filteredTrendlines)
+  // var trendlines = exchange.Trendlines
   var all_fills = exchange.Fills;
   var all_orders = exchange.Orders;
   var all_trades = exchange.Trades;
   var all_triggers = exchange.Triggers || [];
-  var trendlines = exchange.Trendlines || [];
-  console.log("INITIALIZING", trendlines)
+  // var trendlines = exchange.Trendlines || [];
+  // console.log("INITIALIZING", trendlines)
   // console.log("TRENDLINE", trendlines["XLM-USD_1d_Coinbase"])
 
-  trendlines_final = Object.entries(trendlines)
-  Object.entries(trendlines).forEach(([key, value]) => {
-    console.log(`Key: ${key}`)
+  // trendlines_final = Object.entries(trendlines)
+  // Object.entries(trendlines).forEach(([key, value]) => {
+  //   console.log(`Key: ${key}`)
 
-  })
+  // })
 
-  console.log(trendlines_final)
+  // console.log(trendlines_final)
   let tradeGroups = {};
 
   var end = stockData.length
@@ -1987,8 +1990,13 @@
     const width = canvas.width;
     const height = canvas.height;
     const margin = 50;
+
+
     const visibleData = data.slice(start, end);
     const candleWidth = (width - 2 * margin) / visibleData.length;
+    const firstCandleTime = visibleData[0].Timestamp
+    const lastCandleTime = visibleData[visibleData.length - 1].Timestamp
+    const timeRange = lastCandleTime - firstCandleTime
 
     // Price range
     const minPrice = Math.min(...visibleData.map(d => d.Low));
@@ -2139,6 +2147,36 @@
         ctx.font = '12px Arial';
         const triggerType = trigger.type
         ctx.fillText(`${triggerType}: ${trigger.price.toFixed(8)}`, width - 200, triggerY - 5);
+      });
+    }
+
+    // Draw Trendlines
+    if (filteredTrendlines) {
+      visibleTrendlines.forEach(timeframe => {
+        if (filteredTrendlines[timeframe]) {
+          filteredTrendlines[timeframe].forEach((trendline, index) => {
+            // Map trendline times to x-coordinates
+            const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+
+            // Map trendline points (prices) to y-coordinates
+            const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+            // Draw the trendline
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = 'blue'; // Customize as needed
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Optional: Add a label
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.fillText(`${timeframe} Trend ${index + 1}`, endX + 5, endY - 5);
+          });
+        }
       });
     }
 
@@ -2589,5 +2627,36 @@
     }
   });
 
+</script>
+
+<!-- Trendline Button Script -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    console.log("DOM Loaded");
+    const trendlineButtons = document.querySelectorAll('.trendline-btn');
+    console.log("Trendline Buttons", trendlineButtons);
+    trendlineButtons.forEach(button => {
+      button.addEventListener('click', function () {
+        console.log("Trendline Dataset", this.dataset);
+        const trendlineId = this.dataset.trendlineId;
+        if (visibleTrendlines.has(trendlineId)) {
+          visibleTrendlines.delete(trendlineId);
+          this.classList.remove('btn-primary');
+          this.classList.add('btn-secondary');
+        } else {
+          visibleTrendlines.add(trendlineId);
+          this.classList.remove('btn-secondary');
+          this.classList.add('btn-primary');
+        }
+        toggleTrendline(trendlineId);
+        drawCandlestickChart(stockData, start, end);
+      });
+    });
+  });
+
+  function toggleTrendline(key) {
+    console.log("Toggle Trendline", key);
+    console.log("Visible Trendlines", visibleTrendlines)
+  }
 </script>
 {{end}}
