@@ -2218,6 +2218,7 @@
   }
 
   function trendlinePointHoverHandler(e, chartState) {
+    console.log("Trendpoint Hover!")
     
     const rect = canvas.getBoundingClientRect()
     const mouseX = e.clientX - rect.left
@@ -2226,8 +2227,9 @@
     let hoveredPoint = null
 
     trendlinePoints.forEach(point => {
-      const distance = Math.sqrt(Math.pow(point.x - mouseY, 2) + Math.pow(point.y - mouseY, 2))
-      if (distance < 5) {
+      const trendlineY = chartState.height - chartState.margin -((point.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+
+      if (isMouseNearLine(point)) {
         hoveredPoint = point
       }
     })
