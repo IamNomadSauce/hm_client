@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -665,28 +666,30 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Exchange", selectedExchange.Name)
 	log.Printf("Asset: %s", selectedProduct.ProductID)
 	log.Println("Trendlines:")
-	for key, trendlines := range selectedExchange.Trendlines {
+	// for key, trendlines := range selectedExchange.Trendlines {
 
-		log.Println("\n---------------------------------------")
-		key_split := strings.Split(key, "_")
+	// 	log.Println("\n---------------------------------------")
+	// 	key_split := strings.Split(key, "_")
 
-		asset := key_split[0]
-		timeframe := key_split[1]
-		exchange := key_split[2]
+	// 	asset := key_split[0]
+	// 	timeframe := key_split[1]
+	// 	exchange := key_split[2]
 
-		log.Println("Key", key, "Asset: ", selectedProduct.ProductID, "Exchange:", selectedExchange.Name)
-		if asset == selectedProduct.ProductID && exchange == selectedExchange.Name {
-			log.Println(key, "Key Accepted:", "\n-------------------")
-			FilteredTrendlines[timeframe] = append(FilteredTrendlines[timeframe], trendlines...)
+	// 	log.Println("Key", key, "Asset: ", selectedProduct.ProductID, "Exchange:", selectedExchange.Name)
+	// 	if asset == selectedProduct.ProductID && exchange == selectedExchange.Name {
+	// 		log.Println(key, "Key Accepted:", "\n-------------------")
+	// 		FilteredTrendlines[timeframe] = append(FilteredTrendlines[timeframe], trendlines...)
 
-		} else {
-			log.Printf("%s Not Filtered", key)
-		}
-	}
-	log.Printf("Filtered Trendlines: %d", len(FilteredTrendlines))
-	for k, _ := range FilteredTrendlines {
-		log.Println("Filtered key", k)
-	}
+	// 	} else {
+	// 		log.Printf("%s Not Filtered", key)
+	// 	}
+	// }
+	// log.Printf("Filtered Trendlines: %d", len(FilteredTrendlines))
+	// for k, _ := range FilteredTrendlines {
+	// 	log.Println("Filtered key", k)
+	// }
+
+	trendlines, err := makeTrendlines(candles)
 
 	data := struct {
 		Exchanges          []model.Exchange
@@ -697,6 +700,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex     int
 		SelectedTimeframe  model.Timeframe
 		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
+		Trendlines         []model.Trendline
 		Candles            []model.Candle
 		Colors             []string
 		TotalValue         float64
@@ -710,6 +714,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex:     timeframeIndex,
 		SelectedTimeframe:  selectedTimeframe,
 		FilteredTrendlines: FilteredTrendlines,
+		Trendlines:         trendlines,
 		Candles:            candles,
 		Colors:             colors,
 		TotalValue:         totalValue,
@@ -731,6 +736,107 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error writing response: %v", err)
 	}
+}
+
+// MakeTrendlines generates trendlines based on the given candles.
+func makeTrendlines(candles []model.Candle) ([]model.Trendline, error) {
+	var trendlines []model.Trendline
+
+	// Return empty slice if no candles are provided
+	if len(candles) == 0 {
+		return trendlines, fmt.Errorf("No candles given to makeTrendlines")
+	}
+
+	// for i, j := 0, len(candles)-1; i < j; i, j = i+1, j-1 {
+	// 	candles[i], candles[j] = candles[j], candles[i]
+	// }
+
+	counter := 0
+	// startT := time.Now()
+
+	// Initialize start and end points from the first candle
+	start := model.Point{
+		Time:       candles[0].Timestamp,
+		Point:      candles[0].Low,
+		TrendStart: candles[0].Close,
+		Inv:        candles[0].Close,
+	}
+	end := model.Point{
+		Time:       candles[0].Timestamp,
+		Point:      candles[0].High,
+		TrendStart: candles[0].Close,
+		Inv:        candles[0].Close,
+	}
+	current := model.Trendline{
+		Start:     start,
+		End:       end,
+		Direction: "up",
+		Status:    "current",
+	}
+
+	for i, candle := range candles {
+		// log.Println("Processing candle time: ", candle.Timestamp)
+		// Condition 1: Higher high in uptrend (continuation)
+		if candle.High > current.End.Point && current.Direction == "up" {
+			current.End = model.Point{
+				Time:       candle.Timestamp,
+				Point:      candle.High,
+				Inv:        candle.Low,
+				TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+			}
+			counter = 0
+		} else if (candle.High > current.End.Inv || (i > 0 && candle.High > candles[i-1].High)) && current.Direction == "down" { // Condition 2: Higher high in downtrend (new uptrend)
+			counter++
+			if counter >= 0 { // Confirm reversal after 3 higher highs
+				current.Status = "done"
+				trendlines = append(trendlines, current)
+				current = model.Trendline{
+					Start: current.End,
+					End: model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.High,
+						Inv:        candle.Low,
+						TrendStart: math.Max(candle.Close, candle.Open),
+					},
+					Direction: "up",
+					Status:    "current",
+				}
+				counter = 0
+			}
+		} else if (candle.Low < current.End.Inv || (i > 0 && candle.Low < candles[i-1].Low)) && current.Direction == "up" { // Condition 3: Lower low in uptrend (new downtrend)
+			counter++
+			if counter >= 0 { // Confirm reversal after 3 lower lows
+				current.Status = "done"
+				trendlines = append(trendlines, current)
+				current = model.Trendline{
+					Start: current.End,
+					End: model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.Low,
+						Inv:        candle.High,
+						TrendStart: math.Min(candle.Close, candle.Open), // (close > open) ? open : close
+					},
+					Direction: "down",
+					Status:    "current",
+				}
+				counter = 0
+			}
+		} else if candle.Low < current.End.Point && current.Direction == "down" { // Condition 4: Lower low in downtrend (continuation)
+			current.End = model.Point{
+				Time:       candle.Timestamp,
+				Point:      candle.Low,
+				Inv:        candle.High,
+				TrendStart: math.Min(candle.Close, candle.Open),
+			}
+			counter = 0
+		}
+	}
+
+	// stopT := time.Since(startT)
+	// log.Printf("Trendlines Time: %.3f seconds\n", stopT.Seconds())
+	// log.Println("Trendlines:", trendlines)
+
+	return trendlines, nil
 }
 
 type PortfolioItem struct {

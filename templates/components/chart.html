@@ -346,6 +346,7 @@
   var selectedTimeframe = {{ .SelectedTimeframe }}
   var portfolioSize = {{ .TotalValue }}
   var filteredTrendlines = {{.FilteredTrendlines }}
+  var trendlines = {{ .Trendlines }}
   var visibleTrendlines = new Set()
   console.log("Trendlines:", filteredTrendlines)
   // var trendlines = exchange.Trendlines
@@ -2151,62 +2152,111 @@
       });
     }
 
-    // Draw Trendlines
+    if (trendlines) {
+      trendlines.forEach((trendline, index) => {
+        // console.log("trendline", trendline)
+        const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+        const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+        const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
-    if (filteredTrendlines) {
-      visibleTrendlines.forEach(timeframe => {
-        if (filteredTrendlines[timeframe]) {
-          filteredTrendlines[timeframe].forEach((trendline, index) => {
-            const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-            const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-            const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-            const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.strokeStyle = 'blue';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-            ctx.strokeStyle = 'blue';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(startX, startY, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = 'gold';
+        ctx.fill();
 
-            ctx.beginPath();
-            ctx.arc(startX, startY, 4, 0, 2 * Math.PI);
-            ctx.fillStyle = 'gold';
-            ctx.fill();
+        ctx.beginPath();
+        ctx.arc(endX, endY, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = 'white';
+        ctx.fill();
 
-            ctx.beginPath();
-            ctx.arc(endX, endY, 4, 0, 2 * Math.PI);
-            ctx.fillStyle = 'white';
-            ctx.fill();
-
-            if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-              trendlinePoints.push({
-                x: startX,
-                y: startY,
-                trendline: trendline,
-                timeframe: timeframe,
-                index: index,
-                type: 'start'
-              });
-            }
-            if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-              trendlinePoints.push({
-                x: endX,
-                y: endY,
-                trendline: trendline,
-                timeframe: timeframe,
-                index: index,
-                type: 'end'
-              });
-            }
-
-            // ctx.fillStyle = 'white';
-            // ctx.font = '12px Arial';
-            // ctx.fillText(`${timeframe}:${index + 1}`, endX + 5, endY - 5);
+        if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
+          trendlinePoints.push({
+            x: startX,
+            y: startY,
+            trendline: trendline,
+            // timeframe: timeframe,
+            index: index,
+            type: 'start'
           });
         }
-      });
+        if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
+          trendlinePoints.push({
+            x: endX,
+            y: endY,
+            trendline: trendline,
+            // timeframe: timeframe,
+            index: index,
+            type: 'end'
+          });
+        }
+
+      })
     }
+
+    // Draw Trendlines
+
+    // if (filteredTrendlines) {
+    //   visibleTrendlines.forEach(timeframe => {
+    //     if (filteredTrendlines[timeframe]) {
+    //       filteredTrendlines[timeframe].forEach((trendline, index) => {
+    //         const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+    //         const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+    //         const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+    //         const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+    //         ctx.beginPath();
+    //         ctx.moveTo(startX, startY);
+    //         ctx.lineTo(endX, endY);
+    //         ctx.strokeStyle = 'blue';
+    //         ctx.lineWidth = 2;
+    //         ctx.stroke();
+
+    //         ctx.beginPath();
+    //         ctx.arc(startX, startY, 4, 0, 2 * Math.PI);
+    //         ctx.fillStyle = 'gold';
+    //         ctx.fill();
+
+    //         ctx.beginPath();
+    //         ctx.arc(endX, endY, 4, 0, 2 * Math.PI);
+    //         ctx.fillStyle = 'white';
+    //         ctx.fill();
+
+    //         if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
+    //           trendlinePoints.push({
+    //             x: startX,
+    //             y: startY,
+    //             trendline: trendline,
+    //             timeframe: timeframe,
+    //             index: index,
+    //             type: 'start'
+    //           });
+    //         }
+    //         if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
+    //           trendlinePoints.push({
+    //             x: endX,
+    //             y: endY,
+    //             trendline: trendline,
+    //             timeframe: timeframe,
+    //             index: index,
+    //             type: 'end'
+    //           });
+    //         }
+
+    //         // ctx.fillStyle = 'white';
+    //         // ctx.font = '12px Arial';
+    //         // ctx.fillText(`${timeframe}:${index + 1}`, endX + 5, endY - 5);
+    //       });
+    //     }
+    //   });
+    // }
 
     // Add event listeners with chart state
     updateChartState(ctx, width, height, margin, minPrice, maxPrice)
@@ -2218,18 +2268,24 @@
   }
 
   function trendlinePointHoverHandler(e, chartState) {
-    console.log("Trendpoint Hover!")
-    
+    // console.log("Trendpoint Hover!")
+
     const rect = canvas.getBoundingClientRect()
     const mouseX = e.clientX - rect.left
     const mouseY = e.clientY - rect.top
 
+    const trendlineY = chartState.height - chartState.margin -
+          ((point.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+          (chartState.height - 2 * chartState.margin);
+
     let hoveredPoint = null
 
     trendlinePoints.forEach(point => {
-      const trendlineY = chartState.height - chartState.margin -((point.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+      const trendlineY = chartState.height - chartState.margin - ((point.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+      console.log(point)
 
-      if (isMouseNearLine(point)) {
+      if (isMouseNearLine(mouseY, trendlineY)) {
+        console.log("Near Trendpoint", point);
         hoveredPoint = point
       }
     })
