@@ -2274,17 +2274,17 @@
     const mouseX = e.clientX - rect.left
     const mouseY = e.clientY - rect.top
 
-    const trendlineY = chartState.height - chartState.margin -
-          ((point.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-          (chartState.height - 2 * chartState.margin);
+    // const trendlineY = chartState.height - chartState.margin -
+    //       ((point.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+    //       (chartState.height - 2 * chartState.margin);
 
     let hoveredPoint = null
 
     trendlinePoints.forEach(point => {
       const trendlineY = chartState.height - chartState.margin - ((point.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-      console.log(point)
+      // console.log(point.trendline.end.point)
 
-      if (isMouseNearLine(mouseY, trendlineY)) {
+      if (isMouseNearLine(mouseY, point.trendline.end.point)) {
         console.log("Near Trendpoint", point);
         hoveredPoint = point
       }
