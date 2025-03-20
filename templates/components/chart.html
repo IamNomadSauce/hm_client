@@ -400,7 +400,7 @@
   var draw_lines = []
   var activeLineIndex = -1;
 
-  console.log("Triggers", all_triggers)
+  // console.log("Triggers", all_triggers)
 
   var current_fills = all_fills.filter(product => product.product_id === selectedProduct.product_id)
   var current_orders = all_orders.filter(product => product.ProductID === selectedProduct.product_id)
@@ -1690,14 +1690,14 @@
 
   console.log("Current Exchange", exchange)
   console.log("Selected Product", selectedProduct.product_id)
-  console.log("Fills", all_fills)
+  // console.log("Fills", all_fills)
   // all_fills.forEach((fill)=> {
   //   console.log(fill.product_id, selectedProduct.product_id, fill.product_id == selectedProduct.product_id)
   // })
-  console.log("Orders", all_orders)
-  console.log("Current Fills", current_fills)
-  console.log("Current Orders", current_orders)
-  console.log("All Trades", all_trades)
+  // console.log("Orders", all_orders)
+  // console.log("Current Fills", current_fills)
+  // console.log("Current Orders", current_orders)
+  // console.log("All Trades", all_trades)
   // console.log("Current Trades", current_trades)
 
 
@@ -1786,29 +1786,8 @@
     })
   }
 
-  function updateChartPrice(priceUpdate) {
-    if (candleUpdate.product_id !== selectedProduct.product_id) {
-      return
-    }
-
-    stockData.push({
-      Timestamp: candleUpdate.timestamp,
-      Open: candleUpdate.open,
-      High: candleUpdate.high,
-      Low: candleUpdate.low,
-      Close: candleUpdate.close,
-      Volume: candleUpdate.volume
-    })
-
-    if (stockData.length > end) {
-      stockData.shift()
-    }
-
-    drawCandlestickChart(stockData, start, end)
-  }
 
   function updateChartPrice(priceUpdate) {
-    // console.log("Update Chart Price")
 
     if (priceUpdate.product_id !== selectedProduct.product_id) {
       return;
@@ -1951,6 +1930,26 @@
   }
 
   canvas.addEventListener('mousemove', (e) => handleMouseMove(e, chartState, tradeGroups))
+
+  canvas.addEventListener('mousemove', function (event) {
+    var rect = canvas.getBoundingClientRect();
+    mouseX = event.clientX - rect.left;
+    mouseY = event.clientY - rect.top;
+
+
+    if (isDragging) {
+      var dx = event.clientX - startX;
+      var panFactor = Math.floor(dx / 10);
+      if (panFactor !== 0) {
+        start = Math.max(0, start - panFactor);
+        end = Math.min(stockData.length, end - panFactor);
+        startX = event.clientX;
+        drawCandlestickChart(stockData, start, end);
+      }
+    } else {
+      drawCandlestickChart(stockData, start, end);
+    }
+  });
 
   canvas.addEventListener('mouseleave', function (event) {
     // console.log("Canvas Leave");
@@ -2298,6 +2297,11 @@
   }
 
 
+  function isMouseNearTrendline(mouseX, mouseY, threshold = 5) {
+    
+  }
+
+
   function showTrendlinePointTooltip(point, mouseX, mouseY) {
     if (!trendlinePointTooltip) {
       trendlinePointTooltip = document.createElement('div');
@@ -2332,6 +2336,7 @@
       trendlinePointTooltip.style.display = 'none'
     }
   }
+
 
   function isMouseNearLine(mouseY, lineY, threshold = 5) {
     return Math.abs(mouseY - lineY) < threshold;
@@ -2541,25 +2546,6 @@
     }
   });
 
-  canvas.addEventListener('mousemove', function (event) {
-    var rect = canvas.getBoundingClientRect();
-    mouseX = event.clientX - rect.left;
-    mouseY = event.clientY - rect.top;
-
-
-    if (isDragging) {
-      var dx = event.clientX - startX;
-      var panFactor = Math.floor(dx / 10);
-      if (panFactor !== 0) {
-        start = Math.max(0, start - panFactor);
-        end = Math.min(stockData.length, end - panFactor);
-        startX = event.clientX;
-        drawCandlestickChart(stockData, start, end);
-      }
-    } else {
-      drawCandlestickChart(stockData, start, end);
-    }
-  });
 
   // Redraw on window resize
   window.addEventListener('resize', function () {
