@@ -1938,8 +1938,8 @@
     mouseY = event.clientY - rect.top;
 
     if (isDragging) {
-      const dx = event.clientX - startX;
-      const panFactor = Math.floor(dx / 10);
+      let dx = event.clientX - startX;
+      let panFactor = Math.floor(dx / 10);
       if (panFactor !== 0) {
         start = Math.max(0, start - panFactor);
         end = Math.min(stockData.length, end - panFactor);
@@ -1948,27 +1948,28 @@
       }
     } else {
       handleMouseMove(event, chartState, tradeGroups);
+      drawCandlestickChart(stockData, start, end)
     }
   });
-  canvas.addEventListener('mousemove', function (event) {
-    var rect = canvas.getBoundingClientRect();
-    mouseX = event.clientX - rect.left;
-    mouseY = event.clientY - rect.top;
+  // canvas.addEventListener('mousemove', function (event) {
+  //   var rect = canvas.getBoundingClientRect();
+  //   mouseX = event.clientX - rect.left;
+  //   mouseY = event.clientY - rect.top;
 
 
-    if (isDragging) {
-      var dx = event.clientX - startX;
-      var panFactor = Math.floor(dx / 10);
-      if (panFactor !== 0) {
-        start = Math.max(0, start - panFactor);
-        end = Math.min(stockData.length, end - panFactor);
-        startX = event.clientX;
-        drawCandlestickChart(stockData, start, end);
-      }
-    } else {
-      drawCandlestickChart(stockData, start, end);
-    }
-  });
+  //   if (isDragging) {
+  //     var dx = event.clientX - startX;
+  //     var panFactor = Math.floor(dx / 10);
+  //     if (panFactor !== 0) {
+  //       start = Math.max(0, start - panFactor);
+  //       end = Math.min(stockData.length, end - panFactor);
+  //       startX = event.clientX;
+  //       drawCandlestickChart(stockData, start, end);
+  //     }
+  //   } else {
+  //     drawCandlestickChart(stockData, start, end);
+  //   }
+  // });
 
   canvas.addEventListener('mouseleave', function (event) {
     // console.log("Canvas Leave");
@@ -2236,6 +2237,7 @@
   }
 
   function trendlinePointHoverHandler(e, chartState) {
+    // console.log("Hover Trendline")
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -2521,6 +2523,76 @@
     isDragging = false;
     canvas.style.cursor = 'crosshair';
   });
+
+  canvas.addEventListener('click', function (event) {
+    if (hoveredTrendlinePoint) {
+      const mouseX = event.pageX;
+      const mouseY = event.pageY;
+      // Find the current point object since trendlinePoints is recalculated on redraw
+      const point = trendlinePoints.find(p =>
+        p.trendline === hoveredTrendlinePoint.trendline &&
+        p.type === hoveredTrendlinePoint.type
+      );
+      if (point) {
+        showTrendlinePointMenu(point, mouseX, mouseY);
+      }
+    }
+  });
+
+  function showTrendlinePointMenu(point, mouseX, mouseY) {
+    const menu = document.createElement('div');
+    menu.style.position = 'absolute';
+    menu.style.left = `${mouseX + 10}px`;
+    menu.style.top = `${mouseY + 10}px`;
+    menu.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    menu.style.color = 'white';
+    menu.style.padding = '5px';
+    menu.style.borderRadius = '3px';
+    menu.style.zIndex = '1000';
+    menu.innerHTML = `
+    <div>Menu for ${point.type} point</div>
+    <div>Price: ${point.trendline[point.type].point.toFixed(8)}</div>
+    <div>Time: ${new Date(point.trendline[point.type].time * 1000).toLocaleString()}</div>
+  `;
+    document.body.appendChild(menu);
+
+    // Prevent immediate removal by delaying the click listener
+    setTimeout(() => {
+      document.addEventListener('click', function removeMenu(e) {
+        if (!menu.contains(e.target)) {
+          menu.remove();
+          document.removeEventListener('click', removeMenu);
+        }
+      });
+    }, 0);
+  }
+
+  function showTrendlinePointTooltip(point, mouseX, mouseY) {
+    if (!trendlinePointTooltip) {
+      trendlinePointTooltip = document.createElement('div');
+      trendlinePointTooltip.style.position = 'absolute';
+      trendlinePointTooltip.style.backgroundColor = 'rgba(0,0,0,0.8)';
+      trendlinePointTooltip.style.color = 'white';
+      trendlinePointTooltip.style.padding = '5px';
+      trendlinePointTooltip.style.borderRadius = '3px';
+      trendlinePointTooltip.style.zIndex = '1000';
+      document.body.appendChild(trendlinePointTooltip);
+    }
+
+    const trendline = point.trendline;
+    const time = point.type === 'start' ? trendline.start.time : trendline.end.time;
+    const price = point.type === 'start' ? trendline.start.point : trendline.end.point;
+
+    trendlinePointTooltip.innerHTML = `
+    <div>Trendline Index: ${point.index + 1}</div>
+    <div>Point: ${point.type}</div>
+    <div>Time: ${new Date(time * 1000).toLocaleString()}</div>
+    <div>Price: ${price.toFixed(8)}</div>
+  `;
+    trendlinePointTooltip.style.left = `${mouseX + 10}px`;
+    trendlinePointTooltip.style.top = `${mouseY + 175}px`;
+    trendlinePointTooltip.style.display = 'block';
+  }
 
   canvas.addEventListener('click', function (event) {
     console.log("Line Clicked", draw_lines)
