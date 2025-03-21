@@ -357,6 +357,7 @@
 
   var trendlinePoints = [];
   var trendlinePointTooltip = null
+  let hoveredTrendlinePoint = null
   // var trendlines = exchange.Trendlines || [];
   // console.log("INITIALIZING", trendlines)
   // console.log("TRENDLINE", trendlines["XLM-USD_1d_Coinbase"])
@@ -381,14 +382,16 @@
 
   var chartState = null;
 
-  function updateChartState(ctx, width, height, margin, minPrice, maxPrice) {
+  function updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime) {
     chartState = {
       ctx,
       width,
       height,
       margin,
       minPrice,
-      maxPrice
+      maxPrice,
+      firstCandleTime,
+      lastCandleTime
     }
   }
 
@@ -1929,8 +1932,24 @@
     trendlinePointHoverHandler(e, chartState)
   }
 
-  canvas.addEventListener('mousemove', (e) => handleMouseMove(e, chartState, tradeGroups))
+  canvas.addEventListener('mousemove', function (event) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = event.clientX - rect.left;
+    mouseY = event.clientY - rect.top;
 
+    if (isDragging) {
+      const dx = event.clientX - startX;
+      const panFactor = Math.floor(dx / 10);
+      if (panFactor !== 0) {
+        start = Math.max(0, start - panFactor);
+        end = Math.min(stockData.length, end - panFactor);
+        startX = event.clientX;
+        drawCandlestickChart(stockData, start, end);
+      }
+    } else {
+      handleMouseMove(event, chartState, tradeGroups);
+    }
+  });
   canvas.addEventListener('mousemove', function (event) {
     var rect = canvas.getBoundingClientRect();
     mouseX = event.clientX - rect.left;
@@ -2002,6 +2021,8 @@
 
     const minPrice = Math.min(...visibleData.map(d => d.Low));
     const maxPrice = Math.max(...visibleData.map(d => d.High));
+
+    updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime);
 
     // Draw candlesticks
     visibleData.forEach((d, i) => {
@@ -2153,12 +2174,12 @@
 
     if (trendlines) {
       trendlines.forEach((trendline, index) => {
-        // console.log("trendline", trendline)
         const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
         const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
         const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
+        // Draw trendline
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
@@ -2166,22 +2187,32 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
+        // Check if start point is hovered
+        const isStartHovered = hoveredTrendlinePoint &&
+          hoveredTrendlinePoint.trendline === trendline &&
+          hoveredTrendlinePoint.type === 'start';
+        const startRadius = isStartHovered ? 8 : 4; // Double size if hovered
         ctx.beginPath();
-        ctx.arc(startX, startY, 4, 0, 2 * Math.PI);
+        ctx.arc(startX, startY, startRadius, 0, 2 * Math.PI);
         ctx.fillStyle = 'gold';
         ctx.fill();
 
+        // Check if end point is hovered
+        const isEndHovered = hoveredTrendlinePoint &&
+          hoveredTrendlinePoint.trendline === trendline &&
+          hoveredTrendlinePoint.type === 'end';
+        const endRadius = isEndHovered ? 8 : 4;
         ctx.beginPath();
-        ctx.arc(endX, endY, 4, 0, 2 * Math.PI);
+        ctx.arc(endX, endY, endRadius, 0, 2 * Math.PI);
         ctx.fillStyle = 'white';
         ctx.fill();
 
+        // Push points to trendlinePoints (unchanged)
         if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
           trendlinePoints.push({
             x: startX,
             y: startY,
             trendline: trendline,
-            // timeframe: timeframe,
             index: index,
             type: 'start'
           });
@@ -2191,74 +2222,12 @@
             x: endX,
             y: endY,
             trendline: trendline,
-            // timeframe: timeframe,
             index: index,
             type: 'end'
           });
         }
-
-      })
+      });
     }
-
-    // Draw Trendlines
-
-    // if (filteredTrendlines) {
-    //   visibleTrendlines.forEach(timeframe => {
-    //     if (filteredTrendlines[timeframe]) {
-    //       filteredTrendlines[timeframe].forEach((trendline, index) => {
-    //         const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-    //         const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-    //         ctx.beginPath();
-    //         ctx.moveTo(startX, startY);
-    //         ctx.lineTo(endX, endY);
-    //         ctx.strokeStyle = 'blue';
-    //         ctx.lineWidth = 2;
-    //         ctx.stroke();
-
-    //         ctx.beginPath();
-    //         ctx.arc(startX, startY, 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = 'gold';
-    //         ctx.fill();
-
-    //         ctx.beginPath();
-    //         ctx.arc(endX, endY, 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = 'white';
-    //         ctx.fill();
-
-    //         if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-    //           trendlinePoints.push({
-    //             x: startX,
-    //             y: startY,
-    //             trendline: trendline,
-    //             timeframe: timeframe,
-    //             index: index,
-    //             type: 'start'
-    //           });
-    //         }
-    //         if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-    //           trendlinePoints.push({
-    //             x: endX,
-    //             y: endY,
-    //             trendline: trendline,
-    //             timeframe: timeframe,
-    //             index: index,
-    //             type: 'end'
-    //           });
-    //         }
-
-    //         // ctx.fillStyle = 'white';
-    //         // ctx.font = '12px Arial';
-    //         // ctx.fillText(`${timeframe}:${index + 1}`, endX + 5, endY - 5);
-    //       });
-    //     }
-    //   });
-    // }
-
-    // Add event listeners with chart state
-    updateChartState(ctx, width, height, margin, minPrice, maxPrice)
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
@@ -2267,40 +2236,59 @@
   }
 
   function trendlinePointHoverHandler(e, chartState) {
-    // console.log("Trendpoint Hover!")
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-    const rect = canvas.getBoundingClientRect()
-    const mouseX = e.clientX - rect.left
-    const mouseY = e.clientY - rect.top
-
-    // const trendlineY = chartState.height - chartState.margin -
-    //       ((point.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-    //       (chartState.height - 2 * chartState.margin);
-
-    let hoveredPoint = null
+    // Reset trendlinePoints if necessary (assuming it's a global array)
+    // If trendlinePoints is not global, ensure it's accessible here
+    let closestPoint = null;
+    let minDistance = Infinity;
 
     trendlinePoints.forEach(point => {
-      const trendlineY = chartState.height - chartState.margin - ((point.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-      // console.log(point.trendline.end.point)
-
-      if (isMouseNearLine(mouseY, point.trendline.end.point)) {
-        console.log("Near Trendpoint", point);
-        hoveredPoint = point
+      const dx = point.x - mouseX;
+      const dy = point.y - mouseY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = point;
       }
-    })
+    });
 
-    if (hoveredPoint) {
-      showTrendlinePointTooltip(hoveredPoint, mouseX, mouseY)
+    if (closestPoint && minDistance < 10) { // 10px threshold
+      hoveredTrendlinePoint = closestPoint;
+      showTrendlinePointTooltip(closestPoint, mouseX, mouseY);
+      canvas.style.cursor = 'pointer';
     } else {
-      hideTrendlinePointTooltip()
+      hoveredTrendlinePoint = null;
+      hideTrendlinePointTooltip();
+      canvas.style.cursor = 'default';
     }
   }
 
+  // function findClosestTrendlineIndex(mouseX) {
+  //   if (!chartState) return -1;
 
-  function isMouseNearTrendline(mouseX, mouseY, threshold = 5) {
-    
-  }
+  //   const { margin, width, firstCandleTime, lastCandleTime } = chartState;
+  //   const dateRange = lastCandleTime - firstCandleTime;
+  //   if (dateRange <= 0) return -1;
 
+  //   const mouseDate = firstCandleTime + ((mouseX - margin) / (width - 2 * margin)) * dateRange;
+
+  //   let closestIndex = -1;
+  //   let minDistance = Infinity;
+
+  //   trendlines.forEach((trendline, index) => {
+  //     const midPointTime = (trendline.start.time + trendline.end.time) / 2;
+  //     const distance = Math.abs(midPointTime - mouseDate);
+  //     if (distance < minDistance) {
+  //       minDistance = distance;
+  //       closestIndex = index;
+  //     }
+  //   })
+
+  //   return closestIndex;
+  // }
 
   function showTrendlinePointTooltip(point, mouseX, mouseY) {
     if (!trendlinePointTooltip) {
@@ -2327,7 +2315,7 @@
   `;
 
     trendlinePointTooltip.style.left = `${mouseX + 10}px`;
-    trendlinePointTooltip.style.top = `${mouseY + 10}px`;
+    trendlinePointTooltip.style.top = `${mouseY + 75}px`;
     trendlinePointTooltip.style.display = 'block';
   }
 
