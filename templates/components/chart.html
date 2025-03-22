@@ -584,13 +584,13 @@
           menu.style.pointerEvents = 'auto';
 
           menu.innerHTML = `
-                    <div class="line-menu-item" data-action="entry">Trade Entry</div>
-                    <div class="line-menu-item" data-action="pt">Profit Target</div>
-                    <div class="line-menu-item" data-action="stop">Stop Loss</div>
-                    <div class="line-menu-item" data-action="trigger">Trigger</div>
-                    <div class="line-menu-item" data-action="delete">Delete</div>
-                    <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
-                `;
+            <div class="line-menu-item" data-action="entry">Trade Entry</div>
+            <div class="line-menu-item" data-action="pt">Profit Target</div>
+            <div class="line-menu-item" data-action="stop">Stop Loss</div>
+            <div class="line-menu-item" data-action="trigger">Trigger</div>
+            <div class="line-menu-item" data-action="delete">Delete</div>
+            <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
+          `;
 
           menu.addEventListener('mouseenter', () => {
             menu.dataset.hovering = 'true';
@@ -1000,6 +1000,8 @@
   const updateSidebar = createTradeSetupSidebar();
 
   function handleLineAction(action, line) {
+    console.log("\n-------------------handleLineAction\n----------------")
+    console.log("action:", action, "\nLine:", line);
     switch (action) {
       case 'trigger':
         const lastCandle = stockData[stockData.length - 1];
@@ -2174,6 +2176,7 @@
     }
 
     if (trendlines) {
+      trendlinePoints = []; // Reset points array each redraw
       trendlines.forEach((trendline, index) => {
         const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
         const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
@@ -2188,44 +2191,26 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Check if start point is hovered
-        const isStartHovered = hoveredTrendlinePoint &&
-          hoveredTrendlinePoint.trendline === trendline &&
-          hoveredTrendlinePoint.type === 'start';
-        const startRadius = isStartHovered ? 8 : 4; // Double size if hovered
+        // Draw start point
+        const isStartHovered = hoveredTrendlinePoint && hoveredTrendlinePoint.trendline === trendline && hoveredTrendlinePoint.type === 'start';
         ctx.beginPath();
-        ctx.arc(startX, startY, startRadius, 0, 2 * Math.PI);
+        ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
         ctx.fillStyle = 'gold';
         ctx.fill();
 
-        // Check if end point is hovered
-        const isEndHovered = hoveredTrendlinePoint &&
-          hoveredTrendlinePoint.trendline === trendline &&
-          hoveredTrendlinePoint.type === 'end';
-        const endRadius = isEndHovered ? 8 : 4;
+        // Draw end point
+        const isEndHovered = hoveredTrendlinePoint && hoveredTrendlinePoint.trendline === trendline && hoveredTrendlinePoint.type === 'end';
         ctx.beginPath();
-        ctx.arc(endX, endY, endRadius, 0, 2 * Math.PI);
+        ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
         ctx.fillStyle = 'white';
         ctx.fill();
 
-        // Push points to trendlinePoints (unchanged)
+        // Store points if within visible bounds
         if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-          trendlinePoints.push({
-            x: startX,
-            y: startY,
-            trendline: trendline,
-            index: index,
-            type: 'start'
-          });
+          trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
         }
         if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-          trendlinePoints.push({
-            x: endX,
-            y: endY,
-            trendline: trendline,
-            index: index,
-            type: 'end'
-          });
+          trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
         }
       });
     }
@@ -2541,22 +2526,43 @@
 
   function showTrendlinePointMenu(point, mouseX, mouseY) {
     const menu = document.createElement('div');
+    const canvasRect = canvas.getBoundingClientRect();
+
+    // Position relative to canvas
     menu.style.position = 'absolute';
-    menu.style.left = `${mouseX + 10}px`;
-    menu.style.top = `${mouseY + 10}px`;
+    menu.style.left = `${canvasRect.left + mouseX + 10}px`;
+    menu.style.top = `${canvasRect.top + mouseY - 200}px`;
     menu.style.backgroundColor = 'rgba(0,0,0,0.8)';
     menu.style.color = 'white';
     menu.style.padding = '5px';
     menu.style.borderRadius = '3px';
     menu.style.zIndex = '1000';
+
     menu.innerHTML = `
-    <div>Menu for ${point.type} point</div>
-    <div>Price: ${point.trendline[point.type].point.toFixed(8)}</div>
-    <div>Time: ${new Date(point.trendline[point.type].time * 1000).toLocaleString()}</div>
-  `;
+      <div>Menu for ${point.type} point</div>
+      <div>Price: ${point.trendline[point.type].point.toFixed(8)}</div>
+      <div>Time: ${new Date(point.trendline[point.type].time * 1000).toLocaleString()}</div>
+      <div class="line-menu-item" data-action="alert">Set Alert</div>
+      <div class="line-menu-item" data-action="stop">Set as Stop Loss</div>
+      <div class="line-menu-item" data-action="entry">Set as Entry</div>
+      <div class="line-menu-item" data-action="pt">Set as Profit Target</div>
+    `;
+
     document.body.appendChild(menu);
 
-    // Prevent immediate removal by delaying the click listener
+    // Add event listeners for menu items
+    menu.querySelectorAll('.line-menu-item').forEach(item => {
+      item.addEventListener('click', function () {
+        const action = this.dataset.action;
+        const price = point.trendline[point.type].point;
+        const tempLine = { price: price };
+        handleLineAction(action, tempLine);
+        menu.remove();
+        drawCandlestickChart(stockData, start, end);
+      });
+    });
+
+    // Remove menu on outside click
     setTimeout(() => {
       document.addEventListener('click', function removeMenu(e) {
         if (!menu.contains(e.target)) {
