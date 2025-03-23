@@ -1039,7 +1039,7 @@
         })
           .then(response => response.json())
           .then(data => {
-            console.log('Trigger Created: ', data);
+            console.log('1Trigger Created: ', data);
             line.triggerId = data.id;
             // Update sidebar and push content
             const updateSidebar = createTradeSetupSidebar();
@@ -1061,6 +1061,7 @@
           .catch(error => {
             console.log('Error creating trigger:', error);
           });
+          draw_lines.push(line)
         break;
 
       case 'entry':
@@ -2483,7 +2484,7 @@
           })
             .then(response => response.json())
             .then(data => {
-              console.log('Trigger Created: ', data);
+              console.log('2Trigger Created: ', data);
               line.triggerId = data.id;
             })
             .catch(error => {
@@ -2685,7 +2686,7 @@
             })
               .then(response => response.json())
               .then(data => {
-                console.log('Trigger Created: ', data)
+                console.log('3Trigger Created: ', data)
                 line.triggerId = data.id
               })
               .catch(error => {
