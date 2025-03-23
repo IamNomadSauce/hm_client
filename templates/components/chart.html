@@ -605,6 +605,7 @@
           menu.querySelectorAll('.line-menu-item').forEach(item => {
             item.addEventListener('click', function (e) {
               const action = this.dataset.action;
+              console.log("handle_line_action", draw_lines[activeLineIndex])
               handleLineAction(action, draw_lines[activeLineIndex]);
               menu.remove();
               drawCandlestickChart(stockData, start, end);
@@ -631,6 +632,7 @@
   };
 
   function createTradeSetupSidebar() {
+    console.log("Create Trade Setup Sidebar")
     // Remove any existing sidebars first
     const existingSidebar = document.getElementById('trade-setup-sidebar');
     const existingTab = document.getElementById('trade-setup-tab');
@@ -726,11 +728,7 @@
         }, 300);
       }
     };
-
-
-
-
-
+    
     // Make updateRisk globally accessible
     window.updateRisk = function (value) {
       currentRiskPercentage = parseFloat(value);
@@ -747,6 +745,9 @@
       const entryLine = draw_lines.find(l => l.type === 'entry');
       const stopLine = draw_lines.find(l => l.type === 'stop');
       const ptLines = draw_lines.filter(l => l.type === 'pt');
+      console.log("Entry line", entryLine)
+      console.log("Stop line", stopLine)
+      console.log("PT lines", ptLines)
 
       // let tradeSetupData = null;
 
@@ -756,7 +757,7 @@
       let stopLossRiskPercent = 0;
 
       riskAmount = portfolioSize * (currentRiskPercentage / 100);
-      console.log("Risk Amount", riskAmount)
+      // console.log("Risk Amount", riskAmount)
 
       if (entryLine && stopLine) {
         const entryPrice = entryLine.price;
@@ -804,52 +805,52 @@
             <div class="setup-section">
                 <h4>Trigger Conditions</h4>
                 ${window.currentTradeSetup?.chainedTriggers?.length > 0 ? `
-    ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
-        <div class="trigger-details">
-          <div class="trigger-header">
-              <div class="trigger-order">
-                  <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-                  <span>Trigger ${index + 1}</span>
-                  <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
-              </div>
-              <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
-          </div>
-          <div class="trigger-settings">
-              <select onchange="updateTriggerType(${trigger.id}, this.value)">
-                  <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
-                  <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-                  <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
-                  <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
-                  <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
-                  <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
-              </select>
-          </div>
-          <div>Price: ${trigger.price.toFixed(8)}</div>
-          <div>Timeframe: ${trigger.timeframe || '1m'}</div>
-          <div>Candles: ${trigger.candles || 1}</div>
-          <div>Status: ${trigger.status}</div>
-          <div class="trigger-settings">
-              <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
-                  <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
-                  <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
-                  <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
-                  <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
-              </select>
-              <input type="number" 
-                    value="${trigger.candles || 1}" 
-                    min="1" 
-                    onchange="updateTriggerCandles(${trigger.id}, this.value)"
-                    placeholder="Candles">
-          </div>
-        </div>
+                    ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
+                        <div class="trigger-details">
+                          <div class="trigger-header">
+                              <div class="trigger-order">
+                                  <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                                  <span>Trigger ${index + 1}</span>
+                                  <button onclick="moveTrigger(${index}, 1)" ${index === window.currentTradeSetup.chainedTriggers.length - 1 ? 'disabled' : ''}>↓</button>
+                              </div>
+                              <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
+                          </div>
+                          <div class="trigger-settings">
+                              <select onchange="updateTriggerType(${trigger.id}, this.value)">
+                                  <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
+                                  <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
+                                  <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
+                                  <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
+                                  <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
+                                  <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
+                              </select>
+                          </div>
+                          <div>Price: ${trigger.price.toFixed(8)}</div>
+                          <div>Timeframe: ${trigger.timeframe || '1m'}</div>
+                          <div>Candles: ${trigger.candles || 1}</div>
+                          <div>Status: ${trigger.status}</div>
+                          <div class="trigger-settings">
+                              <select onchange="updateTriggerTimeframe(${trigger.id}, this.value)">
+                                  <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
+                                  <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
+                                  <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
+                                  <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
+                              </select>
+                              <input type="number" 
+                                    value="${trigger.candles || 1}" 
+                                    min="1" 
+                                    onchange="updateTriggerCandles(${trigger.id}, this.value)"
+                                    placeholder="Candles">
+                          </div>
+                        </div>
 
-    `).join('')}
-` : '<div>No triggers set</div>'}
+                    `).join('')}
+                ` : '<div>No triggers set</div>'}
 
-                <div style="margin-top: 10px;">
-                    <small>Draw trigger lines on chart to add conditions</small>
-                </div>
-            </div>
+                          <div style="margin-top: 10px;">
+                              <small>Draw trigger lines on chart to add conditions</small>
+                          </div>
+                      </div>
 
 
             <div class="setup-section">
@@ -928,6 +929,7 @@
     updateSidebarContent();
     // Return refresh function
     return () => {
+      console.log("Why is this here?")
       updateSidebarContent();
       sidebar.style.right = '0px'; // Changed from left to right
     };
@@ -1000,7 +1002,7 @@
   const updateSidebar = createTradeSetupSidebar();
 
   function handleLineAction(action, line) {
-    console.log("\n-------------------handleLineAction\n----------------")
+    console.log("\n-------------------\nhandleLineAction")
     console.log("action:", action, "\nLine:", line);
     switch (action) {
       case 'trigger':
@@ -1062,12 +1064,15 @@
         break;
 
       case 'entry':
+        console.log("ENTRY")
         line.type = 'entry';
         line.color = '#00ff00';
         window.currentTrade = {
           entry: line.price,
           productId: selectedProduct.product_id
         };
+        console.log("CURRENT _ TRADE", window.currentTrade)
+        console.log("CURRENT _ TRADE _ SETUP", window.currentTradeSetup)
         // Add same margin adjustment for entry
         const chartContainer = document.getElementById('chartContainer');
         if (chartContainer) {
@@ -1075,25 +1080,35 @@
           chartContainer.style.width = 'calc(100% - 350px)';
           chartContainer.style.transition = 'all 0.3s ease';
           setTimeout(() => {
+            console.log("candlestick_chart_draw")
             drawCandlestickChart(stockData, start, end);
           }, 300);
         }
+        draw_lines.push(line)
         break;
 
       case 'pt':
+        console.log("PT")
         line.type = 'pt';
         line.color = '#ffff00';
+        console.log("CURRENT _ TRADE", window.currentTrade)
+        console.log("CURRENT _ TRADE _ SETUP", window.currentTradeSetup)
         if (window.currentTrade && window.currentTrade.entry) {
           window.currentTrade.target = line.price;
         }
+        draw_lines.push(line)
         break;
 
       case 'stop':
+        console.log("STOP")
         line.type = 'stop';
         line.color = '#ff0000';
+        console.log("CURRENT _ TRADE", window.currentTrade)
+        console.log("CURRENT _ TRADE _ SETUP", window.currentTradeSetup)
         if (window.currentTrade && window.currentTrade.entry) {
           window.currentTrade.stop = line.price;
         }
+        draw_lines.push(line)
         break;
 
       case 'delete':
@@ -1120,7 +1135,9 @@
         createTradeGroup(tradeSetup);
         break;
     }
+    console.log("update_sidebar")
     updateSidebar()
+    console.log("handleLineAction Finised")
   }
 
   function calculateRisk(entry, stop) {
@@ -2007,7 +2024,7 @@
   });
 
   function drawCandlestickChart(data, start, end) {
-
+    console.log("DrawCandlestickChart")
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2542,7 +2559,7 @@
       <div>Menu for ${point.type} point</div>
       <div>Price: ${point.trendline[point.type].point.toFixed(8)}</div>
       <div>Time: ${new Date(point.trendline[point.type].time * 1000).toLocaleString()}</div>
-      <div class="line-menu-item" data-action="alert">Set Alert</div>
+      <div class="line-menu-item" data-action="trigger">Set Trigger</div>
       <div class="line-menu-item" data-action="stop">Set as Stop Loss</div>
       <div class="line-menu-item" data-action="entry">Set as Entry</div>
       <div class="line-menu-item" data-action="pt">Set as Profit Target</div>
