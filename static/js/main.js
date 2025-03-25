@@ -1,5 +1,5 @@
 console.log("Main Function")
-// window.stockData = {{ .Candles | json }};
+// window.stockData = {{ .Candles }};
 // console.log("Main Function", window.stockData)
 // window.selectedProduct = {{ .SelectedProduct | json }};
 // window.exchange = {{.SelectedExchange | json }};
@@ -10,7 +10,7 @@ console.log("Main Function")
 
 console.log("selected product", window.selectedProduct)
 //Test
-window.end = stockData.length
+window.end = window.stockData.length
 window.start = Math.max(0, end - 250);
 window.zoomFactor = 10;
 window.draw_lines = []

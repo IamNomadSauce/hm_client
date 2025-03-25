@@ -1,4 +1,4 @@
-
+console.log("Utilities.js")
 function calculatePrice(y, height, margin, minPrice, maxPrice) {
     return maxPrice - ((y - margin) / (height - 2 * margin)) * (maxPrice - minPrice);
 }

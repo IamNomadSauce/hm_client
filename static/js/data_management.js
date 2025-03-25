@@ -1,5 +1,6 @@
 
 function connectToBackend() {
+    console.log("Connect To Backend")
     const backendURL = "http://192.168.0.22:31337";
     console.log("Connecting to SSE at:", backendURL);
 

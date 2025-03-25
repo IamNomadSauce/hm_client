@@ -1,4 +1,4 @@
-
+console.log("trade_setup.js")
 function createTradeSetupSidebar() {
     console.log("Create Trade Setup Sidebar")
     // Remove any existing sidebars first

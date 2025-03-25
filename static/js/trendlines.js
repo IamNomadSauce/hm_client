@@ -1,6 +1,24 @@
+// Create and initialize the tooltip element
+console.log("trendlines.js")
+window.trendlinePointTooltip = document.createElement('div');
+window.trendlinePointTooltip.className = 'trendline-point-tooltip';
+window.trendlinePointTooltip.style.position = 'absolute';
+window.trendlinePointTooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+window.trendlinePointTooltip.style.color = 'white';
+window.trendlinePointTooltip.style.padding = '5px';
+window.trendlinePointTooltip.style.borderRadius = '3px';
+window.trendlinePointTooltip.style.display = 'none';
+
+document.body.appendChild(window.trendlinePointTooltip);
+
 window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
     const menu = document.createElement('div');
     const canvasRect = canvas.getBoundingClientRect();
+
+    window.trendlinePointTooltip.style.display = 'block';
+    window.trendlinePointTooltip.innerHTML = `Price: ${point.trendline[point.type].point.toFixed(2)}<br>Time: ${new Date(point.trendline[point.type].time * 1000).toLocaleString()}`;
+    window.trendlinePointTooltip.style.left = `${mouseX + 10}px`;
+    window.trendlinePointTooltip.style.top = `${mouseY + 10}px`;
 
     // Position relative to canvas
     menu.style.position = 'absolute';
@@ -82,7 +100,7 @@ window.toggleTrendline = function (key) {
 
 
 window.hideTrendlinePointTooltip = function () {
-    if (trendlinePointTooltip) {
+    if (window.trendlinePointTooltip) {
         trendlinePointTooltip.style.display = 'none'
     }
 }

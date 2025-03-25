@@ -6,24 +6,25 @@ window.draw_boxes = []
 window.draw_lines = []
 window.activeLineIndex = -1;
 
-function setupEventListeners() {
+window.setupEventListeners = function() {
+    console.log("Setup Event Listeners")
     canvas.addEventListener('mousemove', function (event) {
         const rect = canvas.getBoundingClientRect();
-        mouseX = event.clientX - rect.left;
-        mouseY = event.clientY - rect.top;
+        window.mouseX = event.clientX - rect.left;
+        window.mouseY = event.clientY - rect.top;
 
         if (isDragging) {
             let dx = event.clientX - startX;
             let panFactor = Math.floor(dx / 10);
             if (panFactor !== 0) {
-                start = Math.max(0, start - panFactor);
-                end = Math.min(stockData.length, end - panFactor);
-                startX = event.clientX;
+                window.start = Math.max(0, start - panFactor);
+                window.end = Math.min(stockData.length, end - panFactor);
+                window.startX = event.clientX;
                 drawCandlestickChart(stockData, start, end);
             }
         } else {
-            handleMouseMove(event, chartState, tradeGroups);
-            drawCandlestickChart(stockData, start, end)
+            window.handleMouseMove(event, chartState, tradeGroups);
+            window.drawCandlestickChart(stockData, start, end)
         }
     });
 
@@ -89,7 +90,7 @@ window.handleMouseMove = function (e, chartState, tradeGroups) {
     tradeHoverHandler(e, chartState, tradeGroups)
     lineHoverHandler(e, chartState)
     triggerHoverHandler(e, chartState)
-    trendlinePointHoverHandler(e, chartState)
+    window.trendlinePointHoverHandler(e, chartState)
 }
 
 window.showTriggerNotification = function (trigger) {
@@ -127,11 +128,11 @@ window.trendlinePointHoverHandler = function (e, chartState) {
     });
 
     if (closestPoint && minDistance < 10) { // 10px threshold
-        hoveredTrendlinePoint = closestPoint;
+        window.hoveredTrendlinePoint = closestPoint;
         showTrendlinePointTooltip(closestPoint, mouseX, mouseY);
         canvas.style.cursor = 'pointer';
     } else {
-        hoveredTrendlinePoint = null;
+        window.hoveredTrendlinePoint = null;
         hideTrendlinePointTooltip();
         canvas.style.cursor = 'default';
     }
@@ -441,13 +442,13 @@ canvas.addEventListener('mouseleave', function () {
 });
 
 canvas.addEventListener('click', function (event) {
-    if (hoveredTrendlinePoint) {
+    if (window.hoveredTrendlinePoint) {
         const mouseX = event.pageX;
         const mouseY = event.pageY;
         // Find the current point object since trendlinePoints is recalculated on redraw
         const point = trendlinePoints.find(p =>
-            p.trendline === hoveredTrendlinePoint.trendline &&
-            p.type === hoveredTrendlinePoint.type
+            p.trendline === window.hoveredTrendlinePoint.trendline &&
+            p.type === window.hoveredTrendlinePoint.type
         );
         if (point) {
             showTrendlinePointMenu(point, mouseX, mouseY);

@@ -1,3 +1,5 @@
+window.hoveredTrendlinePoint = null
+window.trendlinePoints = []
 
 window.canvas = document.getElementById('candlestickChart');
 window.ctx = canvas.getContext('2d');
@@ -17,7 +19,7 @@ window.updateChartState = function(ctx, width, height, margin, minPrice, maxPric
     }
 }
 
-function drawCandlestickChart(data, start, end) {
+window.drawCandlestickChart = function(data, start, end) {
     console.log("DrawCandlestickChart")
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
@@ -36,7 +38,7 @@ function drawCandlestickChart(data, start, end) {
     const minPrice = Math.min(...visibleData.map(d => d.Low));
     const maxPrice = Math.max(...visibleData.map(d => d.High));
 
-    updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime);
+    window.updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime);
 
     // Draw candlesticks
     visibleData.forEach((d, i) => {
@@ -203,14 +205,14 @@ function drawCandlestickChart(data, start, end) {
             ctx.stroke();
 
             // Draw start point
-            const isStartHovered = hoveredTrendlinePoint && hoveredTrendlinePoint.trendline === trendline && hoveredTrendlinePoint.type === 'start';
+            const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
             ctx.beginPath();
             ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = 'gold';
             ctx.fill();
 
             // Draw end point
-            const isEndHovered = hoveredTrendlinePoint && hoveredTrendlinePoint.trendline === trendline && hoveredTrendlinePoint.type === 'end';
+            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
             ctx.beginPath();
             ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = 'white';
