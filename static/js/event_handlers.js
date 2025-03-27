@@ -13,18 +13,18 @@ window.setupEventListeners = function() {
         window.mouseX = event.clientX - rect.left;
         window.mouseY = event.clientY - rect.top;
 
-        if (isDragging) {
-            let dx = event.clientX - startX;
+        if (window.isDragging) {
+            let dx = event.clientX - window.startX;
             let panFactor = Math.floor(dx / 10);
             if (panFactor !== 0) {
-                window.start = Math.max(0, start - panFactor);
-                window.end = Math.min(stockData.length, end - panFactor);
+                window.start = Math.max(0, window.start - panFactor);
+                window.end = Math.min(window.stockData.length, window.end - panFactor);
                 window.startX = event.clientX;
-                drawCandlestickChart(stockData, start, end);
+                drawCandlestickChart(window.stockData, window.start, window.end);
             }
         } else {
-            window.handleMouseMove(event, chartState, tradeGroups);
-            window.drawCandlestickChart(stockData, start, end)
+            window.handleMouseMove(event, window.chartState, window.tradeGroups);
+            window.drawCandlestickChart(window.stockData, window.start, window.end)
         }
     });
 
@@ -36,7 +36,7 @@ window.setupEventListeners = function() {
 
         if (currentTool) {
             if (currentTool === 'line' || currentTool === 'trigger') {
-                chartState = drawCandlestickChart(stockData, start, end);
+                chartState = drawCandlestickChart(window.stockData, window.start, window.end);
                 const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
                 const line = { price: price };
 
@@ -73,7 +73,7 @@ window.setupEventListeners = function() {
                 }
 
                 draw_lines.push(line);
-                drawCandlestickChart(stockData, start, end);
+                drawCandlestickChart(window.stockData, window.start, window.end);
             }
             drawingStart = { x: mouseX, y: mouseY };
         } else {
@@ -337,7 +337,7 @@ const lineHoverHandler = function (e, chartState) {
                         console.log("handle_line_action", draw_lines[activeLineIndex])
                         handleLineAction(action, draw_lines[activeLineIndex]);
                         menu.remove();
-                        drawCandlestickChart(stockData, start, end);
+                        drawCandlestickChart(window.stockData, window.start, window.end);
                     });
                 });
 
@@ -372,7 +372,7 @@ window.cancelTrigger = function (triggerID) {
         .then(data => {
             console.log('Trigger cancelled:', data)
             current_triggers = current_triggers.filter(triggers => triggers.id !== triggerID)
-            drawCandlestickChart(stockData, start, end)
+            drawCandlestickChart(window.stockData, window.start, window.end)
         })
         .catch(error => {
             console.error('Error cancelling trigger:', error);
@@ -493,15 +493,15 @@ canvas.addEventListener('mouseleave', function (event) {
 document.getElementById('chartContainer').addEventListener('wheel', function (event) {
     event.preventDefault();
     if (event.deltaY < 0) { // Zoom in
-        if (end - start > zoomFactor) {
-            start += zoomFactor;
-            end -= zoomFactor;
+        if (window.end - window.start > window.zoomFactor) {
+            window.start += window.zoomFactor;
+            window.end -= window.zoomFactor;
         }
     } else { // Zoom out
-        start = Math.max(0, start - zoomFactor);
-        end = Math.min(stockData.length, end + zoomFactor);
+        window.start = Math.max(0, window.start - window.zoomFactor);
+        window.end = Math.min(window.stockData.length, window.end + window.zoomFactor);
     }
-    drawCandlestickChart(stockData, start, end);
+    window.drawCandlestickChart(window.stockData, window.start, window.end);
 });
 
 window.addEventListener('resize', function () {

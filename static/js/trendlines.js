@@ -101,6 +101,6 @@ window.toggleTrendline = function (key) {
 
 window.hideTrendlinePointTooltip = function () {
     if (window.trendlinePointTooltip) {
-        trendlinePointTooltip.style.display = 'none'
+        window.trendlinePointTooltip.style.display = 'none'
     }
 }

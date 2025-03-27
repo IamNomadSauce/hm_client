@@ -20,7 +20,8 @@ window.updateChartState = function(ctx, width, height, margin, minPrice, maxPric
 }
 
 window.drawCandlestickChart = function(data, start, end) {
-    console.log("DrawCandlestickChart")
+    console.log("DrawCandlestickChart\n", data, start, end)
+    // console.log(data, start, end)
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -30,6 +31,7 @@ window.drawCandlestickChart = function(data, start, end) {
     const margin = 50;
 
     const visibleData = data.slice(start, end);
+    // let visibleData = data
     const candleWidth = (width - 2 * margin) / visibleData.length;
     const firstCandleTime = visibleData[0].Timestamp;
     const lastCandleTime = visibleData[visibleData.length - 1].Timestamp;

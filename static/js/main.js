@@ -1,14 +1,7 @@
 console.log("Main Function")
-// window.stockData = {{ .Candles }};
-// console.log("Main Function", window.stockData)
-// window.selectedProduct = {{ .SelectedProduct | json }};
-// window.exchange = {{.SelectedExchange | json }};
-// window.selectedTimeframe = {{ .SelectedTimeframe | json }}
-// window.portfolioSize = {{ .TotalValue | json }}
-// window.filteredTrendlines = {{.FilteredTrendlines | json }}
-// window.trendlines = {{ .Trendlines | json }}
 
-console.log("selected product", window.selectedProduct)
+
+console.log("selected product", window.selectedProduct.product_id)
 //Test
 window.end = window.stockData.length
 window.start = Math.max(0, end - 250);
@@ -27,7 +20,7 @@ window.drawCandlestickChart(stockData, start, end);
 
 function init() {
     console.log("main.js INIT")
-    drawCandlestickChart(window.start, window.end)
+    drawCandlestickChart(window.stockData, window.start, window.end)
     setupEventListeners()
     connectToBackend()
     window.updateSidebar = createTradeSetupSidebar()
