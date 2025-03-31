@@ -12,6 +12,7 @@ window.trendlinePointTooltip.style.display = 'none';
 document.body.appendChild(window.trendlinePointTooltip);
 
 window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
+    console.log("Show TrendlinePoint Menu")
     const menu = document.createElement('div');
     const canvasRect = canvas.getBoundingClientRect();
 
@@ -23,7 +24,7 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
     // Position relative to canvas
     menu.style.position = 'absolute';
     menu.style.left = `${canvasRect.left + mouseX + 10}px`;
-    menu.style.top = `${canvasRect.top + mouseY - 200}px`;
+    menu.style.top = `${canvasRect.top + mouseY - 300}px`;
     menu.style.backgroundColor = 'rgba(0,0,0,0.8)';
     menu.style.color = 'white';
     menu.style.padding = '5px';
@@ -50,7 +51,7 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
             const tempLine = { price: price };
             handleLineAction(action, tempLine);
             menu.remove();
-            drawCandlestickChart(stockData, start, end);
+            drawCandlestickChart(window.stockData, start, end);
         });
     });
 
@@ -66,6 +67,7 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
 }
 
 window.showTrendlinePointTooltip = function (point, mouseX, mouseY) {
+    console.log("Show TrendlinePointTooltip")
     if (!trendlinePointTooltip) {
         trendlinePointTooltip = document.createElement('div');
         trendlinePointTooltip.style.position = 'absolute';

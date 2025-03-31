@@ -41,7 +41,7 @@ window.setupEventListeners = function() {
                 const line = { price: price };
 
                 if (currentTool === 'trigger') {
-                    const lastCandle = stockData[stockData.length - 1];
+                    const lastCandle = window.stockData[window.stockData.length - 1];
                     const currentPrice = lastCandle.Close;
 
                     line.type = 'trigger';
@@ -146,8 +146,8 @@ const fillHoverHandler = function (e, chartState) {
 
     current_fills.forEach(fill => {
         const fillTime = new Date(fill.time).getTime() / 1000;
-        const firstCandleTime = stockData[start].Timestamp;
-        const timeRange = stockData[end - 1].Timestamp - firstCandleTime;
+        const firstCandleTime = window.stockData[start].Timestamp;
+        const timeRange = window.stockData[end - 1].Timestamp - firstCandleTime;
         const xPosition = chartState.margin + ((fillTime - firstCandleTime) / timeRange) * (chartState.width - 2 * chartState.margin);
         const fillY = chartState.height - chartState.margin - ((fill.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
 
@@ -396,7 +396,7 @@ window.cancelOrder = function (orderId, xchId) {
             if (index !== -1) {
                 current_orders.splice(index, 1);
             }
-            drawCandlestickChart(stockData, start, end);
+            drawCandlestickChart(window.stockData, start, end);
             document.querySelectorAll('.order-menu').forEach(el => el.remove());
         })
         .catch(error => console.error('Error canceling order:', error));
@@ -416,7 +416,7 @@ window.deleteTradeBlock = function (groupId) {
         .then(response => response.json())
         .then(data => {
             current_trades = current_trades.filter(t => t.group_id !== groupId)
-            drawCandlestickChart(stockData, start, end)
+            drawCandlestickChart(window.stockData, start, end)
             document.querySelectorAll('.trade-menu').forEach(el => el.remove())
         })
         .catch(error => console.error('Error deleting trade group:', error))
@@ -535,7 +535,7 @@ document.querySelectorAll('.line-menu-item').forEach(item => {
 
             switch (action) {
                 case 'trigger':
-                    const lastCandle = stockData[stockData.length - 1]
+                    const lastCandle = window.stockData[window.stockData.length - 1]
                     const currentPrice = lastCandle.Close
 
                     line.type = 'trigger';
@@ -623,7 +623,7 @@ document.querySelectorAll('.line-menu-item').forEach(item => {
         }
 
         hideLineMenu();
-        drawCandlestickChart(stockData, start, end);
+        drawCandlestickChart(window.stockData, start, end);
     });
 });
 
@@ -657,7 +657,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.classList.add('btn-primary');
             }
             toggleTrendline(trendlineId);
-            drawCandlestickChart(stockData, start, end);
+            drawCandlestickChart(window.stockData, start, end);
         });
     });
 });

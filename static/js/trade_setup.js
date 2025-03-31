@@ -364,6 +364,7 @@ function handleLineAction(action, line) {
                     console.log('Error creating trigger:', error);
                 });
             draw_lines.push(line)
+            window.updateSidebar();
             break;
 
         case 'entry':
@@ -388,6 +389,7 @@ function handleLineAction(action, line) {
                 }, 300);
             }
             draw_lines.push(line)
+            window.updateSidebar();
             break;
 
         case 'pt':
@@ -400,6 +402,7 @@ function handleLineAction(action, line) {
                 window.currentTrade.target = line.price;
             }
             draw_lines.push(line)
+            window.updateSidebar();
             break;
 
         case 'stop':
@@ -412,6 +415,7 @@ function handleLineAction(action, line) {
                 window.currentTrade.stop = line.price;
             }
             draw_lines.push(line)
+            window.updateSidebar();
             break;
 
         case 'delete':

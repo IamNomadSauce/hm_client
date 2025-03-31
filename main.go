@@ -34,6 +34,7 @@ func main() {
 	http.HandleFunc("/update-trigger", updateTriggerHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	err := http.ListenAndServe(":8080", nil)
 
 	// -----------------------------------------------

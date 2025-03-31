@@ -20,7 +20,7 @@ window.updateChartState = function(ctx, width, height, margin, minPrice, maxPric
 }
 
 window.drawCandlestickChart = function(data, start, end) {
-    console.log("DrawCandlestickChart\n", data, start, end)
+    // console.log("DrawCandlestickChart\n", data, start, end)
     // console.log(data, start, end)
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
