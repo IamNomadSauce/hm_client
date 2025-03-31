@@ -1,4 +1,7 @@
 console.log("trade_setup.js")
+
+const updateSidebar = createTradeSetupSidebar();
+
 function createTradeSetupSidebar() {
     console.log("Create Trade Setup Sidebar")
     // Remove any existing sidebars first
@@ -344,8 +347,7 @@ function handleLineAction(action, line) {
                     console.log('1Trigger Created: ', data);
                     line.triggerId = data.id;
                     // Update sidebar and push content
-                    const updateSidebar = createTradeSetupSidebar();
-                    updateSidebar();
+                    window.updateSidebar();
 
                     // Get chart container and adjust margin
                     const chartContainer = document.getElementById('chartContainer');
@@ -363,8 +365,8 @@ function handleLineAction(action, line) {
                 .catch(error => {
                     console.log('Error creating trigger:', error);
                 });
+            
             draw_lines.push(line)
-            window.updateSidebar();
             break;
 
         case 'entry':
@@ -389,7 +391,6 @@ function handleLineAction(action, line) {
                 }, 300);
             }
             draw_lines.push(line)
-            window.updateSidebar();
             break;
 
         case 'pt':
@@ -402,7 +403,6 @@ function handleLineAction(action, line) {
                 window.currentTrade.target = line.price;
             }
             draw_lines.push(line)
-            window.updateSidebar();
             break;
 
         case 'stop':
@@ -415,7 +415,6 @@ function handleLineAction(action, line) {
                 window.currentTrade.stop = line.price;
             }
             draw_lines.push(line)
-            window.updateSidebar();
             break;
 
         case 'delete':
@@ -443,7 +442,7 @@ function handleLineAction(action, line) {
             break;
     }
     console.log("update_sidebar")
-    updateSidebar()
+    window.updateSidebar()
     console.log("handleLineAction Finised")
 }
 
@@ -477,7 +476,7 @@ function executeTradeSetup(tradeSetupData) {
             draw_lines = [];
             window.currentTradeSetup = null;
             drawCandlestickChart(stockData, start, end);
-            updateSidebar();
+            window.updateSidebar();
         })
         .catch(error => {
             console.error('Error creating trade:', error);
@@ -538,38 +537,32 @@ window.addChainedTrigger = function () {
         candles: 1
     });
 
-    const updateSidebar = createTradeSetupSidebar();
-    updateSidebar();
+    window.updateSidebar();
 }
 
 window.updateTriggerCondition = function (index, value) {
     window.currentTradeSetup.chainedTriggers[index].type = value;
-    const updateSidebar = createTradeSetupSidebar();
-    updateSidebar();
+    window.updateSidebar();
 }
 
 window.updateTriggerPrice = function (index, value) {
     window.currentTradeSetup.chainedTriggers[index].price = parseFloat(value);
-    const updateSidebar = createTradeSetupSidebar();
-    updateSidebar();
+    window.updateSidebar();
 }
 
 window.updateTriggerTimeframe = function (index, value) {
     window.currentTradeSetup.chainedTriggers[index].timeframe = value;
-    const updateSidebar = createTradeSetupSidebar();
-    updateSidebar();
+    window.updateSidebar();
 }
 
 window.updateTriggerCandles = function (index, value) {
     window.currentTradeSetup.chainedTriggers[index].candles = parseInt(value);
-    const updateSidebar = createTradeSetupSidebar();
-    updateSidebar();
+    window.updateSidebar();
 }
 
 window.removeTrigger = function (index) {
     window.currentTradeSetup.chainedTriggers.splice(index, 1);
-    const updateSidebar = createTradeSetupSidebar();
-    updateSidebar();
+    window.updateSidebar();
 }
 
 window.updateRisk = function (value) {
@@ -583,7 +576,6 @@ window.updateRisk = function (value) {
     };
 }
 
-const updateSidebar = createTradeSetupSidebar();
 
 
 // ------------------------
@@ -835,8 +827,7 @@ window.moveTrigger = function (index, direction) {
 
     if (newIndex >= 0 && newIndex < triggers.length) {
         [triggers[index], triggers[newIndex]] = [triggers[newIndex], triggers[index]];
-        const updateSidebar = createTradeSetupSidebar();
-        updateSidebar();
+        window.updateSidebar();
     }
 }
 
@@ -874,8 +865,7 @@ window.updateTriggerType = function (triggerId, newType) {
                 }
 
                 // Refresh sidebar
-                const updateSidebar = createTradeSetupSidebar();
-                updateSidebar();
+                window.updateSidebar();
             })
             .catch(error => console.error('Error updating trigger:', error));
     }
@@ -900,8 +890,7 @@ window.updateTriggerTimeframe = function (triggerId, timeframe) {
                 trigger.timeframe = timeframe;
 
                 // Refresh sidebar
-                const updateSidebar = createTradeSetupSidebar();
-                updateSidebar();
+                window.updateSidebar();
             })
             .catch(error => console.error('Error updating trigger:', error));
     }
@@ -926,8 +915,7 @@ window.updateTriggerCandles = function (triggerId, candles) {
                 trigger.candles = parseInt(candles);
 
                 // Refresh sidebar
-                const updateSidebar = createTradeSetupSidebar();
-                updateSidebar();
+                window.updateSidebar();
             })
             .catch(error => console.error('Error updating trigger:', error));
     }
@@ -988,8 +976,7 @@ window.handleTriggerAction = function (action, triggerId) {
                 window.currentTradeSetup.chainedTriggers.push(triggerData);
 
                 // Force sidebar update
-                const updateSidebar = createTradeSetupSidebar();
-                updateSidebar();
+                window.updateSidebar();
 
                 // Open sidebar if closed
                 if (document.getElementById('trade-setup-sidebar').style.right === '-350px') {
