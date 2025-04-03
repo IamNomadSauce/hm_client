@@ -5,10 +5,11 @@ window.drawingStart = null
 window.draw_boxes = []
 window.draw_lines = []
 window.activeLineIndex = -1;
-// current_triggers = [] 
+current_triggers = [] 
 window.setupEventListeners = function() {
     console.log("Setup Event Listeners")
     canvas.addEventListener('mousemove', function (event) {
+        // console.log("MOUSE MOVE INIT")
         const rect = canvas.getBoundingClientRect();
         window.mouseX = event.clientX - rect.left;
         window.mouseY = event.clientY - rect.top;
@@ -86,6 +87,7 @@ window.setupEventListeners = function() {
 }
 
 window.handleMouseMove = function (e, chartState, tradeGroups) {
+    // console.log("Mouse Move")
     fillHoverHandler(e, chartState)
     orderHoverHandler(e, chartState)
     tradeHoverHandler(e, chartState, tradeGroups)
@@ -372,7 +374,7 @@ window.cancelTrigger = function (triggerID) {
         .then(response => response.json())
         .then(data => {
             console.log('Trigger cancelled:', data)
-            window.current_triggers = window.current_triggers.filter(triggers => triggers.id !== triggerID) 
+            window.current_triggers = window.current_triggers.filter(triggers => triggers.id !== triggerID) || []
             drawCandlestickChart(window.stockData, window.start, window.end)
         })
         .catch(error => {
