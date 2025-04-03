@@ -5,7 +5,7 @@ window.drawingStart = null
 window.draw_boxes = []
 window.draw_lines = []
 window.activeLineIndex = -1;
-
+// current_triggers = [] 
 window.setupEventListeners = function() {
     console.log("Setup Event Listeners")
     canvas.addEventListener('mousemove', function (event) {
@@ -34,13 +34,14 @@ window.setupEventListeners = function() {
         mouseX = event.clientX - rect.left;
         mouseY = event.clientY - rect.top;
 
-        if (currentTool) {
-            if (currentTool === 'line' || currentTool === 'trigger') {
+        console.log("Current Tool:", window.currentTool)
+        if (window.currentTool) {
+            if (window.currentTool === 'line' || window.currentTool === 'trigger') {
                 chartState = drawCandlestickChart(window.stockData, window.start, window.end);
                 const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
                 const line = { price: price };
 
-                if (currentTool === 'trigger') {
+                if (window.currentTool === 'trigger') {
                     const lastCandle = window.stockData[window.stockData.length - 1];
                     const currentPrice = lastCandle.Close;
 
@@ -107,7 +108,7 @@ window.showTriggerNotification = function (trigger) {
 }
 
 window.trendlinePointHoverHandler = function (e, chartState) {
-    // console.log("Hover Trendline")
+    console.log("Hover Trendline")
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -371,7 +372,7 @@ window.cancelTrigger = function (triggerID) {
         .then(response => response.json())
         .then(data => {
             console.log('Trigger cancelled:', data)
-            current_triggers = current_triggers.filter(triggers => triggers.id !== triggerID)
+            window.current_triggers = window.current_triggers.filter(triggers => triggers.id !== triggerID) 
             drawCandlestickChart(window.stockData, window.start, window.end)
         })
         .catch(error => {
@@ -424,9 +425,9 @@ window.deleteTradeBlock = function (groupId) {
 
 canvas.addEventListener('mouseup', function () {
     console.log("MouseUp")
-    if (currentTool) {
+    if (window.currentTool) {
         drawingStart = null
-        if (currentTool === 'box') {
+        if (window.currentTool === 'box') {
             console.log(" - _Box end", mouseX, mouseY)
         }
     } else {
@@ -510,21 +511,21 @@ window.addEventListener('resize', function () {
 
 document.getElementById('line').addEventListener('click', function () {
     console.log("Line Selected")
-    if (currentTool == 'line' || currentTool == 'box') {
-        currentTool = null
+    if (window.currentTool == 'line' || window.currentTool == 'box') {
+        window.currentTool = null
     }
     else {
 
-        currentTool = 'line'
+        window.currentTool = 'line'
     }
 })
 document.getElementById('box').addEventListener('click', function () {
-    if (currentTool == 'line' || currentTool == 'box') {
-        currentTool = null
+    if (window.currentTool == 'line' || window.currentTool == 'box') {
+        window.currentTool = null
     }
     else {
         console.log("Box Selected")
-        currentTool = 'box'
+        window.currentTool = 'box'
     }
 })
 document.querySelectorAll('.line-menu-item').forEach(item => {
@@ -681,11 +682,12 @@ document.addEventListener('click', function (e) {
 });
 
 document.getElementById('trigger').addEventListener('click', function () {
-    if (currentTool === 'trigger') {
-        currentTool = null;
+    if (window.currentTool === 'trigger') {
+        console.log("TRIGGER_DESELECTED")
+        window.currentTool = null;
     } else {
-        currentTool = 'trigger';
-        console.log("Trigger tool selected");
+        window.currentTool = 'trigger';
+        console.log("TRIGGER_SELECTED")
     }
 });
 

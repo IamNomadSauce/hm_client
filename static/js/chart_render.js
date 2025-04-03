@@ -164,8 +164,8 @@ window.drawCandlestickChart = function(data, start, end) {
     }
 
     // Draw triggers
-    if (current_triggers) {
-        current_triggers.forEach(trigger => {
+    if (window.current_triggers) {
+        window.current_triggers.forEach(trigger => {
             // Skip triggered triggers
             if (trigger.status === 'triggered') {
                 return;

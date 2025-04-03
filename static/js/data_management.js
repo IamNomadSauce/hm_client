@@ -27,23 +27,22 @@ function connectToBackend() {
                     break;
                 case 'trigger':
                     console.log("Trigger:", message);
-                    if (current_triggers) {
+                    if (window.current_triggers) {
                         // Find and update the triggered trigger
-                        const triggerIndex = current_triggers.findIndex(t => t.id === message.data.id);
+                        const triggerIndex = window.current_triggers.findIndex(t => t.id === message.data.id);
                         if (triggerIndex !== -1) {
                             if (message.data.status === 'triggered') {
                                 // Remove triggered trigger from array
-                                current_triggers.splice(triggerIndex, 1);
+                                window.current_triggers.splice(triggerIndex, 1)
                             } else {
                                 // Update trigger data
-                                current_triggers[triggerIndex] = message.data;
+                                window.current_triggers[triggerIndex] = message.data;
                             }
                             // Redraw the chart to reflect the changes
                             drawCandlestickChart(stockData, start, end);
                         }
                     }
                     break;
-
             }
         } catch (err) {
             console.error("Error processing message:", err, "Raw data:", event.data);

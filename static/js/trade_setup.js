@@ -584,8 +584,8 @@ window.triggerHoverHandler = function (e, chartState) {
     const rect = canvas.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
 
-    if (current_triggers) {
-        current_triggers.forEach(trigger => {
+    if (window.current_triggers) {
+        window.current_triggers.forEach(trigger => {
             const triggerY = chartState.height - chartState.margin -
                 ((trigger.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
                 (chartState.height - 2 * chartState.margin);
@@ -933,9 +933,9 @@ window.deleteTrigger = function (triggerId) {
     })
         .then(response => {
             if (response.ok) {
-                const index = current_triggers.findIndex(t => t.id === triggerId);
+                const index = window.current_triggers.findIndex(t => t.id === triggerId);
                 if (index !== -1) {
-                    current_triggers.splice(index, 1);
+                    window.current_triggers.splice(index, 1);
                 }
                 drawCandlestickChart(stockData, start, end);
             } else {
@@ -947,7 +947,7 @@ window.deleteTrigger = function (triggerId) {
 
 window.handleTriggerAction = function (action, triggerId) {
 
-    const trigger = current_triggers.find(t => t.id === triggerId);
+    const trigger = window.current_triggers.find(t => t.id === triggerId);
     console.log("Trigger:", trigger)
 
     switch (action) {
@@ -1023,7 +1023,7 @@ window.handleTriggerAction = function (action, triggerId) {
 }
 
 window.showTradeOptions = function (triggerId) {
-    const trigger = current_triggers.find(t => t.id === triggerId);
+    const trigger = window.current_triggers.find(t => t.id === triggerId);
     if (!trigger) return;
 
     // Remove any existing submenus
