@@ -11,9 +11,12 @@ window.currentTool = null
 window.isDragging = false
 window.currentRiskPercentage = 0.5
 
-window.current_fills = window.exchange.Fills.filter(p => filter(p => p.product_id == window.selectedProduct.product_id))
+// window.current_fills = window.exchange.Fills.filter(p => filter(p => p.product_id == window.selectedProduct.product_id))
+window.current_fills = (window.exchange.Fills || []).filter(p => p.product_id === window.selectedProduct?.product_id || '');
 window.current_orders = window.exchange.Orders.filter(p => filter(p => p.product_id == window.selectedProduct.product_id))
 window.current_trades = window.exchange.Trades.filter(t => filter(p => p.product_id == window.selectedProduct.product_id))
+
+const triggers = (window.exchange.Triggers || []);
 window.current_triggers = window.exchange.Triggers.filter(t => filter(p => p.product_id == window.selectedProduct.product_id)) || []
 
 window.drawCandlestickChart(stockData, start, end);

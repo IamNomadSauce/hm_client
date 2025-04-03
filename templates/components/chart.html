@@ -54,7 +54,8 @@
   window.current_fills = window.exchange.Fills.filter(p => p.product_id === window.selectedProduct.product_id);
   window.current_orders = window.exchange.Orders.filter(p => p.product_id === window.selectedProduct.product_id);
   window.current_trades = window.exchange.Trades.filter(t => t.product_id === window.selectedProduct.product_id);
-  window.current_triggers = window.exchange.Triggers.filter(t => t.product_id === window.selectedProduct.product_id) || [];
+  // window.current_triggers = window.exchange.Triggers.filter(t => t.product_id === window.selectedProduct.product_id) || [];
+  window.current_triggers = (window.exchange && window.exchange.Triggers ? window.exchange.Triggers : []).filter(t => t.product_id === window.selectedProduct.product_id) || [];
 
 window.drawCandlestickChart(window.stockData, window.start, window.end);
 
