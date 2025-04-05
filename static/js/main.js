@@ -10,16 +10,42 @@ window.draw_lines = []
 window.currentTool = null
 window.isDragging = false
 window.currentRiskPercentage = 0.5
+window.all_triggers = []
+
 
 // window.current_fills = window.exchange.Fills.filter(p => filter(p => p.product_id == window.selectedProduct.product_id))
 window.current_fills = (window.exchange.Fills || []).filter(p => p.product_id === window.selectedProduct?.product_id || '');
-window.current_orders = window.exchange.Orders.filter(p => filter(p => p.product_id == window.selectedProduct.product_id))
-window.current_trades = window.exchange.Trades.filter(t => filter(p => p.product_id == window.selectedProduct.product_id))
 
-const triggers = (window.exchange.Triggers || []);
-window.current_triggers = window.exchange.Triggers.filter(t => filter(p => p.product_id == window.selectedProduct.product_id)) || []
+try {
+    window.current_orders = (window.exchange.Orders || []).filter(p => filter(p => p.product_id == window.selectedProduct.product_id))
+} catch (error) {
+    console.log(error)
+    
+}
+try {
+    window.current_trades = (window.exchange.Trades || []).filter(t => filter(p => p.product_id == window.selectedProduct.product_id))
+} catch (error) {
+    console.log(error)
+}
+console.log("Trigger Check")
 
-window.drawCandlestickChart(stockData, start, end);
+try {
+    const triggers = (window.exchange.Triggers || []);
+    console.log("Triggers", triggers)
+    triggers.forEach(element => {
+        console.log(element)
+    });
+    console.log("Selected Product", window.selectedProduct.product_id)
+    
+    window.current_triggers = (window.exchange.Triggers || []).filter(t => filter(p => p.product_id == window.selectedProduct.product_id)) || []
+    console.log("Current Triggers1", window.current_triggers)
+} catch (error) {
+    console.log(error)
+    
+}
+console.log("Current Triggers2", window.current_triggers)
+
+// drawCandlestickChart(stockData, start, end);
 
 function init() {
     console.log("main.js INIT")

@@ -635,10 +635,13 @@ window.triggerHoverHandler = function (e, chartState) {
 }
 
 window.editTrigger = function (triggerId) {
+    console.log("Edit Trigger", triggerId)
     // Get trigger data from all_triggers
-    const trigger = all_triggers.find(t => t.id === triggerId);
+    console.log("All Triggers", window.exchange.Triggers)
+    const trigger = window.exchange.Triggers.find(t => t.id === triggerId);
     if (!trigger) return;
 
+    console.log("Made it past the return")
     // Create or get sidebar
     let sidebar = document.getElementById('trigger-edit-sidebar');
     if (!sidebar) {
@@ -770,6 +773,7 @@ window.editTrigger = function (triggerId) {
 }
 
 window.closeTriggerEditor = function () {
+    console.log("Close Trigger Editor")
     const sidebar = document.getElementById('trigger-edit-sidebar');
     if (sidebar) {
         sidebar.style.right = '-350px';
@@ -807,7 +811,7 @@ window.updateTriggerField = function (triggerId, field, value) {
         .then(response => response.json())
         .then(data => {
             // Update local trigger data
-            const trigger = all_triggers.find(t => t.id === triggerId);
+            const trigger = window.all_triggers.find(t => t.id === triggerId);
             if (trigger) {
                 trigger[field] = value;
             }
@@ -847,7 +851,7 @@ window.updateTriggerType = function (triggerId, newType) {
             .then(response => response.json())
             .then(data => {
                 // Get fresh trigger data from all_triggers
-                const freshTrigger = all_triggers.find(t => t.id === triggerId);
+                const freshTrigger = window.all_triggers.find(t => t.id === triggerId);
 
                 // Update local trigger data with fresh data
                 Object.assign(trigger, freshTrigger);
