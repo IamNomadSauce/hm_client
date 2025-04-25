@@ -5,8 +5,8 @@ window.drawingStart = null
 window.draw_boxes = []
 window.draw_lines = []
 window.activeLineIndex = -1;
-current_triggers = [] 
-window.setupEventListeners = function() {
+current_triggers = []
+window.setupEventListeners = function () {
     console.log("Setup Event Listeners")
     canvas.addEventListener('mousemove', function (event) {
         // console.log("MOUSE MOVE INIT")
@@ -24,8 +24,8 @@ window.setupEventListeners = function() {
                 drawCandlestickChart(window.stockData, window.start, window.end);
             }
         } else {
-            window.handleMouseMove(event, window.chartState, window.tradeGroups);
-            window.drawCandlestickChart(window.stockData, window.start, window.end)
+            handleMouseMove(event, window.chartState, window.tradeGroups);
+            drawCandlestickChart(window.stockData, window.start, window.end)
         }
     });
 
@@ -86,17 +86,9 @@ window.setupEventListeners = function() {
     });
 }
 
-window.handleMouseMove = function (e, chartState, tradeGroups) {
-    // console.log("Mouse Move")
-    fillHoverHandler(e, chartState)
-    orderHoverHandler(e, chartState)
-    tradeHoverHandler(e, chartState, tradeGroups)
-    lineHoverHandler(e, chartState)
-    triggerHoverHandler(e, chartState)
-    window.trendlinePointHoverHandler(e, chartState)
-}
 
-window.showTriggerNotification = function (trigger) {
+
+const showTriggerNotification = function (trigger) {
     const notification = document.createElement('div')
     notification.className = 'trigger-notification'
     notification.innerHTML = `
@@ -109,37 +101,138 @@ window.showTriggerNotification = function (trigger) {
     setTimeout(() => notification.remove(), 5000)
 }
 
-window.trendlinePointHoverHandler = function (e, chartState) {
-    console.log("Hover Trendline")
+
+window.triggerHoverHandler = function (e, chartState) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseY = e.clientY - rect.top;
+    let isNearTrigger = false;
+
+    if (window.current_triggers) {
+        window.current_triggers.forEach(trigger => {
+            const triggerY = chartState.height - chartState.margin -
+                ((trigger.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+                (chartState.height - 2 * chartState.margin);
+            if (isMouseNearLine(mouseY, triggerY)) {
+                isNearTrigger = true;
+            }
+        });
+    }
+    return isNearTrigger;
+};
+
+window.triggerClickHandler = function (e, chartState) {
+    if (e.type !== 'click') return; // Only handle click events
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseY = e.clientY - rect.top;
+
+    if (!window.current_triggers) return;
+
+    let selectedTrigger = null;
+    let triggerY = null;
+
+    // Find the closest trigger to the click
+    window.current_triggers.forEach(trigger => {
+        const y = chartState.height - chartState.margin -
+            ((trigger.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+            (chartState.height - 2 * chartState.margin);
+
+        if (isMouseNearLine(mouseY, y)) {
+            selectedTrigger = trigger;
+            triggerY = y;
+        }
+    });
+
+    // Remove any existing menu
+    document.querySelectorAll('.trigger-menu').forEach(el => el.remove());
+
+    // If a trigger was clicked, show the menu
+    if (selectedTrigger) {
+        const menu = document.createElement('div');
+        menu.className = 'trigger-menu';
+        menu.style.position = 'absolute';
+        menu.style.left = `${e.pageX - 150}px`;
+        menu.style.top = `${e.pageY - 10}px`;
+        menu.style.backgroundColor = '#333';
+        menu.style.color = 'white';
+        menu.style.padding = '10px';
+        menu.style.border = '1px solid #666';
+        menu.style.borderRadius = '4px';
+        menu.style.display = 'block';
+        menu.style.zIndex = '1000';
+        menu.style.pointerEvents = 'auto';
+        menu.style.minWidth = '200px';
+
+        menu.innerHTML = `
+            <div style="margin-bottom: 8px;"><strong>Trigger Details</strong></div>
+            <div>Type: ${selectedTrigger.type}</div>
+            <div>Price: ${selectedTrigger.price.toFixed(8)}</div>
+            <div>Status: ${selectedTrigger.status}</div>
+            <div class="trigger-menu-item" onclick="editTrigger(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Edit</div>
+            <div class="trigger-menu-item" onclick="deleteTrigger(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Delete</div>
+            <div class="trigger-menu-item" onclick="handleTriggerAction('connect', ${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Connect to Trade</div>
+            <div class="trigger-menu-item" onclick="showTradeOptions(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Upon Trigger...</div>
+        `;
+
+        document.body.appendChild(menu);
+
+        // Add a global click listener to close the menu when clicking outside
+        const closeMenuOnOutsideClick = (event) => {
+            if (!menu.contains(event.target) && !event.target.classList.contains('trigger-menu-item')) {
+                menu.remove();
+                document.removeEventListener('click', closeMenuOnOutsideClick);
+            }
+        };
+        // Delay to avoid immediate closure from the current click
+        setTimeout(() => {
+            document.addEventListener('click', closeMenuOnOutsideClick);
+        }, 0);
+    }
+};
+
+handleMouseMove = function (e, chartState, tradeGroups) {
+    fillHoverHandler(e, chartState);
+    orderHoverHandler(e, chartState);
+    tradeHoverHandler(e, chartState, tradeGroups);
+    const isLineHover = lineHoverHandler(e, chartState);
+    const isTriggerHover = window.triggerHoverHandler(e, chartState);
+    const isTrendlinePointHover = trendlinePointHoverHandler(e, chartState);
+
+    if (isLineHover || isTriggerHover || isTrendlinePointHover) {
+        canvas.style.cursor = 'pointer';
+    } else {
+        canvas.style.cursor = 'default';
+    }
+};
+
+const trendlinePointHoverHandler = function (e, chartState) {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Reset trendlinePoints if necessary (assuming it's a global array)
-    // If trendlinePoints is not global, ensure it's accessible here
     let closestPoint = null;
-    let minDistance = Infinity;
+    let minDistance = 5;
 
     trendlinePoints.forEach(point => {
         const dx = point.x - mouseX;
         const dy = point.y - mouseY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < minDistance) {
+            console.log("trendlinePointHoverHandler");
             minDistance = distance;
             closestPoint = point;
         }
     });
 
-    if (closestPoint && minDistance < 10) { // 10px threshold
+    if (closestPoint && minDistance < 10) {
         window.hoveredTrendlinePoint = closestPoint;
         showTrendlinePointTooltip(closestPoint, mouseX, mouseY);
-        canvas.style.cursor = 'pointer';
     } else {
         window.hoveredTrendlinePoint = null;
         hideTrendlinePointTooltip();
-        canvas.style.cursor = 'default';
     }
-}
+    return closestPoint !== null;
+};
 
 
 const fillHoverHandler = function (e, chartState) {
@@ -301,6 +394,7 @@ const lineHoverHandler = function (e, chartState) {
             (chartState.height - 2 * chartState.margin);
 
         if (isMouseNearLine(mouseY, lineY)) {
+            console.log("near::lineHoverHandler");
             let existingMenu = document.querySelector('.line-menu');
 
             if (!existingMenu) {
@@ -316,28 +410,29 @@ const lineHoverHandler = function (e, chartState) {
                 menu.style.pointerEvents = 'auto';
 
                 menu.innerHTML = `
-            <div class="line-menu-item" data-action="entry">Trade Entry</div>
-            <div class="line-menu-item" data-action="pt">Profit Target</div>
-            <div class="line-menu-item" data-action="stop">Stop Loss</div>
-            <div class="line-menu-item" data-action="trigger">Trigger</div>
-            <div class="line-menu-item" data-action="delete">Delete</div>
-            <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
-          `;
+                    <div class="line-menu-item" data-action="entry">Trade Entry</div>
+                    <div class="line-menu-item" data-action="pt">Profit Target</div>
+                    <div class="line-menu-item" data-action="stop">Stop Loss</div>
+                    <div class="line-menu-item" data-action="trigger">Trigger</div>
+                    <div class="line-menu-item" data-action="delete">Delete</div>
+                    <div class="line-menu-item create-trade-btn" data-action="create">Create Trade</div>
+                `;
 
-                menu.addEventListener('mouseenter', () => {
+                menu.addEventListener('click', () => {
+                    console.log("click::lineHoverHandler");
                     menu.dataset.hovering = 'true';
                 });
 
                 menu.addEventListener('mouseleave', () => {
+                    console.log("mouse-leave::lineHoverHandler");
                     menu.dataset.hovering = 'false';
                     menu.remove();
                 });
 
-                // Add click handlers to menu items
                 menu.querySelectorAll('.line-menu-item').forEach(item => {
                     item.addEventListener('click', function (e) {
                         const action = this.dataset.action;
-                        console.log("handle_line_action", draw_lines[activeLineIndex])
+                        console.log("handle_line_action", draw_lines[activeLineIndex]);
                         handleLineAction(action, draw_lines[activeLineIndex]);
                         menu.remove();
                         drawCandlestickChart(window.stockData, window.start, window.end);
@@ -347,20 +442,19 @@ const lineHoverHandler = function (e, chartState) {
                 document.body.appendChild(menu);
             }
 
-            canvas.style.cursor = 'pointer';
             isNearLine = true;
             activeLineIndex = index;
         }
     });
 
     if (!isNearLine) {
-        canvas.style.cursor = 'default';
         activeLineIndex = -1;
         const menu = document.querySelector('.line-menu');
         if (menu && menu.dataset.hovering !== 'true') {
             menu.remove();
         }
     }
+    return isNearLine;
 };
 
 window.cancelTrigger = function (triggerID) {
@@ -458,7 +552,7 @@ canvas.addEventListener('click', function (event) {
         }
     }
 });
-
+canvas.addEventListener('click', (e) => window.triggerClickHandler(e, chartState));
 canvas.addEventListener('mouseleave', function (event) {
     // console.log("Canvas Leave");
 

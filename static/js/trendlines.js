@@ -12,7 +12,7 @@ window.trendlinePointTooltip.style.display = 'none';
 document.body.appendChild(window.trendlinePointTooltip);
 
 window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
-    console.log("Show TrendlinePoint Menu")
+    // console.log("Show TrendlinePoint Menu")
     const menu = document.createElement('div');
     const canvasRect = canvas.getBoundingClientRect();
 
@@ -67,7 +67,7 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
 }
 
 window.showTrendlinePointTooltip = function (point, mouseX, mouseY) {
-    console.log("Show TrendlinePointTooltip")
+    // console.log("Show TrendlinePointTooltip")
     if (!trendlinePointTooltip) {
         trendlinePointTooltip = document.createElement('div');
         trendlinePointTooltip.style.position = 'absolute';

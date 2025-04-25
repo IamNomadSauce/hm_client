@@ -365,7 +365,7 @@ function handleLineAction(action, line) {
                 .catch(error => {
                     console.log('Error creating trigger:', error);
                 });
-            
+
             draw_lines.push(line)
             break;
 
@@ -580,59 +580,6 @@ window.updateRisk = function (value) {
 
 // ------------------------
 
-window.triggerHoverHandler = function (e, chartState) {
-    const rect = canvas.getBoundingClientRect();
-    const mouseY = e.clientY - rect.top;
-
-    if (window.current_triggers) {
-        window.current_triggers.forEach(trigger => {
-            const triggerY = chartState.height - chartState.margin -
-                ((trigger.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-                (chartState.height - 2 * chartState.margin);
-
-            if (isMouseNearLine(mouseY, triggerY)) {
-                document.querySelectorAll('.trigger-menu').forEach(el => el.remove());
-
-                const menu = document.createElement('div');
-                menu.className = 'trigger-menu';
-                menu.style.position = 'absolute';
-                menu.style.left = `${e.pageX - 150}px`;
-                menu.style.top = `${e.pageY - 10}px`;
-                menu.style.backgroundColor = '#333';
-                menu.style.color = 'white';
-                menu.style.padding = '10px';
-                menu.style.border = '1px solid #666';
-                menu.style.borderRadius = '4px';
-                menu.style.display = 'block';
-                menu.style.zIndex = '1000';
-                menu.style.pointerEvents = 'auto';
-                menu.style.minWidth = '200px';
-
-                menu.innerHTML = `
-                    <div style="margin-bottom: 8px;"><strong>Trigger Details</strong></div>
-                    <div>Type: ${trigger.type}</div>
-                    <div>Price: ${trigger.price.toFixed(8)}</div>
-                    <div>Status: ${trigger.status}</div>
-                    <div class="trigger-menu-item" onclick="editTrigger(${trigger.id})">Edit</div>
-                    <div class="trigger-menu-item" onclick="deleteTrigger(${trigger.id})">Delete</div>
-                    <div class="trigger-menu-item" onclick="handleTriggerAction('connect', ${trigger.id})">Connect to Trade</div>
-                    <div class="trigger-menu-item" onclick="showTradeOptions(${trigger.id})">Upon Trigger...</div>
-                `;
-
-                menu.addEventListener('mouseenter', () => {
-                    menu.dataset.hovering = 'true';
-                });
-
-                menu.addEventListener('mouseleave', function () {
-                    menu.dataset.hovering = 'false';
-                    menu.remove();
-                });
-
-                document.body.appendChild(menu);
-            }
-        });
-    }
-}
 
 window.editTrigger = function (triggerId) {
     console.log("Edit Trigger", triggerId)
@@ -1092,4 +1039,4 @@ window.showTradeSetupDialog = function (trigger) {
     `;
 
     document.body.appendChild(dialog);
-  }
+}
