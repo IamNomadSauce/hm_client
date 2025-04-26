@@ -874,6 +874,33 @@ func makeAPITrendlines(candles []model.Candle, exchange string, symbol string, t
 	for index, candle := range sliced_candles {
 
 		if current.Direction == "up" {
+			if candle.High > current.End.Point && candle.Low < current.End.Inv {
+				current.Status = "done"
+				trendlines = append(trendlines, current)
+				current = model.Trendline{
+					Start: current.End,
+					End: model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.Low,
+						Inv:        candle.High,
+						TrendStart: current.End.TrendStart,
+					},
+					Direction: "down",
+					Status:    "done",
+				}
+				trendlines = append(trendlines, current)
+				current = model.Trendline{
+					Start: current.End,
+					End: model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.High,
+						Inv:        candle.Low,
+						TrendStart: candle.Open,
+					},
+				}
+				continue
+			}
+
 			// Higher High in uptrend  (continuation)
 			if candle.High > current.End.Point {
 				current.End = model.Point{
@@ -911,6 +938,33 @@ func makeAPITrendlines(candles []model.Candle, exchange string, symbol string, t
 			}
 
 		} else if current.Direction == "down" {
+
+			if candle.Low < current.End.Point && candle.High > current.End.Inv {
+				current.Status = "done"
+				trendlines = append(trendlines, current)
+				current = model.Trendline{
+					Start: current.End,
+					End: model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.High,
+						Inv:        candle.Low,
+						TrendStart: current.End.Inv,
+					},
+					Direction: "up",
+					Status:    "done",
+				}
+				trendlines = append(trendlines, current)
+				current = model.Trendline{
+					Start: current.End,
+					End: model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.Low,
+						Inv:        candle.High,
+						TrendStart: candle.Open,
+					},
+				}
+				continue
+			}
 
 			// Lower Low in downtrend  (continuation)
 			if candle.Low < current.End.Point {

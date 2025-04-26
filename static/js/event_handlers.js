@@ -218,7 +218,7 @@ const trendlinePointHoverHandler = function (e, chartState) {
         const dy = point.y - mouseY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < minDistance) {
-            console.log("trendlinePointHoverHandler");
+            // console.log("trendlinePointHoverHandler");
             minDistance = distance;
             closestPoint = point;
         }
