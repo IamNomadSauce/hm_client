@@ -14,6 +14,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -838,6 +839,184 @@ func makeTrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	// log.Println("Trendlines:", trendlines)
 
 	return trendlines, nil
+}
+
+func makeAPITrendlines(candles []model.Candle, exchange string, symbol string, tf string) []model.Trendline {
+	symbol = strings.ReplaceAll(symbol, "-", "")
+	startTime := time.Now()
+	fmt.Println("Generating Trendlines for ", tf, " Candles:", len(candles))
+	trendlines := []model.Trendline{}
+
+	var current = model.Trendline{}
+	sliced_candles := candles
+
+	counter := 0
+
+	start := model.Point{
+		Time:       candles[0].Timestamp,
+		Point:      candles[0].Low,
+		TrendStart: candles[0].Close,
+		Inv:        candles[0].Close,
+	}
+	end := model.Point{
+		Time:       candles[0].Timestamp,
+		Point:      candles[0].High,
+		TrendStart: candles[0].Close,
+		Inv:        candles[0].Close,
+	}
+	current = model.Trendline{
+		Start:     start,
+		End:       end,
+		Direction: "up",
+		Status:    "current",
+	}
+
+	for index, candle := range sliced_candles {
+
+		if current.Direction == "up" {
+			// Higher High in uptrend  (continuation)
+			if candle.High > current.End.Point {
+				current.End = model.Point{
+					Time:       candle.Timestamp,
+					Point:      candle.High,
+					Inv:        candle.Low,
+					TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+				}
+				counter = 0
+				continue
+			}
+
+			// Lower Low in uptrend (new trend)
+			if candle.Low < current.End.Inv || (index > 0 && candle.Low < candles[index-1].Low) {
+
+				counter++
+				if counter >= 0 { // Confirm reversal after 3 lower lows
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.Low,
+							Inv:        candle.High,
+							TrendStart: math.Min(candle.Close, candle.Open), // (close > open) ? open : close
+						},
+						Direction: "down",
+						Status:    "current",
+					}
+					counter = 0
+				}
+				continue
+
+			}
+
+		} else if current.Direction == "down" {
+
+			// Lower Low in downtrend  (continuation)
+			if candle.Low < current.End.Point {
+				current.End = model.Point{
+					Time:       candle.Timestamp,
+					Point:      candle.Low,
+					Inv:        candle.High,
+					TrendStart: math.Min(candle.Close, candle.Open),
+				}
+				counter = 0
+
+				continue
+
+			}
+
+			// Higher High in downtrend  (new trend)
+			if candle.High > current.End.Inv || (index > 0 && candle.High > candles[index-1].High) {
+				counter++
+				if counter >= 0 { // Confirm reversal after 3 higher highs
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.High,
+							Inv:        candle.Low,
+							TrendStart: math.Max(candle.Close, candle.Open),
+						},
+						Direction: "up",
+						Status:    "current",
+					}
+					counter = 0
+				}
+
+				continue
+
+			}
+
+		}
+		// if current.StartTime == current.EndTime {
+		// 	current.StartTime = current.StartTime - 1
+		// }
+
+		// // After generating trendlines, create a windowed slice of trendlines
+		// windowedTrends := windowArray(trendlines, 3)
+
+		// // Iterate over the windowed trendlines to assign labels and colors
+		// for i, window := range windowedTrends {
+		// 	if len(window) == 3 {
+		// 		a, b, c := window[0], window[1], window[2]
+
+		// 		// Determine the label and color based on the trend
+		// 		if c.End < b.End && c.End > a.End {
+		// 			c.Label = "HL"
+		// 			c.Color = "green"
+		// 		} else if c.End < a.End && b.End > a.End {
+		// 			c.Label = "LL"
+		// 			c.Color = "red"
+		// 		} else if c.End > b.End && c.End > a.End {
+		// 			c.Label = "HH"
+		// 			c.Color = "green"
+		// 		} else if c.End < a.End && b.End < c.End {
+		// 			c.Label = "LH"
+		// 			c.Color = "red"
+		// 		}
+
+		// 		// Update the trendlines with the new labels and colors
+		// 		trendlines[i+1].Label = b.Label // b is the middle element in the window
+		// 		trendlines[i+1].Color = b.Color
+		// 		trendlines[i+2].Label = c.Label // c is the last element in the window
+		// 		trendlines[i+2].Color = c.Color
+
+		// 		// Seed the labels and colors for the first window
+		// 		if i == 0 {
+		// 			trendlines[i].Label = "L"
+		// 			if a.End > b.End {
+		// 				trendlines[i].Label = "H"
+		// 			}
+		// 			trendlines[i].Color = "white"
+		// 		}
+		// 	}
+		// }
+	}
+
+	trendlines = append(trendlines, current)
+
+	stopTime := time.Now()
+	duration := stopTime.Sub(startTime)
+	fmt.Println("\n", len(trendlines), " trends generated for ", exchange, symbol, tf, " in ", duration)
+
+	return trendlines
+}
+
+func windowArray(trends []model.Trendline, windowSize int) [][]model.Trendline {
+	var windowedTrends [][]model.Trendline
+	for i := 0; i < len(trends); i++ {
+		var window []model.Trendline
+		for j := i; j < i+windowSize && j < len(trends); j++ {
+			window = append(window, trends[j])
+		}
+		if len(window) == windowSize {
+			windowedTrends = append(windowedTrends, window)
+		}
+	}
+	return windowedTrends
 }
 
 type PortfolioItem struct {
