@@ -197,12 +197,13 @@ window.drawCandlestickChart = function(data, start, end) {
             const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
             const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
             const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            // console.log("Trendline", trendline)
 
             // Draw trendline
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = 'blue';
+            ctx.strokeStyle = trendline.status == "done" ? "blue" : "gold";
             ctx.lineWidth = 2;
             ctx.stroke();
 

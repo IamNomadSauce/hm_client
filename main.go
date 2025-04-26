@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -691,7 +690,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	// 	log.Println("Filtered key", k)
 	// }
 
-	trendlines, err := makeTrendlines(candles)
+	trendlines, err := makeAPITrendlines(candles)
 
 	data := struct {
 		Exchanges          []model.Exchange
@@ -841,10 +840,7 @@ func makeTrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	return trendlines, nil
 }
 
-func makeAPITrendlines(candles []model.Candle, exchange string, symbol string, tf string) []model.Trendline {
-	symbol = strings.ReplaceAll(symbol, "-", "")
-	startTime := time.Now()
-	fmt.Println("Generating Trendlines for ", tf, " Candles:", len(candles))
+func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	trendlines := []model.Trendline{}
 
 	var current = model.Trendline{}
@@ -1052,11 +1048,7 @@ func makeAPITrendlines(candles []model.Candle, exchange string, symbol string, t
 
 	trendlines = append(trendlines, current)
 
-	stopTime := time.Now()
-	duration := stopTime.Sub(startTime)
-	fmt.Println("\n", len(trendlines), " trends generated for ", exchange, symbol, tf, " in ", duration)
-
-	return trendlines
+	return trendlines, nil
 }
 
 func windowArray(trends []model.Trendline, windowSize int) [][]model.Trendline {
