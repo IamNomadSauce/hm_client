@@ -870,29 +870,57 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	for index, candle := range sliced_candles {
 
 		if current.Direction == "up" {
+
+			// Higher High && Lower Low
 			if candle.High > current.End.Point && candle.Low < current.End.Inv {
-				current.Status = "done"
-				trendlines = append(trendlines, current)
-				current = model.Trendline{
-					Start: current.End,
-					End: model.Point{
-						Time:       candle.Timestamp,
-						Point:      candle.Low,
-						Inv:        candle.High,
-						TrendStart: current.End.TrendStart,
-					},
-					Direction: "down",
-					Status:    "done",
-				}
-				trendlines = append(trendlines, current)
-				current = model.Trendline{
-					Start: current.End,
-					End: model.Point{
+				if candle.Close > candle.Open { // Green Candle
+					current.End = model.Point{
 						Time:       candle.Timestamp,
 						Point:      candle.High,
 						Inv:        candle.Low,
-						TrendStart: candle.Open,
-					},
+						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+					}
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.Low,
+							Inv:        candle.High,
+							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+						},
+						Status:    "current",
+						Direction: "down",
+					}
+				} else { // Red Candle
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.Low,
+							Inv:        candle.High,
+							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+						},
+						Direction: "down",
+						Status:    "done",
+					}
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.High,
+							Inv:        candle.Low,
+							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+						},
+						Direction: "up",
+						Status:    "current",
+					}
+
 				}
 				continue
 			}
@@ -935,29 +963,56 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 
 		} else if current.Direction == "down" {
 
+			// Lower Low && Higher High in downtrend
 			if candle.Low < current.End.Point && candle.High > current.End.Inv {
-				current.Status = "done"
-				trendlines = append(trendlines, current)
-				current = model.Trendline{
-					Start: current.End,
-					End: model.Point{
-						Time:       candle.Timestamp,
-						Point:      candle.High,
-						Inv:        candle.Low,
-						TrendStart: current.End.Inv,
-					},
-					Direction: "up",
-					Status:    "done",
-				}
-				trendlines = append(trendlines, current)
-				current = model.Trendline{
-					Start: current.End,
-					End: model.Point{
+				if candle.Close < candle.Open { // Red candle
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.High,
+							Inv:        candle.Low,
+							TrendStart: math.Min(candle.Close, candle.Open), // (close > open) ? open : close
+						},
+						Direction: "up",
+						Status:    "done",
+					}
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.Low,
+							Inv:        candle.High,
+							TrendStart: math.Min(candle.Close, candle.Open), // (close > open) ? open : close
+						},
+						Direction: "down",
+						Status:    "current",
+					}
+
+				} else { // Green candle
+					current.End = model.Point{
 						Time:       candle.Timestamp,
 						Point:      candle.Low,
 						Inv:        candle.High,
-						TrendStart: candle.Open,
-					},
+						TrendStart: math.Min(candle.Close, candle.Open), // (close > open) ? open : close
+					}
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.High,
+							Inv:        candle.Low,
+							TrendStart: math.Min(candle.Close, candle.Open), // (close > open) ? open : close
+						},
+						Direction: "up",
+						Status:    "current",
+					}
 				}
 				continue
 			}
