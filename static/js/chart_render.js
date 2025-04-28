@@ -42,7 +42,7 @@ window.drawCandlestickChart = function(data, start, end) {
 
     window.updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime);
 
-    // Draw candlesticks
+    // Draw candles
     visibleData.forEach((d, i) => {
         const x = margin + i * candleWidth;
         const openY = height - margin - ((d.Open - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
@@ -59,7 +59,7 @@ window.drawCandlestickChart = function(data, start, end) {
 
         ctx.beginPath();
         ctx.rect(x, Math.min(openY, closeY), candleWidth, Math.abs(openY - closeY));
-        ctx.fillStyle = d.Close >= d.Open ? 'gray' : 'gray';
+        ctx.fillStyle = d.Close >= d.Open ? 'green' : 'red';
         ctx.strokeStyle = 'black';
         ctx.fill();
         ctx.stroke();
@@ -203,7 +203,8 @@ window.drawCandlestickChart = function(data, start, end) {
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = trendline.status == "done" ? "blue" : "gold";
+            ctx.strokeStyle = trendline.status == "done" ? "gray" : "gold";
+            // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
             ctx.lineWidth = 2;
             ctx.stroke();
 

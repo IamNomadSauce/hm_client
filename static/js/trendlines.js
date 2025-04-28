@@ -86,6 +86,7 @@ window.showTrendlinePointTooltip = function (point, mouseX, mouseY) {
     trendlinePointTooltip.innerHTML = `
     <div>Trendline Index: ${point.index + 1}</div>
     <div>Point: ${point.type}</div>
+    <div>Direction: ${JSON.stringify(point)}</div>
     <div>Time: ${new Date(time * 1000).toLocaleString()}</div>
     <div>Price: ${price.toFixed(8)}</div>
   `;
