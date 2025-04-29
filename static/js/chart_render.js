@@ -191,6 +191,7 @@ window.drawCandlestickChart = function(data, start, end) {
     }
 
     if (trendlines) {
+
         trendlinePoints = []; // Reset points array each redraw
         trendlines.forEach((trendline, index) => {
             const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
@@ -230,6 +231,9 @@ window.drawCandlestickChart = function(data, start, end) {
                 trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
             }
         });
+
+        let last_trend = trendlines[trendlines.length - 1]
+        console.log("Last Trendline", last_trend)
     }
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
