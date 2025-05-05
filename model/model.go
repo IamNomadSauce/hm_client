@@ -54,7 +54,7 @@ type Trendline struct {
 	End       Point  `json:"end"`
 	Direction string `json:"type"`   // "up" or "down"
 	Status    string `json:"status"` // "current" or "done"
-	Label     string `json: "label"`
+	Label     string `json:"label"`
 	Color     string `json:"color"`
 }
 

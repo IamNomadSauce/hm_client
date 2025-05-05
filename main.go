@@ -1091,6 +1091,18 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	return trendlines, nil
 }
 
+func recursive_trends(trendlines []model.Trendline, levels int) ([]model.Trendline, error) {
+
+	if levels == 0 {
+		return trendlines, nil
+	}
+
+	levels--
+
+	return nil, nil
+
+}
+
 func windowArray(trends []model.Trendline, windowSize int) [][]model.Trendline {
 	var windowedTrends [][]model.Trendline
 	for i := 0; i < len(trends); i++ {
