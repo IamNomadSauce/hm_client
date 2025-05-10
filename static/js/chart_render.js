@@ -233,7 +233,7 @@ window.drawCandlestickChart = function(data, start, end) {
         });
 
         let last_trend = trendlines[trendlines.length - 1]
-        console.log("Last Trendline", last_trend)
+        // console.log("Last Trendline", last_trend)
     }
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);

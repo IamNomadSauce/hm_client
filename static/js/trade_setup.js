@@ -1,9 +1,9 @@
-console.log("trade_setup.js")
+console.log("trade_setup.js");
 
 const updateSidebar = createTradeSetupSidebar();
 
 function createTradeSetupSidebar() {
-    console.log("Create Trade Setup Sidebar")
+    console.log("Create Trade Setup Sidebar");
     // Remove any existing sidebars first
     const existingSidebar = document.getElementById('trade-setup-sidebar');
     const existingTab = document.getElementById('trade-setup-tab');
@@ -12,7 +12,7 @@ function createTradeSetupSidebar() {
 
     let currentRiskPercentage = 0.5;
 
-    // Add CSS for slider
+    // Add CSS for slider and active tool highlighting
     const style = document.createElement('style');
     style.textContent = `
         .risk-slider {
@@ -24,7 +24,6 @@ function createTradeSetupSidebar() {
             outline: none;
             margin: 10px 0;
         }
-
         .risk-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -34,13 +33,25 @@ function createTradeSetupSidebar() {
             background: #666;
             cursor: pointer;
         }
-
         .risk-slider::-moz-range-thumb {
             width: 20px;
             height: 20px;
             border-radius: 50%;
             background: #666;
             cursor: pointer;
+        }
+        .setup-section {
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .setup-section.active {
+            background-color: #555;
+            border: 1px solid #777;
+        }
+        .setup-section:hover {
+            background-color: #444;
         }
     `;
     document.head.appendChild(style);
@@ -61,7 +72,6 @@ function createTradeSetupSidebar() {
     `;
     tab.innerHTML = '▶ Trade Setup';
 
-
     const sidebar = document.createElement('div');
     sidebar.id = 'trade-setup-sidebar';
     sidebar.style.cssText = `
@@ -79,70 +89,56 @@ function createTradeSetupSidebar() {
         transition: right 0.3s ease;
     `;
 
-
     window.toggleSidebar = function () {
         const isExpanded = sidebar.style.right === '0px';
         sidebar.style.right = isExpanded ? '-350px' : '0px';
         tab.innerHTML = isExpanded ? '▶ Trade Setup' : '◀ Trade Setup';
-
-        // Get chart container
         const chartContainer = document.getElementById('chartContainer');
         if (chartContainer) {
-            // Set margin and width together
             chartContainer.style.marginRight = isExpanded ? '0' : '350px';
             chartContainer.style.width = isExpanded ? '100%' : 'calc(100% - 350px)';
             chartContainer.style.transition = 'all 0.3s ease';
-
-            // Redraw chart after transition to ensure proper sizing
             setTimeout(() => {
                 drawCandlestickChart(stockData, start, end);
             }, 300);
         }
     };
 
-    // Make updateRisk globally accessible
     window.updateRisk = function (value) {
         currentRiskPercentage = parseFloat(value);
         updateSidebarContent();
+        drawCandlestickChart(stockData, start, end);
     };
 
     tab.addEventListener('click', window.toggleSidebar);
 
-    window.tradeSetupData = null
+    window.tradeSetupData = null;
 
     function updateSidebarContent() {
-        console.log("Update Sidebar Content")
+        console.log("Update Sidebar Content");
         const trigger = window.currentTradeSetup?.trigger;
         const entryLine = draw_lines.find(l => l.type === 'entry');
         const stopLine = draw_lines.find(l => l.type === 'stop');
         const ptLines = draw_lines.filter(l => l.type === 'pt');
-        console.log("Entry line", entryLine)
-        console.log("Stop line", stopLine)
-        console.log("PT lines", ptLines)
+        console.log("Entry line", entryLine);
+        console.log("Stop line", stopLine);
+        console.log("PT lines", ptLines);
 
-        // let tradeSetupData = null;
-
-        // Calculate risk if entry and stop are set
         let riskAmount = 0;
         let positionSize = 0;
         let stopLossRiskPercent = 0;
 
         riskAmount = window.portfolioSize * (currentRiskPercentage / 100);
-        // console.log("Risk Amount", riskAmount)
 
         if (entryLine && stopLine) {
             const entryPrice = entryLine.price;
             const stopPrice = stopLine.price;
             const priceDiff = Math.abs(entryPrice - stopPrice);
-
-            // Calculate position sizing
             riskAmount = portfolioSize * (currentRiskPercentage / 100);
             positionSize = (riskAmount / priceDiff).toFixed(2);
-
-            // Calculate stop loss risk percentage (price-based risk)
             stopLossRiskPercent = ((priceDiff / entryPrice) * 100).toFixed(2);
 
-            console.log("Risk Calculations", portfolioSize, currentRiskPercentage, riskAmount)
+            console.log("Risk Calculations", portfolioSize, currentRiskPercentage, riskAmount);
 
             if (ptLines.length > 0) {
                 tradeSetupData = {
@@ -166,14 +162,13 @@ function createTradeSetupSidebar() {
             }
         }
 
-
         sidebar.innerHTML = `
             <div style="text-align: right;">
                 <span onclick="toggleSidebar()" style="cursor: pointer; padding: 5px;">✕</span>
             </div>
             <h3>Trade Setup</h3>
             
-            <div class="setup-section">
+            <div class="setup-section ${window.currentTool === 'trigger' ? 'active' : ''}" onclick="setTradeTool('trigger')">
                 <h4>Trigger Conditions</h4>
                 ${window.currentTradeSetup?.chainedTriggers?.length > 0 ? `
                     ${window.currentTradeSetup.chainedTriggers.map((trigger, index) => `
@@ -214,25 +209,59 @@ function createTradeSetupSidebar() {
                                     placeholder="Candles">
                           </div>
                         </div>
-
                     `).join('')}
                 ` : '<div>No triggers set</div>'}
+                <div style="margin-top: 10px;">
+                    <small>Click to select, then click chart to add trigger</small>
+                </div>
+            </div>
 
-                          <div style="margin-top: 10px;">
-                              <small>Draw trigger lines on chart to add conditions</small>
-                          </div>
-                      </div>
+            <div class="setup-section ${window.currentTool === 'entry' ? 'active' : ''}" onclick="setTradeTool('entry')">
+                <h4>Entry</h4>
+                ${entryLine ? `
+                    <div>Price: ${entryLine.price.toFixed(8)}</div>
+                    <div>Position Size: ${positionSize} units</div>
+                    <div>Total Value: $${(positionSize * entryLine.price).toFixed(2)}</div>
+                ` : '<div>Not Set</div>'}
+                <div style="margin-top: 10px;">
+                    <small>Click to select, then click chart to set entry</small>
+                </div>
+            </div>
 
+            <div class="setup-section ${window.currentTool === 'stop' ? 'active' : ''}" onclick="setTradeTool('stop')">
+                <h4>Stop Loss</h4>
+                ${stopLine ? `
+                    <div>Price: ${stopLine.price.toFixed(8)}</div>
+                    <div>Risk: ${currentRiskPercentage}%</div>
+                    <div>Total Value: $${(positionSize * stopLine.price).toFixed(2)}</div>
+                ` : '<div>Not Set</div>'}
+                <div style="margin-top: 10px;">
+                    <small>Click to select, then click chart to set stop loss</small>
+                </div>
+            </div>
+
+            <div class="setup-section ${window.currentTool === 'pt' ? 'active' : ''}" onclick="setTradeTool('pt')">
+                <h4>Profit Targets</h4>
+                ${ptLines.length > 0 ? ptLines.map((pt, i) => `
+                    <div class="pt-item">
+                        <div>Target ${i + 1}: ${pt.price.toFixed(8)}</div>
+                        <div>R:R ${calculateRR(entryLine?.price, stopLine?.price, pt.price)}</div>
+                    </div>
+                `).join('') : '<div>Not Set</div>'}
+                <div style="margin-top: 10px;">
+                    <small>Click to select, then click chart to add profit target</small>
+                </div>
+            </div>
 
             <div class="setup-section">
                 <h4>Risk Calculator</h4>
                 <div class="risk-calculator">
                     <div>Portfolio Size: $${window.portfolioSize.toLocaleString()}</div>
                     <div style="margin: 10px 0;">
-                      <div class="d-flex">
-                        <label class="pe-2">Risk %: <span id="riskValue">${currentRiskPercentage}</span>%</label>
-                        <div class="pe-2">$${riskAmount.toFixed(2)}</div>
-                      </div>
+                        <div class="d-flex">
+                            <label class="pe-2">Risk %: <span id="riskValue">${currentRiskPercentage}</span>%</label>
+                            <div class="pe-2">$${riskAmount.toFixed(2)}</div>
+                        </div>
                         <input type="range" 
                                class="risk-slider"
                                id="riskSlider" 
@@ -247,36 +276,6 @@ function createTradeSetupSidebar() {
                 </div>
             </div>
 
-            <div class="setup-section">
-                <h4>Entry </h4>
-                ${entryLine ? `
-                    <div>Price: ${entryLine.price.toFixed(8)}</div>
-                    <div>Position Size: ${positionSize} units</div>
-                    <div>Total Value: $${(positionSize * entryLine.price).toFixed(2)}</div>
-                    
-                ` : '<div>Not Set</div>'}
-            </div>
-
-            <div class="setup-section">
-                  <h4>Stop Loss</h4>
-                  ${stopLine ? `
-                      <div>Price: ${stopLine.price.toFixed(8)}</div>
-                      <div>Risk: ${currentRiskPercentage}%</div>
-                      <div>Total Value2: $${(positionSize * stopLine.price).toFixed(2)}</div>
-                  ` : '<div>Not Set</div>'}
-            </div>
-
-            <div class="setup-section">
-                <h4>Profit Targets</h4>,
-      
-                ${ptLines.length > 0 ? ptLines.map((pt, i) => `
-                    <div class="pt-item">
-                        <div>Target ${i + 1}: ${pt.price.toFixed(8)}</div>
-                        <div>R:R ${calculateRR(entryLine?.price, stopLine?.price, pt.price)}</div>
-                    </div>
-                `).join('') : '<div>Not Set</div>'}
-            </div>
-
             ${entryLine && stopLine && ptLines.length > 0 ? `
                 <button class="execute-btn" onclick="executeTradeSetup(tradeSetupData)">
                     Execute Trade Setup
@@ -288,26 +287,38 @@ function createTradeSetupSidebar() {
     document.body.appendChild(tab);
     document.body.appendChild(sidebar);
 
-    // Reset main content margin when sidebar is created
     const chartContainer = document.getElementById('chartContainer');
     if (chartContainer) {
         chartContainer.style.marginRight = '0';
     }
 
-
-    // Initial render
-    console.log("Initial Sidebar Render")
+    console.log("Initial Sidebar Render");
     updateSidebarContent();
-    // Return refresh function
+
     return () => {
-        console.log("Why is this here?")
+        console.log("Refreshing Sidebar");
         updateSidebarContent();
-        sidebar.style.right = '0px'; // Changed from left to right
+        sidebar.style.right = '0px';
     };
 }
 
+window.setTradeTool = function (tool) {
+    window.currentTool = tool;
+    console.log(`Selected tool: ${tool}`);
+    updateSidebar(); // Refresh sidebar to show active state
+};
+
+window.setTradeTool = function (tool) {
+    window.currentTool = window.currentTool === tool ? null : tool;
+    console.log(`Selected tool: ${window.currentTool || 'none'}`);
+    updateSidebar();
+};
+
+
+
 function handleLineAction(action, line) {
     console.log("\n-------------------\nhandleLineAction")
+
     console.log("action:", action, "\nLine:", line);
     switch (action) {
         case 'trigger':
@@ -441,6 +452,7 @@ function handleLineAction(action, line) {
             createTradeGroup(tradeSetup);
             break;
     }
+    window.currentTool = null; // Reset tool
     console.log("update_sidebar")
     window.updateSidebar()
     console.log("handleLineAction Finised")

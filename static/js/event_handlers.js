@@ -808,3 +808,35 @@ window.hideLineMenu = function () {
     const menu = document.getElementById('lineMenu');
     menu.style.display = 'none';
 }
+
+canvas.addEventListener('click', function (event) {
+    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseY = event.clientY - rect.top;
+        const chartState = drawCandlestickChart(stockData, start, end);
+        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+
+        const line = { price: price };
+        handleLineAction(window.currentTool, line);
+        drawCandlestickChart(stockData, start, end);
+        window.updateSidebar();
+    }
+});
+
+canvas.addEventListener('click', function (event) {
+    // Existing trigger menu handler
+    window.triggerClickHandler(event, chartState);
+
+    // New trade tool handler
+    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseY = event.clientY - rect.top;
+        const chartState = drawCandlestickChart(stockData, start, end);
+        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+        const line = { price: price };
+        handleLineAction(window.currentTool, line);
+        drawCandlestickChart(stockData, start, end);
+        window.updateSidebar();
+    }
+});
+
