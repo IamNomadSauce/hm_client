@@ -63,6 +63,7 @@ type Point struct {
 	Time       int64   `json:"time"`
 	Point      float64 `json:"point"`
 	Inv        float64 `json:"inv"`
+	Label      string  `json:"label"`
 	TrendStart float64 `json:"trendStart"`
 }
 

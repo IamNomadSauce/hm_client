@@ -1056,30 +1056,32 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 
 			// Determine the label and color based on the trend
 			if c.End.Point < b.End.Point && c.End.Point > a.End.Point {
-				c.Label = "HL"
+				c.End.Label = "HL"
 				c.Color = "green"
 			} else if c.End.Point < a.End.Point && b.End.Point > a.End.Point {
-				c.Label = "LL"
+				c.End.Label = "LL"
 				c.Color = "red"
 			} else if c.End.Point > b.End.Point && c.End.Point > a.End.Point {
-				c.Label = "HH"
+				c.End.Label = "HH"
 				c.Color = "green"
 			} else if c.End.Point < a.End.Point && b.End.Point < c.End.Point {
-				c.Label = "LH"
+				c.End.Label = "LH"
 				c.Color = "red"
 			}
 
+			fmt.Printf("%v %v\n", c.End.Time, c.End.Label)
+
 			// Update the trendlines with the new labels and colors
-			trendlines[i+1].Label = b.Label // b is the middle element in the window
+			trendlines[i+1].End.Label = b.Label // b is the middle element in the window
 			trendlines[i+1].Color = b.Color
-			trendlines[i+2].Label = c.Label // c is the last element in the window
+			trendlines[i+2].End.Label = c.Label // c is the last element in the window
 			trendlines[i+2].Color = c.Color
 
 			// Seed the labels and colors for the first window
 			if i == 0 {
 				trendlines[i].Label = "L"
 				if a.End.Point > b.End.Point {
-					trendlines[i].Label = "H"
+					trendlines[i].End.Label = "H"
 				}
 				trendlines[i].Color = "white"
 			}

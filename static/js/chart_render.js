@@ -192,6 +192,8 @@ window.drawCandlestickChart = function(data, start, end) {
 
     if (trendlines) {
 
+        console.log("Trendlines: ", trendlines)
+
         trendlinePoints = []; // Reset points array each redraw
         trendlines.forEach((trendline, index) => {
             const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
