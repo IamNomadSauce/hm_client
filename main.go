@@ -1068,27 +1068,30 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 				c.End.Label = "LH"
 				c.Color = "red"
 			}
+			fmt.Printf("%s", c.Label)
 
-			fmt.Printf("%v %v\n", c.End.Time, c.End.Label)
+			//fmt.Printf("Trendline: %v %v\n", c.End.Time, c.Label)
 
 			// Update the trendlines with the new labels and colors
-			trendlines[i+1].End.Label = b.Label // b is the middle element in the window
-			trendlines[i+1].Color = b.Color
-			trendlines[i+2].End.Label = c.Label // c is the last element in the window
-			trendlines[i+2].Color = c.Color
+			trendlines[i+2].End.Label = c.End.Label
 
-			// Seed the labels and colors for the first window
-			if i == 0 {
-				trendlines[i].Label = "L"
-				if a.End.Point > b.End.Point {
-					trendlines[i].End.Label = "H"
-				}
-				trendlines[i].Color = "white"
-			}
+			// // Seed the labels and colors for the first window
+			// if i == 0 {
+			// 	trendlines[i].Label = "L"
+			// 	if a.End.Point > b.End.Point {
+			// 		trendlines[i].Label = "H"
+			// 	}
+			// 	trendlines[i].Color = "white"
+			// }
 		}
 	}
 
 	trendlines = append(trendlines, current)
+
+	fmt.Printf("|%d| TRENDLINES\n", len(trendlines))
+	for _, trend := range trendlines {
+		fmt.Printf("%+v %s \n", trend.End.Label, trend.Color)
+	}
 
 	return trendlines, nil
 }
