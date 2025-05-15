@@ -192,7 +192,7 @@ window.drawCandlestickChart = function(data, start, end) {
 
     if (trendlines) {
 
-        console.log("Trendlines: ", trendlines)
+        // console.log("Trendlines: ", trendlines)
 
         trendlinePoints = []; // Reset points array each redraw
         trendlines.forEach((trendline, index) => {

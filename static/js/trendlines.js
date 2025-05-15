@@ -67,7 +67,7 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
 }
 
 window.showTrendlinePointTooltip = function (point, mouseX, mouseY) {
-    // console.log("Show TrendlinePointTooltip")
+    console.log("Show TrendlinePointTooltip", point)
     if (!trendlinePointTooltip) {
         trendlinePointTooltip = document.createElement('div');
         trendlinePointTooltip.style.position = 'absolute';
@@ -85,7 +85,7 @@ window.showTrendlinePointTooltip = function (point, mouseX, mouseY) {
 
     trendlinePointTooltip.innerHTML = `
     <div>Trendline Index: ${point.index + 1}</div>
-    <div>Point: ${point.type}</div>
+    <div>Point: ${point.trendline.end.label}</div>
     <div>Time: ${new Date(time * 1000).toLocaleString()}</div>
     <div>Price: ${price.toFixed(8)}</div>
   `;

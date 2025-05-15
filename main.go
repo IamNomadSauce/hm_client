@@ -666,7 +666,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Exchange", selectedExchange.Name)
 	log.Printf("Asset: %s", selectedProduct.ProductID)
-	log.Println("Trendlines:")
+	// log.Println("Trendlines:")
 	// for key, trendlines := range selectedExchange.Trendlines {
 
 	// 	log.Println("\n---------------------------------------")
@@ -692,6 +692,8 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	trendlines, err := makeAPITrendlines(candles)
 
+	ddx_1, err := dxTrendlines(trendlines)
+
 	data := struct {
 		Exchanges          []model.Exchange
 		SelectedExchange   model.Exchange
@@ -702,6 +704,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		SelectedTimeframe  model.Timeframe
 		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
 		Trendlines         []model.Trendline
+		DxTrendlines       []model.Trendline
 		Candles            []model.Candle
 		Colors             []string
 		TotalValue         float64
@@ -716,6 +719,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		SelectedTimeframe:  selectedTimeframe,
 		FilteredTrendlines: FilteredTrendlines,
 		Trendlines:         trendlines,
+		DxTrendlines:       ddx_1,
 		Candles:            candles,
 		Colors:             colors,
 		TotalValue:         totalValue,
@@ -1094,6 +1098,19 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	}
 
 	return trendlines, nil
+}
+
+func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
+
+	return_trends := []model.Trendline{}
+
+	for _, trend := range trendlines {
+		if trend.End.Label == "LL" || trend.End.Label == "HH" {
+			return_trends = append(return_trends, trend)
+		}
+	}
+
+	return return_trends, nil
 }
 
 func recursive_trends(trendlines []model.Trendline, levels int) ([]model.Trendline, error) {
