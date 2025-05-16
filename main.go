@@ -694,6 +694,8 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	ddx_1, err := dxTrendlines(trendlines)
 
+	// fmt.Printf("DxTrendlines: %+v", ddx_1)
+
 	data := struct {
 		Exchanges          []model.Exchange
 		SelectedExchange   model.Exchange
@@ -1104,14 +1106,68 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 
 	return_trends := []model.Trendline{}
 
+	current := trendlines[0]
+	direction := trendlines[0].Label
 	for _, trend := range trendlines {
-		if trend.End.Label == "LL" || trend.End.Label == "HH" {
-			return_trends = append(return_trends, trend)
+		end := trend.End
+
+		if end.Label == "LL" {
+			if direction == "LL" { // Continuation
+				current.End = end
+				current.End.Color = "orange"
+			} else { // HH -> LL New Trend
+
+				return_trends = append(return_trends, current)
+
+				var temp_current model.Trendline
+				temp_current.Start = current.End
+				temp_current.End = end
+				current = temp_current
+				current.End.Color = "red"
+				direction = "LL"
+			}
+
+		} else { // HH
+			if direction == "HH" { // Continuation
+				current.End = end
+				current.End.Color = "gray"
+			} else { // New Trend
+				return_trends = append(return_trends, current)
+
+				var temp_current model.Trendline
+				temp_current.Start = current.End
+				temp_current.End = end
+				current = temp_current
+				current.End.Color = "green"
+				direction = "HH"
+			}
+
 		}
 	}
 
+	fmt.Printf("Trendlines %+v", return_trends)
+
 	return return_trends, nil
 }
+
+type refinedTrends struct {
+	Point float64
+	Time  int64
+}
+
+// func dxTrendlines2(trendlines []model.Trendline) (refinedTrends, error) {
+
+// 	var return_trends []refinedTrends
+// 	current := trendlines[0]
+// 	direction := current.End.Label
+// 	for _, trend := range trendlines {
+// 		if current.End.Label == "HH" {
+// 			if direction == "HH" {
+
+// 			}
+// 		}
+// 	}
+// }
 
 func recursive_trends(trendlines []model.Trendline, levels int) ([]model.Trendline, error) {
 

@@ -65,6 +65,7 @@ type Point struct {
 	Inv        float64 `json:"inv"`
 	Label      string  `json:"label"`
 	TrendStart float64 `json:"trendStart"`
+	Color      string  `json:"color"`
 }
 
 type Product struct {
