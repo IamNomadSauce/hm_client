@@ -1107,16 +1107,19 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 	return_trends := []model.Trendline{}
 
 	current := trendlines[0]
-	direction := trendlines[0].Label
+	direction := trendlines[4].Direction
+	log.Println(trendlines[0])
+	log.Println("Initial Label", direction)
 	for _, trend := range trendlines {
 		end := trend.End
 
 		if end.Label == "LL" {
 			log.Println(end.Label)
-			if direction == "LL" { // Continuation
+			if direction == "down" { // Continuation
+				log.Println("Continuation LL")
 				current.End = end
 				current.End.Color = "orange"
-			} else if direction == "HH" { // HH -> LL New Trend
+			} else if direction == "up" { // HH -> LL New Trend
 				log.Println("New Trend HH")
 				return_trends = append(return_trends, current)
 
@@ -1130,10 +1133,11 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 
 		} else if end.Label == "HH" { // HH
 			log.Println(end.Label)
-			if direction == "HH" { // Continuation
+			if direction == "up" { // Continuation
+				log.Println("Continuation HH")
 				current.End = end
 				current.End.Color = "gray"
-			} else if direction == "LL" { // New Trend
+			} else if direction == "down" { // New Trend
 				log.Println("New Trend LL")
 				return_trends = append(return_trends, current)
 
