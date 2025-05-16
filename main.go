@@ -1112,11 +1112,12 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 		end := trend.End
 
 		if end.Label == "LL" {
+			log.Println(end.Label)
 			if direction == "LL" { // Continuation
 				current.End = end
 				current.End.Color = "orange"
-			} else { // HH -> LL New Trend
-
+			} else if direction == "HH" { // HH -> LL New Trend
+				log.Println("New Trend HH")
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
@@ -1127,11 +1128,13 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				direction = "LL"
 			}
 
-		} else { // HH
+		} else if end.Label == "HH" { // HH
+			log.Println(end.Label)
 			if direction == "HH" { // Continuation
 				current.End = end
 				current.End.Color = "gray"
-			} else { // New Trend
+			} else if direction == "LL" { // New Trend
+				log.Println("New Trend LL")
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
@@ -1145,29 +1148,10 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 		}
 	}
 
-	fmt.Printf("Trendlines %+v", return_trends)
+	log.Printf("Trendlines %+v", len(return_trends))
 
 	return return_trends, nil
 }
-
-type refinedTrends struct {
-	Point float64
-	Time  int64
-}
-
-// func dxTrendlines2(trendlines []model.Trendline) (refinedTrends, error) {
-
-// 	var return_trends []refinedTrends
-// 	current := trendlines[0]
-// 	direction := current.End.Label
-// 	for _, trend := range trendlines {
-// 		if current.End.Label == "HH" {
-// 			if direction == "HH" {
-
-// 			}
-// 		}
-// 	}
-// }
 
 func recursive_trends(trendlines []model.Trendline, levels int) ([]model.Trendline, error) {
 
