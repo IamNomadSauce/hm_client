@@ -1107,37 +1107,18 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 	return_trends := []model.Trendline{}
 
 	current := trendlines[0]
-	direction := trendlines[4].Direction
+	direction := trendlines[0].Direction
 	log.Println(trendlines[0])
-	log.Println("Initial Label", direction)
+	log.Println("Initial Direction", direction)
 	for _, trend := range trendlines {
 		end := trend.End
-
 		if end.Label == "LL" {
 			log.Println(end.Label)
 			if direction == "down" { // Continuation
-				log.Println("Continuation LL")
+				log.Println("Continuation LL", direction)
 				current.End = end
 				current.End.Color = "orange"
 			} else if direction == "up" { // HH -> LL New Trend
-				log.Println("New Trend HH")
-				return_trends = append(return_trends, current)
-
-				var temp_current model.Trendline
-				temp_current.Start = current.End
-				temp_current.End = end
-				current = temp_current
-				current.End.Color = "red"
-				direction = "LL"
-			}
-
-		} else if end.Label == "HH" { // HH
-			log.Println(end.Label)
-			if direction == "up" { // Continuation
-				log.Println("Continuation HH")
-				current.End = end
-				current.End.Color = "gray"
-			} else if direction == "down" { // New Trend
 				log.Println("New Trend LL")
 				return_trends = append(return_trends, current)
 
@@ -1145,8 +1126,26 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				temp_current.Start = current.End
 				temp_current.End = end
 				current = temp_current
+				current.End.Color = "red"
+				direction = "down"
+			}
+
+		} else if end.Label == "HH" { // HH
+			log.Println(end.Label)
+			if direction == "up" { // Continuation
+				log.Println("Continuation HH", direction)
+				current.End = end
+				current.End.Color = "gray"
+			} else if direction == "down" { // New Trend
+				log.Println("New Trend HH")
+				return_trends = append(return_trends, current)
+
+				var temp_current model.Trendline
+				temp_current.Start = current.End
+				temp_current.End = end
+				current = temp_current
 				current.End.Color = "green"
-				direction = "HH"
+				direction = "up"
 			}
 
 		}

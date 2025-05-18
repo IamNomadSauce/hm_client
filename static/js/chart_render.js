@@ -6,7 +6,7 @@ window.ctx = canvas.getContext('2d');
 
 window.chartState = null;
 
-window.updateChartState = function(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime) {
+window.updateChartState = function (ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime) {
     chartState = {
         ctx,
         width,
@@ -19,7 +19,7 @@ window.updateChartState = function(ctx, width, height, margin, minPrice, maxPric
     }
 }
 
-window.drawCandlestickChart = function(data, start, end) {
+window.drawCandlestickChart = function (data, start, end) {
     // console.log("DrawCandlestickChart\n", data, start, end)
     // console.log(data, start, end)
     canvas.width = canvas.offsetWidth;
@@ -189,7 +189,7 @@ window.drawCandlestickChart = function(data, start, end) {
             ctx.fillText(`${triggerType}: ${trigger.price.toFixed(8)}`, width - 200, triggerY - 5);
         });
     }
- if (dxtrendlines) {
+    if (dxtrendlines) {
 
         // console.log("Trendlines: ", trendlines)
 
@@ -284,7 +284,7 @@ window.drawCandlestickChart = function(data, start, end) {
     //     // console.log("Last Trendline", last_trend)
     // }
 
-   
+
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
