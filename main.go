@@ -692,7 +692,17 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	trendlines, err := makeAPITrendlines(candles)
 
+	log.Println("\nCREATING DDX_Trendlines")
 	ddx_1, err := dxTrendlines(trendlines)
+	if err != nil {
+		log.Println("Error creating ddx_1 trends", err)
+	}
+
+	log.Println("\nCREATING DDX2_Trendlines")
+	ddx_2, err := dxTrendlines(ddx_1)
+	if err != nil {
+		log.Println("Error creating ddx_2 trends", err)
+	}
 
 	// fmt.Printf("DxTrendlines: %+v", ddx_1)
 
@@ -707,6 +717,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
 		Trendlines         []model.Trendline
 		DxTrendlines       []model.Trendline
+		Dx2Trendlines      []model.Trendline
 		Candles            []model.Candle
 		Colors             []string
 		TotalValue         float64
@@ -722,6 +733,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		FilteredTrendlines: FilteredTrendlines,
 		Trendlines:         trendlines,
 		DxTrendlines:       ddx_1,
+		Dx2Trendlines:      ddx_2,
 		Candles:            candles,
 		Colors:             colors,
 		TotalValue:         totalValue,
@@ -1052,7 +1064,58 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 		// 	current.StartTime = current.StartTime - 1
 	}
 
+	trendlines = append(trendlines, current)
+
 	// After generating trendlines, create a windowed slice of trendlines
+	// windowedTrends := windowArray(trendlines, 3)
+
+	// // Iterate over the windowed trendlines to assign labels and colors
+	// for i, window := range windowedTrends {
+	// 	if len(window) == 3 {
+	// 		a, b, c := window[0], window[1], window[2]
+
+	// 		// Determine the label and color based on the trend
+	// 		if c.End.Point < b.End.Point && c.End.Point > a.End.Point {
+	// 			c.End.Label = "HL"
+	// 			c.Color = "green"
+	// 		} else if c.End.Point < a.End.Point && b.End.Point > a.End.Point {
+	// 			c.End.Label = "LL"
+	// 			c.Color = "red"
+	// 		} else if c.End.Point > b.End.Point && c.End.Point > a.End.Point {
+	// 			c.End.Label = "HH"
+	// 			c.Color = "green"
+	// 		} else if c.End.Point < a.End.Point && b.End.Point < c.End.Point {
+	// 			c.End.Label = "LH"
+	// 			c.Color = "red"
+	// 		}
+	// 		fmt.Printf("%s", c.Label)
+
+	// 		//fmt.Printf("Trendline: %v %v\n", c.End.Time, c.Label)
+
+	// 		// Update the trendlines with the new labels and colors
+	// 		trendlines[i+2].End.Label = c.End.Label
+
+	// 		// // Seed the labels and colors for the first window
+	// 		// if i == 0 {
+	// 		// 	trendlines[i].Label = "L"
+	// 		// 	if a.End.Point > b.End.Point {
+	// 		// 		trendlines[i].Label = "H"
+	// 		// 	}
+	// 		// 	trendlines[i].Color = "white"
+	// 		// }
+	// 	}
+	// }
+
+	fmt.Printf("|%d| TRENDLINES\n", len(trendlines))
+	for _, trend := range trendlines {
+		fmt.Printf("%+v %s \n", trend.End.Label, trend.Color)
+	}
+
+	return trendlines, nil
+}
+
+func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
+
 	windowedTrends := windowArray(trendlines, 3)
 
 	// Iterate over the windowed trendlines to assign labels and colors
@@ -1092,18 +1155,6 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 		}
 	}
 
-	trendlines = append(trendlines, current)
-
-	fmt.Printf("|%d| TRENDLINES\n", len(trendlines))
-	for _, trend := range trendlines {
-		fmt.Printf("%+v %s \n", trend.End.Label, trend.Color)
-	}
-
-	return trendlines, nil
-}
-
-func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
-
 	return_trends := []model.Trendline{}
 
 	current := trendlines[0]
@@ -1115,11 +1166,11 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 		if end.Label == "LL" {
 			log.Println(end.Label)
 			if direction == "down" { // Continuation
-				log.Println("Continuation LL", direction)
+				log.Println("Continuation LL", direction, end.Point)
 				current.End = end
 				current.End.Color = "orange"
 			} else if direction == "up" { // HH -> LL New Trend
-				log.Println("New Trend LL")
+				log.Println("New Trend LL", end.Point)
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
@@ -1129,15 +1180,14 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				current.End.Color = "red"
 				direction = "down"
 			}
-
 		} else if end.Label == "HH" { // HH
 			log.Println(end.Label)
 			if direction == "up" { // Continuation
-				log.Println("Continuation HH", direction)
+				log.Println("Continuation HH", direction, end.Point)
 				current.End = end
 				current.End.Color = "gray"
 			} else if direction == "down" { // New Trend
-				log.Println("New Trend HH")
+				log.Println("New Trend HH", end.Point)
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
@@ -1147,9 +1197,10 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				current.End.Color = "green"
 				direction = "up"
 			}
-
 		}
 	}
+
+	return_trends = append(return_trends, current)
 
 	log.Printf("Trendlines %+v", len(return_trends))
 
