@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -692,17 +693,26 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	trendlines, err := makeAPITrendlines(candles)
 
-	log.Println("\nCREATING DDX_Trendlines")
-	ddx_1, err := dxTrendlines(trendlines)
-	if err != nil {
-		log.Println("Error creating ddx_1 trends", err)
-	}
+	log.Println("Building Trends\n")
+	trendZilla, err := buildTrendlines(trendlines)
 
-	log.Println("\nCREATING DDX2_Trendlines")
-	ddx_2, err := dxTrendlines(ddx_1)
-	if err != nil {
-		log.Println("Error creating ddx_2 trends", err)
-	}
+	// log.Println("\nCREATING DDX_Trendlines")
+	// ddx_1, err := dxTrendlines(trendlines)
+	// if err != nil {
+	// 	log.Println("Error creating ddx_1 trends", err)
+	// }
+
+	// log.Println("\nCREATING DDX2_Trendlines")
+	// ddx_2, err := dxTrendlines(ddx_1)
+	// if err != nil {
+	// 	log.Println("Error creating ddx_2 trends", err)
+	// }
+
+	// log.Println("\nCREATING DDX2_Trendlines")
+	// ddx_3, err := dxTrendlines(ddx_2)
+	// if err != nil {
+	// 	log.Println("Error creating ddx_2 trends", err)
+	// }
 
 	// fmt.Printf("DxTrendlines: %+v", ddx_1)
 
@@ -716,12 +726,13 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		SelectedTimeframe  model.Timeframe
 		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
 		Trendlines         []model.Trendline
-		DxTrendlines       []model.Trendline
-		Dx2Trendlines      []model.Trendline
-		Candles            []model.Candle
-		Colors             []string
-		TotalValue         float64
-		PortfolioData      []PortfolioItem
+		// DxTrendlines       []model.Trendline
+		// Dx2Trendlines      []model.Trendline
+		// Dx3Trendlines      []model.Trendline
+		Candles       []model.Candle
+		Colors        []string
+		TotalValue    float64
+		PortfolioData []PortfolioItem
 	}{
 		Exchanges:          exchanges,
 		SelectedExchange:   selectedExchange,
@@ -731,13 +742,14 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex:     timeframeIndex,
 		SelectedTimeframe:  selectedTimeframe,
 		FilteredTrendlines: FilteredTrendlines,
-		Trendlines:         trendlines,
-		DxTrendlines:       ddx_1,
-		Dx2Trendlines:      ddx_2,
-		Candles:            candles,
-		Colors:             colors,
-		TotalValue:         totalValue,
-		PortfolioData:      preparePortfolioData(selectedExchange.Portfolio),
+		Trendlines:         trendZilla,
+		// DxTrendlines:       ddx_1,
+		// Dx2Trendlines:      ddx_2,
+		// Dx3Trendlines:      ddx_3,
+		Candles:       candles,
+		Colors:        colors,
+		TotalValue:    totalValue,
+		PortfolioData: preparePortfolioData(selectedExchange.Portfolio),
 	}
 
 	// Use a buffer to render the template first
@@ -1114,9 +1126,41 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	return trendlines, nil
 }
 
+func buildTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
+	if len(trendlines) <= 1 {
+		log.Println("Build Trends Complete")
+		return trendlines, nil
+	}
+
+	trends, err := dxTrendlines(trendlines)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range trends {
+		v := &trends[i] // Use a pointer to modify the original trend
+
+		// Find the start index where trendlines[k].Start.Time >= v.Start.Time
+		startIdx := sort.Search(len(trendlines), func(k int) bool {
+			return trendlines[k].Start.Time >= v.Start.Time
+		})
+
+		// Find the end index where trendlines[k].Start.Time > v.End.Time
+		endIdx := sort.Search(len(trendlines), func(k int) bool {
+			return trendlines[k].Start.Time > v.End.Time
+		})
+
+		// Assign the subslice to v.TrendLines
+		v.TrendLines = trendlines[startIdx:endIdx]
+	}
+
+	return trends, nil
+}
+
 func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 
 	windowedTrends := windowArray(trendlines, 3)
+	return_trends := []model.Trendline{}
 
 	// Iterate over the windowed trendlines to assign labels and colors
 	for i, window := range windowedTrends {
@@ -1154,8 +1198,6 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 			// }
 		}
 	}
-
-	return_trends := []model.Trendline{}
 
 	current := trendlines[0]
 	direction := trendlines[0].Direction

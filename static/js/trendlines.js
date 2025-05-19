@@ -88,6 +88,7 @@ window.showTrendlinePointTooltip = function (point, mouseX, mouseY) {
     <div>Point: ${point.trendline.end.label}</div>
     <div>Time: ${new Date(time * 1000).toLocaleString()}</div>
     <div>Price: ${price.toFixed(8)}</div>
+    <div>SubTrends: ${point.trendline.trends.length}</div>
   `;
     trendlinePointTooltip.style.left = `${mouseX + 10}px`;
     trendlinePointTooltip.style.top = `${mouseY + 175}px`;

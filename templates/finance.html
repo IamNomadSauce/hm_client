@@ -101,15 +101,29 @@
             <h5>Timeframes</h5>
             <div class="d-flex flex-wrap gap-2">
               {{range $index, $timeframe := .SelectedExchange.Timeframes}}
-              <form action="/finance">
-                <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
-                <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
-                <input type="hidden" name="timeframe_index" value="{{$index}}">
-                <button type="submit"
-                  class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
-                  {{$timeframe.TF}}
-                </button>
-              </form>
+              <div class="flex-column">
+                <div>
+                  <form action="/finance">
+                    <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
+                    <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
+                    <input type="hidden" name="timeframe_index" value="{{$index}}">
+                    <button type="submit"
+                      class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
+                      {{$timeframe.TF}}
+                    </button>
+                  </form>
+                </div>
+                <div>
+                  <form action="">
+                    <button class="btn btn-sm btn-dark">ddx_1</button>
+                  </form>
+                </div>
+                <div>
+                  <form action="">
+                    <button class="btn btn-sm btn-dark">ddx_2</button>
+                  </form>
+                </div>
+              </div>
               {{end}}
             </div>
           </div>
@@ -119,9 +133,9 @@
           <div class="col">
             <div class="d-flex flex-wrap gap-2">
               {{range $key, $val := .FilteredTrendlines}}
-                <button class="btn btn-sm btn-secondary trendline-btn" data-trendline-id="{{$key}}">
-                  {{$key}}
-                </button>
+              <button class="btn btn-sm btn-secondary trendline-btn" data-trendline-id="{{$key}}">
+                {{$key}}
+              </button>
               {{end}}
             </div>
           </div>
