@@ -694,7 +694,11 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	trendlines, err := makeAPITrendlines(candles)
 
 	log.Println("Building Trends\n")
-	trendZilla, err := buildTrendlines(trendlines)
+	trendZilla, err := buildTrendlines(trendlines, 0)
+	// trendZilla, err := BuildTrendlines(trendlines)
+	if err != nil {
+		return
+	}
 
 	// log.Println("\nCREATING DDX_Trendlines")
 	// ddx_1, err := dxTrendlines(trendlines)
@@ -1126,35 +1130,104 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	return trendlines, nil
 }
 
-func buildTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
-	if len(trendlines) <= 1 {
-		log.Println("Build Trends Complete")
+var maxTrendDepth = 2
+
+// buildTrendlines is the recursive function
+func buildTrendlines(trendlines []model.Trendline, depth int) ([]model.Trendline, error) {
+	// Log the current depth
+
+	// Base case: stop if too few trendlines or max depth reached
+	if len(trendlines) <= 1 || depth >= maxTrendDepth {
+		log.Println("Build Trends Complete at depth", depth)
 		return trendlines, nil
 	}
 
+	// Generate higher-level trendlines
 	trends, err := dxTrendlines(trendlines)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Println("Trend Depth", depth, "trends_0", len(trendlines), "ddx_trends", len(trends))
+	// Process each trendline
 	for i := range trends {
-		v := &trends[i] // Use a pointer to modify the original trend
+		log.Printf("Trend: %d of %d @ depth %d", i, len(trends), depth)
+		v := &trends[i] // Pointer to modify the original trend
 
-		// Find the start index where trendlines[k].Start.Time >= v.Start.Time
+		// Find start index where trendlines[k].Start.Time >= v.Start.Time
 		startIdx := sort.Search(len(trendlines), func(k int) bool {
 			return trendlines[k].Start.Time >= v.Start.Time
 		})
 
-		// Find the end index where trendlines[k].Start.Time > v.End.Time
+		// Find end index where trendlines[k].Start.Time > v.End.Time
 		endIdx := sort.Search(len(trendlines), func(k int) bool {
 			return trendlines[k].Start.Time > v.End.Time
 		})
 
 		// Assign the subslice to v.TrendLines
 		v.TrendLines = trendlines[startIdx:endIdx]
+		log.Printf("Bisected Trends %d idx_start %d idx_end %d", len(v.TrendLines), startIdx, endIdx)
+
+		// Recursively build sub-trendlines
+		subTrends, err := buildTrendlines(v.TrendLines, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		v.TrendLines = subTrends
 	}
 
 	return trends, nil
+}
+
+// func buildTrendlines(trendlines []model.Trendline, depth int) ([]model.Trendline, error) {
+// 	log.Printf("Trend Depth %d, trends: %d", depth, len(trendlines))
+
+// 	// Generate higher-level trendlines
+// 	trends, err := dxTrendlines(trendlines)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Base case: stop if no new trends are generated
+// 	if len(trends) == 0 {
+// 		log.Printf("No trends generated at depth %d, stopping", depth)
+// 		return trendlines, nil
+// 	}
+
+// 	// Process each generated trend
+// 	for i := range trends {
+// 		v := &trends[i]
+
+// 		// Find the subset of trendlines that overlap with [v.Start.Time, v.End.Time]
+// 		startIdx := sort.Search(len(trendlines), func(k int) bool {
+// 			return trendlines[k].End.Time >= v.Start.Time
+// 		})
+// 		endIdx := sort.Search(len(trendlines), func(k int) bool {
+// 			return trendlines[k].Start.Time > v.End.Time
+// 		})
+
+// 		subTrendlines := trendlines[startIdx:endIdx]
+
+// 		// Log the subset size for debugging
+// 		log.Printf("Depth %d, trend %d, subTrendlines: %d", depth, i, len(subTrendlines))
+
+// 		// Recurse on the subset if it’s not empty
+// 		if len(subTrendlines) > 0 {
+// 			subTrends, err := buildTrendlines(subTrendlines, depth+1)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			v.TrendLines = subTrends
+// 		} else {
+// 			v.TrendLines = nil
+// 		}
+// 	}
+
+// 	return trends, nil
+// }
+
+func BuildTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
+	return buildTrendlines(trendlines, 0)
 }
 
 func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
@@ -1201,18 +1274,18 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 
 	current := trendlines[0]
 	direction := trendlines[0].Direction
-	log.Println(trendlines[0])
-	log.Println("Initial Direction", direction)
+	// log.Println(trendlines[0])
+	// log.Println("Initial Direction", direction)
 	for _, trend := range trendlines {
 		end := trend.End
 		if end.Label == "LL" {
-			log.Println(end.Label)
+			// log.Println(end.Label)
 			if direction == "down" { // Continuation
-				log.Println("Continuation LL", direction, end.Point)
+				// log.Println("Continuation LL", direction, end.Point)
 				current.End = end
 				current.End.Color = "orange"
 			} else if direction == "up" { // HH -> LL New Trend
-				log.Println("New Trend LL", end.Point)
+				// log.Println("New Trend LL", end.Point)
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
@@ -1223,13 +1296,13 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				direction = "down"
 			}
 		} else if end.Label == "HH" { // HH
-			log.Println(end.Label)
+			// log.Println(end.Label)
 			if direction == "up" { // Continuation
-				log.Println("Continuation HH", direction, end.Point)
+				// log.Println("Continuation HH", direction, end.Point)
 				current.End = end
 				current.End.Color = "gray"
 			} else if direction == "down" { // New Trend
-				log.Println("New Trend HH", end.Point)
+				// log.Println("New Trend HH", end.Point)
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
@@ -1244,7 +1317,7 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 
 	return_trends = append(return_trends, current)
 
-	log.Printf("Trendlines %+v", len(return_trends))
+	// log.Printf("Trendlines %+v", len(return_trends))
 
 	return return_trends, nil
 }
