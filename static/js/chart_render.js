@@ -236,6 +236,10 @@ window.drawCandlestickChart = function (data, start, end) {
             // console.log("Subtrends", trendline.trends)
 
             trendline.trends.forEach(subtrend => {
+                const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+                const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+                const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+                const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
                 ctx.beginPath();
                 ctx.moveTo(startX, startY);
                 ctx.lineTo(endX, endY);
@@ -265,7 +269,6 @@ window.drawCandlestickChart = function (data, start, end) {
                 if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
                     subtrendPoints.push({ x: endX, y: endY, subtrend, index, type: 'end' });
                 }
-
             })
         });
 
