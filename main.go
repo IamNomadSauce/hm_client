@@ -1132,6 +1132,8 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 
 var maxTrendDepth = 2
 
+var totalTrends = 0
+
 // buildTrendlines is the recursive function
 func buildTrendlines(trendlines []model.Trendline, depth int) ([]model.Trendline, error) {
 	// Log the current depth
@@ -1143,16 +1145,16 @@ func buildTrendlines(trendlines []model.Trendline, depth int) ([]model.Trendline
 	}
 
 	// Generate higher-level trendlines
-	trends, err := dxTrendlines(trendlines)
+	dx_trends, err := dxTrendlines(trendlines)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Println("Trend Depth", depth, "trends_0", len(trendlines), "ddx_trends", len(trends))
+	log.Println("Trend Depth", depth, "trends_0", len(trendlines), "dx_trends", len(dx_trends))
 	// Process each trendline
-	for i := range trends {
-		log.Printf("Trend: %d of %d @ depth %d", i, len(trends), depth)
-		v := &trends[i] // Pointer to modify the original trend
+	for i := range dx_trends {
+		log.Printf("Trend: %d of %d @ depth %d", i, len(dx_trends), depth)
+		v := &dx_trends[i] // Pointer to modify the original trend
 
 		// Find start index where trendlines[k].Start.Time >= v.Start.Time
 		startIdx := sort.Search(len(trendlines), func(k int) bool {
@@ -1164,19 +1166,24 @@ func buildTrendlines(trendlines []model.Trendline, depth int) ([]model.Trendline
 			return trendlines[k].Start.Time > v.End.Time
 		})
 
-		// Assign the subslice to v.TrendLines
+		log.Printf("Start:%d End: %d", startIdx, endIdx)
+		log.Printf("Start_time:%d End_time: %d", dx_trends[i].Start.Time, dx_trends[i].End.Time)
+		// // Assign the subslice to v.TrendLines
 		v.TrendLines = trendlines[startIdx:endIdx]
-		log.Printf("Bisected Trends %d idx_start %d idx_end %d", len(v.TrendLines), startIdx, endIdx)
+		// totalTrends += len(v.TrendLines)
+		// log.Println(totalTrends)
+		// log.Printf("Bisected dx_Trends %d idx_start %d idx_end %d", len(v.TrendLines), startIdx, endIdx)
 
-		// Recursively build sub-trendlines
-		subTrends, err := buildTrendlines(v.TrendLines, depth+1)
-		if err != nil {
-			return nil, err
-		}
-		v.TrendLines = subTrends
+		// // Recursively build sub-trendlines
+		// subTrends, err := buildTrendlines(v.TrendLines, depth+1)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// v.TrendLines = subTrends
 	}
 
-	return trends, nil
+	// return trendlines, nil
+	return dx_trends, nil
 }
 
 // func buildTrendlines(trendlines []model.Trendline, depth int) ([]model.Trendline, error) {
