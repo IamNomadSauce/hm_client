@@ -1135,7 +1135,7 @@ func buildTrendlines(trendlines []model.Trendline, depth int) []model.Trendline 
 	// Log the current depth
 
 	// Base case: stop if too few trendlines or max depth reached
-	if len(trendlines) <= 5 {
+	if len(trendlines) <= 10 {
 		log.Println("Build Trends Complete at depth", depth, len(trendlines))
 		return trendlines
 	}
