@@ -197,6 +197,7 @@ handleMouseMove = function (e, chartState, tradeGroups) {
     const isLineHover = lineHoverHandler(e, chartState);
     const isTriggerHover = window.triggerHoverHandler(e, chartState);
     const isTrendlinePointHover = trendlinePointHoverHandler(e, chartState);
+    const isSubtrendPointHover = subtrendPointHoverHandler(e, chartState);
 
     if (isLineHover || isTriggerHover || isTrendlinePointHover) {
         canvas.style.cursor = 'pointer';
@@ -225,11 +226,42 @@ const trendlinePointHoverHandler = function (e, chartState) {
     });
 
     if (closestPoint && minDistance < 10) {
+        console.log("MetaTrendPoint", closestPoint)
         window.hoveredTrendlinePoint = closestPoint;
         showTrendlinePointTooltip(closestPoint, mouseX, mouseY);
     } else {
         window.hoveredTrendlinePoint = null;
         hideTrendlinePointTooltip();
+    }
+    return closestPoint !== null;
+};
+
+const subtrendPointHoverHandler = function (e, chartState) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    let closestPoint = null;
+    let minDistance = 5;
+
+    subtrendPoints.forEach(point => {
+        const dx = point.x - mouseX;
+        const dy = point.y - mouseY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < minDistance) {
+            // console.log("trendlinePointHoverHandler");
+            minDistance = distance;
+            closestPoint = point;
+        }
+    });
+
+    if (closestPoint && minDistance < 10) {
+        console.log("SubtrendPoint", closestPoint)
+        window.hoveredSubtrendPoint = closestPoint;
+        showSubtrendPointTooltip(closestPoint, mouseX, mouseY);
+    } else {
+        window.hoveredSubtrendPoint = null;
+        hideSubtrendPointTooltip();
     }
     return closestPoint !== null;
 };

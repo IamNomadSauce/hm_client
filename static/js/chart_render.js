@@ -1,5 +1,7 @@
 window.hoveredTrendlinePoint = null
+window.hoveredSubtrendPoint = null
 window.trendlinePoints = []
+window.subtrendPoints = []
 
 window.canvas = document.getElementById('candlestickChart');
 window.ctx = canvas.getContext('2d');
@@ -211,14 +213,16 @@ window.drawCandlestickChart = function (data, start, end) {
                 ctx.stroke();
 
                 // Draw start point
-                const isStartHovered = window.hoveredTrendlinepoint && window.hoveredTrendlinePoint.subtrend === subtrend && window.hoveredTrendlinePoint.type === 'start';
+                const isStartHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.subtrend === subtrend && window.hoveredSubtrendPoint.type === 'start';
+                // console.log("Subtrend isStartHovered", isStartHovered)
                 ctx.beginPath();
                 ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
                 ctx.fillStyle = 'gold';
                 ctx.fill();
 
                 // Draw end point
-                const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.subtrend === subtrend && window.hoveredTrendlinePoint.type === 'end';
+                const isEndHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.subtrend === subtrend && window.hoveredSubtrendPoint.type === 'end';
+                // console.log("Subtrend isEndHovered", isEndHovered)
                 ctx.beginPath();
                 ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
                 ctx.fillStyle = 'white';
@@ -226,10 +230,10 @@ window.drawCandlestickChart = function (data, start, end) {
 
                 // Store points if within visible bounds
                 if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-                    trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
+                    subtrendPoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
                 }
                 if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-                    trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
+                    subtrendPoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
                 }
             })
 
@@ -250,6 +254,7 @@ window.drawCandlestickChart = function (data, start, end) {
 
             // Draw start point
             const isStartHovered = window.hoveredTrendlinepoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
+            // console.log("Trendline isEndHovered", isStartHovered)
             ctx.beginPath();
             ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = 'gold';
@@ -257,6 +262,7 @@ window.drawCandlestickChart = function (data, start, end) {
 
             // Draw end point
             const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
+            // console.log("Trendline isEndHovered", isEndHovered)
             ctx.beginPath();
             ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = 'white';
