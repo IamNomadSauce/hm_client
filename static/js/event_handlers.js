@@ -6,6 +6,8 @@ window.draw_boxes = []
 window.draw_lines = []
 window.activeLineIndex = -1;
 current_triggers = []
+
+
 window.setupEventListeners = function () {
     console.log("Setup Event Listeners")
     canvas.addEventListener('mousemove', function (event) {
@@ -196,17 +198,16 @@ handleMouseMove = function (e, chartState, tradeGroups) {
     tradeHoverHandler(e, chartState, tradeGroups);
     const isLineHover = lineHoverHandler(e, chartState);
     const isTriggerHover = window.triggerHoverHandler(e, chartState);
-    const isTrendlinePointHover = trendlinePointHoverHandler(e, chartState);
-    const isSubtrendPointHover = subtrendPointHoverHandler(e, chartState);
+    const isPointHover = pointHoverHandler(e, chartState);
 
-    if (isLineHover || isTriggerHover || isTrendlinePointHover) {
+    if (isLineHover || isTriggerHover || isPointHover) {
         canvas.style.cursor = 'pointer';
     } else {
         canvas.style.cursor = 'default';
     }
 };
 
-const trendlinePointHoverHandler = function (e, chartState) {
+const pointHoverHandler = function (e, chartState) {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -214,57 +215,97 @@ const trendlinePointHoverHandler = function (e, chartState) {
     let closestPoint = null;
     let minDistance = 5;
 
-    trendlinePoints.forEach(point => {
+    const allPoints = [...trendlinePoints, ...subtrendPoints];
+    allPoints.forEach(point => {
         const dx = point.x - mouseX;
         const dy = point.y - mouseY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < minDistance) {
-            // console.log("trendlinePointHoverHandler");
             minDistance = distance;
             closestPoint = point;
         }
     });
 
     if (closestPoint && minDistance < 10) {
-        console.log("MetaTrendPoint", closestPoint)
-        window.hoveredTrendlinePoint = closestPoint;
-        showTrendlinePointTooltip(closestPoint, mouseX, mouseY);
+        window.hoveredPoint = closestPoint;
+        showPointTooltip(closestPoint, mouseX, mouseY);
+        // Set specific hovered point variables for rendering
+        if (trendlinePoints.includes(closestPoint)) {
+            window.hoveredTrendlinePoint = closestPoint;
+            window.hoveredSubtrendPoint = null;
+        } else if (subtrendPoints.includes(closestPoint)) {
+            window.hoveredSubtrendPoint = closestPoint;
+            window.hoveredTrendlinePoint = null;
+        }
     } else {
+        window.hoveredPoint = null;
         window.hoveredTrendlinePoint = null;
-        hideTrendlinePointTooltip();
-    }
-    return closestPoint !== null;
-};
-
-const subtrendPointHoverHandler = function (e, chartState) {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    let closestPoint = null;
-    let minDistance = 5;
-
-    subtrendPoints.forEach(point => {
-        const dx = point.x - mouseX;
-        const dy = point.y - mouseY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < minDistance) {
-            // console.log("trendlinePointHoverHandler");
-            minDistance = distance;
-            closestPoint = point;
-        }
-    });
-
-    if (closestPoint && minDistance < 10) {
-        console.log("SubtrendPoint", closestPoint)
-        window.hoveredSubtrendPoint = closestPoint;
-        showSubtrendPointTooltip(closestPoint, mouseX, mouseY);
-    } else {
         window.hoveredSubtrendPoint = null;
-        hideSubtrendPointTooltip();
+        hidePointTooltip();
     }
     return closestPoint !== null;
 };
+
+
+// const trendlinePointHoverHandler = function (e, chartState) {
+//     const rect = canvas.getBoundingClientRect();
+//     const mouseX = e.clientX - rect.left;
+//     const mouseY = e.clientY - rect.top;
+
+//     let closestPoint = null;
+//     let minDistance = 5;
+
+//     trendlinePoints.forEach(point => {
+//         const dx = point.x - mouseX;
+//         const dy = point.y - mouseY;
+//         const distance = Math.sqrt(dx * dx + dy * dy);
+//         if (distance < minDistance) {
+//             // console.log("trendlinePointHoverHandler");
+//             minDistance = distance;
+//             closestPoint = point;
+//         }
+//     });
+
+//     if (closestPoint && minDistance < 10) {
+//         console.log("MetaTrendPoint", closestPoint)
+//         window.hoveredTrendlinePoint = closestPoint;
+//         showTrendlinePointTooltip(closestPoint, mouseX, mouseY);
+//     } else {
+//         window.hoveredTrendlinePoint = null;
+//         hideTrendlinePointTooltip();
+//     }
+//     return closestPoint !== null;
+// };
+
+// const subtrendPointHoverHandler = function (e, chartState) {
+//     const rect = canvas.getBoundingClientRect();
+//     const mouseX = e.clientX - rect.left;
+//     const mouseY = e.clientY - rect.top;
+
+//     let closestPoint = null;
+//     let minDistance = 5;
+
+//     subtrendPoints.forEach(point => {
+//         const dx = point.x - mouseX;
+//         const dy = point.y - mouseY;
+//         const distance = Math.sqrt(dx * dx + dy * dy);
+//         if (distance < minDistance) {
+//             // console.log("trendlinePointHoverHandler");
+//             minDistance = distance;
+//             closestPoint = point;
+//         }
+//     });
+
+//     if (closestPoint && minDistance < 10) {
+//         console.log("SubtrendPoint", closestPoint)
+//         window.hoveredSubtrendPoint = closestPoint;
+//         showSubtrendPointTooltip(closestPoint, mouseX, mouseY);
+//     } else {
+//         window.hoveredSubtrendPoint = null;
+//         hideSubtrendPointTooltip();
+//     }
+//     return closestPoint !== null;
+// };
 
 
 const fillHoverHandler = function (e, chartState) {
@@ -570,25 +611,35 @@ canvas.addEventListener('mouseleave', function () {
     canvas.style.cursor = 'crosshair';
 });
 
+// canvas.addEventListener('click', function (event) {
+//     if (window.hoveredTrendlinePoint) {
+//         const mouseX = event.pageX;
+//         const mouseY = event.pageY;
+//         // Find the current point object since trendlinePoints is recalculated on redraw
+//         const point = trendlinePoints.find(p =>
+//             p.trendline === window.hoveredTrendlinePoint.trendline &&
+//             p.type === window.hoveredTrendlinePoint.type
+//         );
+//         if (point) {
+//             showTrendlinePointMenu(point, mouseX, mouseY);
+//         }
+//     }
+// });
+
 canvas.addEventListener('click', function (event) {
-    if (window.hoveredTrendlinePoint) {
-        const mouseX = event.pageX;
-        const mouseY = event.pageY;
-        // Find the current point object since trendlinePoints is recalculated on redraw
-        const point = trendlinePoints.find(p =>
-            p.trendline === window.hoveredTrendlinePoint.trendline &&
-            p.type === window.hoveredTrendlinePoint.type
-        );
-        if (point) {
-            showTrendlinePointMenu(point, mouseX, mouseY);
-        }
+    if (window.hoveredPoint) {
+        const mouseX = event.pageX
+        const mouseY = event.pageY
+        showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
     }
-});
+})
+
 canvas.addEventListener('click', (e) => window.triggerClickHandler(e, chartState));
 canvas.addEventListener('mouseleave', function (event) {
     // console.log("Canvas Leave");
 
-    hideTrendlinePointTooltip()
+    // hideTrendlinePointTooltip()
+    hidePointTooltip()
     // Get mouse position
     const mouseX = event.clientX;
     const mouseY = event.clientY;

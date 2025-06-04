@@ -1,3 +1,4 @@
+window.hoveredPoint = null
 window.hoveredTrendlinePoint = null
 window.hoveredSubtrendPoint = null
 window.trendlinePoints = []
@@ -193,94 +194,110 @@ window.drawCandlestickChart = function (data, start, end) {
     }
 
     if (trendlines) {
-
-        // console.log("Trendlines: ", trendlines)
-
         trendlinePoints = []; // Reset points array each redraw
-        subtrendPoints = []
+        subtrendPoints = [];
+
         trendlines.forEach((trendline, index) => {
+            // Draw subtrends
             trendline.trends.forEach(subtrend => {
                 const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
                 const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
                 const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
                 const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
                 ctx.beginPath();
                 ctx.moveTo(startX, startY);
                 ctx.lineTo(endX, endY);
-                ctx.strokeStyle = subtrend.status == "done" ? "gray" : "gray";
-                // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
+                ctx.strokeStyle = subtrend.status === "done" ? "gray" : "gray";
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
                 // Draw start point
-                const isStartHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.subtrend === subtrend && window.hoveredSubtrendPoint.type === 'start';
-                // console.log("Subtrend isStartHovered", isStartHovered)
+                const isStartHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.trend === subtrend && window.hoveredSubtrendPoint.type === 'start';
                 ctx.beginPath();
                 ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
                 ctx.fillStyle = 'gold';
                 ctx.fill();
 
                 // Draw end point
-                const isEndHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.subtrend === subtrend && window.hoveredSubtrendPoint.type === 'end';
-                // console.log("Subtrend isEndHovered", isEndHovered)
+                const isEndHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.trend === subtrend && window.hoveredSubtrendPoint.type === 'end';
                 ctx.beginPath();
                 ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
                 ctx.fillStyle = 'white';
                 ctx.fill();
 
-                // Store points if within visible bounds
+                // Store subtrend points with explicit price
                 if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-                    subtrendPoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
+                    subtrendPoints.push({
+                        x: startX,
+                        y: startY,
+                        trend: subtrend, // Reference to the subtrend object
+                        index: index,
+                        type: 'start',
+                        price: subtrend.start.point // Explicitly store the subtrend’s start price
+                    });
                 }
                 if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-                    subtrendPoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
+                    subtrendPoints.push({
+                        x: endX,
+                        y: endY,
+                        trend: subtrend,
+                        index: index,
+                        type: 'end',
+                        price: subtrend.end.point // Explicitly store the subtrend’s end price
+                    });
                 }
-            })
+            });
 
+            // Draw main trendline
             const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
             const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
             const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
             const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-            // console.log("Trendline", trendline)
 
-            // Draw trendline
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = trendline.status == "done" ? "gray" : "gold";
-            // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
+            ctx.strokeStyle = trendline.status === "done" ? "gray" : "gold";
             ctx.lineWidth = 2;
             ctx.stroke();
 
             // Draw start point
-            const isStartHovered = window.hoveredTrendlinepoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
-            // console.log("Trendline isEndHovered", isStartHovered)
+            const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'start';
             ctx.beginPath();
             ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = 'gold';
             ctx.fill();
 
             // Draw end point
-            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
-            // console.log("Trendline isEndHovered", isEndHovered)
+            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'end';
             ctx.beginPath();
             ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = 'white';
             ctx.fill();
 
-            // Store points if within visible bounds
+            // Store main trendline points with explicit price
             if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-                trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
+                trendlinePoints.push({
+                    x: startX,
+                    y: startY,
+                    trend: trendline, // Reference to the main trendline object
+                    index: index,
+                    type: 'start',
+                    price: trendline.start.point // Explicitly store the main trendline’s start price
+                });
             }
             if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-                trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
+                trendlinePoints.push({
+                    x: endX,
+                    y: endY,
+                    trend: trendline,
+                    index: index,
+                    type: 'end',
+                    price: trendline.end.point // Explicitly store the main trendline’s end price
+                });
             }
-            // console.log("Subtrends", trendline.trends)
-
         });
-
-        let last_trend = trendlines[trendlines.length - 1]
-        // console.log("Last Trendline", last_trend)
     }
 
     // if (dxtrendlines) {
