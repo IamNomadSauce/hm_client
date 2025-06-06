@@ -192,6 +192,26 @@ window.triggerClickHandler = function (e, chartState) {
     }
 };
 
+function distanceToLineSegment(px, py, x1, y1, x2, y2) {
+
+    const dx = x2 - x1
+    const dy = y2 - y1
+    if (dx === 0 && dy === 0) {
+        return Math.hypot(px - x1, py - y1)
+    }
+
+    const t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
+    if (t < 0) {
+        return Math.hypot(px - x1, py - y1)
+    } else if (t > 1) {
+        return Math.hypot(px - x2, py - y2)
+    } else {
+        const nx = x1 + t * dx
+        const ny = y1 + t * dy
+        return Math.hypot(px - nx, py - ny)
+    }
+}
+
 handleMouseMove = function (e, chartState, tradeGroups) {
     fillHoverHandler(e, chartState);
     orderHoverHandler(e, chartState);
@@ -199,10 +219,17 @@ handleMouseMove = function (e, chartState, tradeGroups) {
     const isLineHover = lineHoverHandler(e, chartState);
     const isTriggerHover = window.triggerHoverHandler(e, chartState);
     const isPointHover = pointHoverHandler(e, chartState);
+    const isTrendLineHover = trendLineHoverHandler(e, chartState)
 
-    if (isLineHover || isTriggerHover || isPointHover) {
+    if (isPointHover) {
+        canvas.style.cursor = 'pointer'; // Point tooltip is shown by pointHoverHandler
+    } else if (isTrendLineHover) {
+        canvas.style.cursor = 'pointer'; // Trend line tooltip is shown by trendLineHoverHandler
+    } else if (isLineHover || isTriggerHover) {
         canvas.style.cursor = 'pointer';
     } else {
+        hidePointTooltip(); // Assuming this exists for point tooltips
+        hideTrendlineTooltip();
         canvas.style.cursor = 'default';
     }
 };
@@ -245,6 +272,51 @@ const pointHoverHandler = function (e, chartState) {
     }
     return closestPoint !== null;
 };
+
+function trendLineHoverHandler(e, chartState) {
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
+
+    let closestTrend = null
+    let minDistance = Infinity
+
+    trendlines.forEach(trendline => {
+        // Main trendline coordinates
+        const startX = chartState.margin + ((trendline.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+        const endX = chartState.margin + ((trendline.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+        const startY = chartState.height - chartState.margin - ((trendline.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+        const endY = chartState.height - chartState.margin - ((trendline.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+
+        const distance = distanceToLineSegment(mouseX, mouseY, startX, startY, endX, endY);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestTrend = trendline;
+        }
+
+        // Subtrend coordinates
+        trendline.trends.forEach(subtrend => {
+            const subStartX = chartState.margin + ((subtrend.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+            const subEndX = chartState.margin + ((subtrend.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+            const subStartY = chartState.height - chartState.margin - ((subtrend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+            const subEndY = chartState.height - chartState.margin - ((subtrend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+
+            const subDistance = distanceToLineSegment(mouseX, mouseY, subStartX, subStartY, subEndX, subEndY);
+            if (subDistance < minDistance) {
+                minDistance = subDistance;
+                closestTrend = subtrend;
+            }
+        });
+    });
+    const threshold = 5
+    if (minDistance < threshold) {
+        showTrendlineTooltip(closestTrend, mouseX, mouseY)
+        return true
+    } else {
+        hideTrendlineTooltip()
+        return false
+    }
+}
 
 
 // const trendlinePointHoverHandler = function (e, chartState) {

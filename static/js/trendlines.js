@@ -11,6 +11,42 @@ window.pointTooltip.style.borderRadius = '3px';
 window.pointTooltip.style.display = 'none';
 document.body.appendChild(window.pointTooltip);
 
+window.trendLineTooltip = document.createElement('div');
+window.trendLineTooltip.className = 'trend-line-tooltip';
+window.trendLineTooltip.style.position = 'absolute';
+window.trendLineTooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+window.trendLineTooltip.style.color = 'white';
+window.trendLineTooltip.style.padding = '5px';
+window.trendLineTooltip.style.borderRadius = '3px';
+window.trendLineTooltip.style.display = 'none';
+document.body.appendChild(window.trendLineTooltip);
+
+function showTrendlineTooltip(trend, mouseX, mouseY) {
+    let html = `
+        <div>TrendDetails</div>
+        <div>Start: ${trend.start.point.toFixed(8)} at ${new Date(trend.start.time * 1000).toLocaleString()}</div>
+        <div>End: ${trend.end.point.toFixed(8)} at ${new Date(trend.end.time * 1000).toLocaleString()}</div>
+        <div>Status: ${trend.status || 'N/A'}</div>
+    `
+
+    if (trend.trends && trend.trends.length > 0) {
+        html += `<div>Subtrends: ${trend.trends.length}</div><ul>`
+        trend.trends.forEach(subtrend => {
+            html += `<li>${subtrend.start.point.toFixed(8)} to ${subtrend.end.point.toFixed(8)}</li>`
+        })
+        html += '</ul>'
+    }
+
+    window.trendLineTooltip.innerHTML = html
+    window.trendLineTooltip.style.left = `${mouseX + 10}px`
+    window.trendLineTooltip.style.top = `${mouseY + 10}px`
+    window.trendLineTooltip.style.display = 'block'
+}
+
+function hideTrendlineTooltip() {
+    window.trendLineTooltip.style.display = 'none'
+}
+
 window.showPointTooltip = function (point, mouseX, mouseY) {
     const trend = point.trend; // Use point.trend instead of point.trendline
     const time = point.type === 'start' ? trend.start.time : trend.end.time;
