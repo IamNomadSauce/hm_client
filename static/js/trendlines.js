@@ -21,6 +21,15 @@ window.trendLineTooltip.style.borderRadius = '3px';
 window.trendLineTooltip.style.display = 'none';
 document.body.appendChild(window.trendLineTooltip);
 
+function getTrendStartFinish(trend) {
+    if (trend.trends.length() > 0) {
+
+
+
+    }
+
+}
+
 function showTrendlineTooltip(trend, mouseX, mouseY) {
     let html = `
         <div>TrendDetails</div>
@@ -36,6 +45,13 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
         })
         html += '</ul>'
     }
+
+
+    console.log("|TREND_Start|",trend.start.trendStart)
+    console.log("|TREND_Finish|",trend.end.trendStart)
+    console.log("|Trend_Start|", trend)
+    console.log("|Trend_m2l_m2h|", trend)
+
 
     window.trendLineTooltip.innerHTML = html
     window.trendLineTooltip.style.left = `${mouseX + 10}px`

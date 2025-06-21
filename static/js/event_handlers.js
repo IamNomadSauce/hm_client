@@ -878,8 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('click', function (e) {
-    if (!e.target.closest('#lineMenu') && !e.target.closest('#candlestickChart')) {
-        hideLineMenu();
+    if (!e.target.closest('lineMenu') && !e.target.closest('#candlestickChart')) {
+        window.hideLineMenu();
     }
 });
 
