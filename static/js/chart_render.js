@@ -1,8 +1,10 @@
 window.hoveredPoint = null
+window.point = null
 window.hoveredTrendlinePoint = null
 window.hoveredSubtrendPoint = null
 window.trendlinePoints = []
 window.subtrendPoints = []
+var price = 0.0
 
 window.canvas = document.getElementById('candlestickChart');
 window.ctx = canvas.getContext('2d');
@@ -193,6 +195,7 @@ window.drawCandlestickChart = function (data, start, end) {
         });
     }
 
+    // Draw trends and metatrends
     if (trendlines && window.meta_trends_toggle) {
         trendlinePoints = []; // Reset points array each redraw
         subtrendPoints = [];
@@ -370,9 +373,76 @@ function drawCrosshair(ctx, width, height, margin, minPrice, maxPrice) {
     ctx.stroke();
 
     // Calculate price - fixed formula to match the candlestick scaling
-    var price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
+    price = minPrice + ((height - margin - mouseY) / (height - 2 * margin)) * (maxPrice - minPrice);
     ctx.fillStyle = 'white';
     ctx.fillText(price.toFixed(2), width - 40, mouseY - 5);
+}
+
+window.showPointMenu = function(x, y) {
+    console.log("X", x)
+    console.log("Y", y)
+    console.log("Price", price)
+
+    document.querySelectorAll('.chart-point-menu').forEach(el => el.remove())
+
+    const menu = document.createElement('div')
+    menu.className = 'trendline-point-menu';
+    menu.style.position = 'absolute';
+    menu.style.left = `${mouseX - 100}px`;
+    menu.style.top = `${mouseY + 50}px`;
+    menu.style.backgroundColor = '#333';
+    menu.style.color = 'white';
+    menu.style.padding = '10px';
+    menu.style.border = '1px solid #666';
+    menu.style.borderRadius = '4px';
+    menu.style.display = 'block';
+    menu.style.zIndex = '1000';
+    menu.style.pointerEvents = 'auto';
+    menu.style.minWidth = '150px';
+
+    menu.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong>Point Menu</strong>
+            <span class="close-menu" style="cursor: pointer; padding: 0 5px;">×</span>
+        </div>
+        <div class="line-menu-item" data-action="entry">Entry</div>
+        <div class="line-menu-item" data-action="stop">Stop Loss</div>
+        <div class="line-menu-item" data-action="pt">Profit Target</div>
+        <div class="line-menu-item" data-action="trigger">Trigger</div>
+    `;
+
+    document.body.appendChild(menu);
+
+    // Close menu when clicking the X button
+    menu.querySelector('.close-menu').addEventListener('click', () => {
+        menu.remove();
+    });
+
+    // Close menu when hovering off
+    menu.addEventListener('mouseleave', () => {
+        menu.remove();
+    });
+
+    menu.querySelectorAll('.line-menu-item').forEach(item => {
+        item.addEventListener('click', function () {
+            const action = this.dataset.action;
+            const line = { price: price };
+            handleLineAction(action, line);
+            menu.remove();
+            drawCandlestickChart(window.stockData, window.start, window.end);
+        });
+    });
+
+    // Close menu when clicking outside
+    const closeMenuOnOutsideClick = (event) => {
+        if (!menu.contains(event.target) && !event.target.classList.contains('line-menu-item')) {
+            menu.remove();
+            document.removeEventListener('click', closeMenuOnOutsideClick);
+        }
+    };
+    setTimeout(() => {
+        document.addEventListener('click', closeMenuOnOutsideClick);
+    }, 0);
 }
 
 function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {

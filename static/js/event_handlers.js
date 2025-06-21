@@ -90,6 +90,16 @@ window.setupEventListeners = function () {
 
 
 
+canvas.addEventListener('click', function (event) {
+    console.log("Canvas Clicked")
+    showPointMenu(event.x, event.y)
+    if (window.hoveredPoint) {
+        const mouseX = event.pageX
+        const mouseY = event.pageY
+        showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
+    }
+})
+
 const showTriggerNotification = function (trigger) {
     const notification = document.createElement('div')
     notification.className = 'trigger-notification'
@@ -636,13 +646,6 @@ canvas.addEventListener('mouseleave', function () {
 //     }
 // });
 
-canvas.addEventListener('click', function (event) {
-    if (window.hoveredPoint) {
-        const mouseX = event.pageX
-        const mouseY = event.pageY
-        showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
-    }
-})
 
 canvas.addEventListener('click', (e) => window.triggerClickHandler(e, chartState));
 canvas.addEventListener('mouseleave', function (event) {

@@ -46,12 +46,7 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
         html += '</ul>'
     }
 
-
-    console.log("|TREND_Start|",trend.start.trendStart)
-    console.log("|TREND_Finish|",trend.end.trendStart)
-    console.log("|Trend_Start|", trend)
-    console.log("|Trend_m2l_m2h|", trend)
-
+    console.log("|TREND_Start|",trend.start.trendStart, trend.end.trendStart)
 
     window.trendLineTooltip.innerHTML = html
     window.trendLineTooltip.style.left = `${mouseX + 10}px`
@@ -117,7 +112,10 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
     const price = point.price;
 
     menu.innerHTML = `
-        <div style="margin-bottom: 8px;"><strong>Trendline Point</strong></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong>Trend Point Menu</strong>
+            <span class="close-menu" style="cursor: pointer; padding: 0 5px;">×</span>
+        </div>
         <div>Price: ${price.toFixed(8)}</div>
         <div class="line-menu-item" data-action="entry">Set as Entry</div>
         <div class="line-menu-item" data-action="stop">Set as Stop Loss</div>
@@ -136,6 +134,15 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
             menu.remove();
             drawCandlestickChart(window.stockData, window.start, window.end);
         });
+    });
+
+    menu.querySelector('.close-menu').addEventListener('click', () => {
+        menu.remove();
+    });
+
+    // Close menu when hovering off
+    menu.addEventListener('mouseleave', () => {
+        menu.remove();
     });
 
     // Close menu when clicking outside
