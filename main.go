@@ -682,6 +682,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex     int
 		SelectedTimeframe  model.Timeframe
 		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
+		BaseTrends []model.Trendline
 		Trendlines         []model.Trendline
 		Candles       []model.Candle
 		Colors        []string
@@ -696,6 +697,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex:     timeframeIndex,
 		SelectedTimeframe:  selectedTimeframe,
 		FilteredTrendlines: FilteredTrendlines,
+		BaseTrends: trendlines,
 		Trendlines:         trendZilla,
 		Candles:       candles,
 		Colors:        colors,
@@ -1206,18 +1208,6 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 	// log.Printf("Trendlines %+v", len(return_trends))
 
 	return return_trends, nil
-}
-
-func recursive_trends(trendlines []model.Trendline, levels int) ([]model.Trendline, error) {
-
-	if levels == 0 {
-		return trendlines, nil
-	}
-
-	levels--
-
-	return nil, nil
-
 }
 
 func windowArray(trends []model.Trendline, windowSize int) [][]model.Trendline {

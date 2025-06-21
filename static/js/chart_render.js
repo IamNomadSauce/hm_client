@@ -193,7 +193,7 @@ window.drawCandlestickChart = function (data, start, end) {
         });
     }
 
-    if (trendlines) {
+    if (trendlines && window.meta_trends_toggle) {
         trendlinePoints = []; // Reset points array each redraw
         subtrendPoints = [];
 
@@ -300,151 +300,53 @@ window.drawCandlestickChart = function (data, start, end) {
         });
     }
 
-    // if (dxtrendlines) {
+    if (basetrends && window.base_trends_toggle) {
 
-    //     // console.log("DX_Trendlines: ", dxtrendlines)
+        // console.log("DX_Trendlines: ", dxtrendlines)
 
-    //     trendlinePoints = []; // Reset points array each redraw
-    //     dxtrendlines.forEach((trendline, index) => {
-    //         const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-    //         const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-    //         // console.log("Trendline", trendline)
+        trendlinePoints = []; // Reset points array each redraw
+        basetrends.forEach((trendline, index) => {
+            const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            // console.log("Trendline", trendline)
 
-    //         // Draw trendline
-    //         ctx.beginPath();
-    //         ctx.moveTo(startX, startY);
-    //         ctx.lineTo(endX, endY);
-    //         ctx.strokeStyle = trendline.status == "done" ? "gray" : "gray";
-    //         // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
-    //         ctx.lineWidth = 2;
-    //         ctx.stroke();
+            // Draw trendline
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = trendline.status == "done" ? "gray" : "gray";
+            // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-    //         // Draw start point
-    //         const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
-    //         ctx.beginPath();
-    //         ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = trendline.end.color;
-    //         ctx.fill();
+            // Draw start point
+            const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
+            ctx.beginPath();
+            ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
+            ctx.fillStyle = trendline.end.color;
+            ctx.fill();
 
-    //         // Draw end point
-    //         const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
-    //         ctx.beginPath();
-    //         ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = trendline.end.color;
-    //         ctx.fill();
+            // Draw end point
+            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
+            ctx.beginPath();
+            ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
+            ctx.fillStyle = trendline.end.color;
+            ctx.fill();
 
-    //         // Store points if within visible bounds
-    //         if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-    //             trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
-    //         }
-    //         if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-    //             trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
-    //         }
-    //     });
+            // Store points if within visible bounds
+            if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
+                trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
+            }
+            if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
+                trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
+            }
+        });
 
-    //     let last_trend = dxtrendlines[dxtrendlines.length - 1]
-    //     // console.log("Last Trendline", last_trend)
-    // }
-
-    // if (dx2trendlines) {
-
-    //     // console.log("DX2_Trendlines: ", dx2trendlines)
-
-    //     trendlinePoints = []; // Reset points array each redraw
-    //     dx2trendlines.forEach((trendline, index) => {
-    //         const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-    //         const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-    //         // console.log("Trendline", trendline)
-
-    //         // Draw trendline
-    //         ctx.beginPath();
-    //         ctx.moveTo(startX, startY);
-    //         ctx.lineTo(endX, endY);
-    //         ctx.strokeStyle = trendline.status == "done" ? "gray" : "purple";
-    //         // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
-    //         ctx.lineWidth = 2;
-    //         ctx.stroke();
-
-    //         // Draw start point
-    //         const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
-    //         ctx.beginPath();
-    //         ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = trendline.end.color;
-    //         ctx.fill();
-
-    //         // Draw end point
-    //         const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
-    //         ctx.beginPath();
-    //         ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = trendline.end.color;
-    //         ctx.fill();
-
-    //         // Store points if within visible bounds
-    //         if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-    //             trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
-    //         }
-    //         if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-    //             trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
-    //         }
-    //     });
-
-    //     let last_trend = dx2trendlines[dx2trendlines.length - 1]
-    //     // console.log("Last Trendline", last_trend)
-    // }
-
-    // if (dx3trendlines) {
-
-    //     // console.log("DX2_Trendlines: ", dx2trendlines)
-
-    //     trendlinePoints = []; // Reset points array each redraw
-    //     dx3trendlines.forEach((trendline, index) => {
-    //         const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-    //         const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-    //         const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-    //         // console.log("Trendline", trendline)
-
-    //         // Draw trendline
-    //         ctx.beginPath();
-    //         ctx.moveTo(startX, startY);
-    //         ctx.lineTo(endX, endY);
-    //         ctx.strokeStyle = trendline.status == "done" ? "gray" : "gold";
-    //         // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
-    //         ctx.lineWidth = 2;
-    //         ctx.stroke();
-
-    //         // Draw start point
-    //         const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
-    //         ctx.beginPath();
-    //         ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = trendline.end.color;
-    //         ctx.fill();
-
-    //         // Draw end point
-    //         const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
-    //         ctx.beginPath();
-    //         ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
-    //         ctx.fillStyle = trendline.end.color;
-    //         ctx.fill();
-
-    //         // Store points if within visible bounds
-    //         if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-    //             trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
-    //         }
-    //         if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-    //             trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
-    //         }
-    //     });
-
-    //     let last_trend = dx3trendlines[dx2trendlines.length - 1]
-    //     // console.log("Last Trendline", last_trend)
-    // }
-
-
+        let last_trend = basetrends[basetrends.length - 1]
+        // console.log("Last Trendline", last_trend)
+    }
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);

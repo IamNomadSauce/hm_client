@@ -318,68 +318,6 @@ function trendLineHoverHandler(e, chartState) {
     }
 }
 
-
-// const trendlinePointHoverHandler = function (e, chartState) {
-//     const rect = canvas.getBoundingClientRect();
-//     const mouseX = e.clientX - rect.left;
-//     const mouseY = e.clientY - rect.top;
-
-//     let closestPoint = null;
-//     let minDistance = 5;
-
-//     trendlinePoints.forEach(point => {
-//         const dx = point.x - mouseX;
-//         const dy = point.y - mouseY;
-//         const distance = Math.sqrt(dx * dx + dy * dy);
-//         if (distance < minDistance) {
-//             // console.log("trendlinePointHoverHandler");
-//             minDistance = distance;
-//             closestPoint = point;
-//         }
-//     });
-
-//     if (closestPoint && minDistance < 10) {
-//         console.log("MetaTrendPoint", closestPoint)
-//         window.hoveredTrendlinePoint = closestPoint;
-//         showTrendlinePointTooltip(closestPoint, mouseX, mouseY);
-//     } else {
-//         window.hoveredTrendlinePoint = null;
-//         hideTrendlinePointTooltip();
-//     }
-//     return closestPoint !== null;
-// };
-
-// const subtrendPointHoverHandler = function (e, chartState) {
-//     const rect = canvas.getBoundingClientRect();
-//     const mouseX = e.clientX - rect.left;
-//     const mouseY = e.clientY - rect.top;
-
-//     let closestPoint = null;
-//     let minDistance = 5;
-
-//     subtrendPoints.forEach(point => {
-//         const dx = point.x - mouseX;
-//         const dy = point.y - mouseY;
-//         const distance = Math.sqrt(dx * dx + dy * dy);
-//         if (distance < minDistance) {
-//             // console.log("trendlinePointHoverHandler");
-//             minDistance = distance;
-//             closestPoint = point;
-//         }
-//     });
-
-//     if (closestPoint && minDistance < 10) {
-//         console.log("SubtrendPoint", closestPoint)
-//         window.hoveredSubtrendPoint = closestPoint;
-//         showSubtrendPointTooltip(closestPoint, mouseX, mouseY);
-//     } else {
-//         window.hoveredSubtrendPoint = null;
-//         hideSubtrendPointTooltip();
-//     }
-//     return closestPoint !== null;
-// };
-
-
 const fillHoverHandler = function (e, chartState) {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -760,25 +698,38 @@ window.addEventListener('resize', function () {
     chartState = drawCandlestickChart(window.stockData, start, end);
 });
 
-document.getElementById('line').addEventListener('click', function () {
-    console.log("Line Selected")
-    if (window.currentTool == 'line' || window.currentTool == 'box') {
-        window.currentTool = null
-    }
-    else {
+// document.getElementById('line').addEventListener('click', function () {
+//     console.log("Line Selected")
+//     if (window.currentTool == 'line' || window.currentTool == 'box') {
+//         window.currentTool = null
+//     }
+//     else {
 
-        window.currentTool = 'line'
-    }
+//         window.currentTool = 'line'
+//     }
+// })
+// document.getElementById('box').addEventListener('click', function () {
+//     if (window.currentTool == 'line' || window.currentTool == 'box') {
+//         window.currentTool = null
+//     }
+//     else {
+//         console.log("Box Selected")
+//         window.currentTool = 'box'
+//     }
+// })
+
+document.getElementById('base-trends').addEventListener('click', function () {
+    console.log("base-trends")
+    window.base_trends_toggle = !window.base_trends_toggle
+    window.drawCandlestickChart(window.stockData, start, end)
 })
-document.getElementById('box').addEventListener('click', function () {
-    if (window.currentTool == 'line' || window.currentTool == 'box') {
-        window.currentTool = null
-    }
-    else {
-        console.log("Box Selected")
-        window.currentTool = 'box'
-    }
+
+document.getElementById('meta-trends').addEventListener('click', function () {
+    console.log("meta-trends")
+    window.meta_trends_toggle = !window.meta_trends_toggle
+    window.drawCandlestickChart(window.stockData, start, end)
 })
+
 document.querySelectorAll('.line-menu-item').forEach(item => {
     item.addEventListener('click', function (e) {
         const action = this.dataset.action;
@@ -932,15 +883,15 @@ document.addEventListener('click', function (e) {
     }
 });
 
-document.getElementById('trigger').addEventListener('click', function () {
-    if (window.currentTool === 'trigger') {
-        console.log("TRIGGER_DESELECTED")
-        window.currentTool = null;
-    } else {
-        window.currentTool = 'trigger';
-        console.log("TRIGGER_SELECTED")
-    }
-});
+// document.getElementById('trigger').addEventListener('click', function () {
+//     if (window.currentTool === 'trigger') {
+//         console.log("TRIGGER_DESELECTED")
+//         window.currentTool = null;
+//     } else {
+//         window.currentTool = 'trigger';
+//         console.log("TRIGGER_SELECTED")
+//     }
+// });
 
 window.showLineMenu = function (x, y) {
     const menu = document.getElementById('lineMenu');
