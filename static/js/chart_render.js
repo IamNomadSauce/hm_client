@@ -4,6 +4,7 @@ window.hoveredTrendlinePoint = null
 window.hoveredSubtrendPoint = null
 window.trendlinePoints = []
 window.subtrendPoints = []
+window.trendstartlines = []
 var price = 0.0
 
 window.canvas = document.getElementById('candlestickChart');
@@ -349,6 +350,20 @@ window.drawCandlestickChart = function (data, start, end) {
 
         let last_trend = basetrends[basetrends.length - 1]
         // console.log("Last Trendline", last_trend)
+    }
+
+    if (trendstartlines) {
+        trendstartlines.forEach(trend => {
+
+            // console.log("|TREND|", trend)
+
+            const trendY = height - margin - ((trend - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            ctx.beginPath();
+            ctx.moveTo(margin, trendY);
+            ctx.lineTo(width - margin, trendY);
+            ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+            ctx.stroke();
+        })
     }
 
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);

@@ -38,15 +38,25 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
         <div>Status: ${trend.status || 'N/A'}</div>
     `
 
-    if (trend.trends && trend.trends.length > 0) {
-        html += `<div>Subtrends: ${trend.trends.length}</div><ul>`
-        trend.trends.forEach(subtrend => {
-            html += `<li>${subtrend.start.point.toFixed(8)} to ${subtrend.end.point.toFixed(8)}</li>`
-        })
-        html += '</ul>'
+    // if (trend.trends && trend.trends.length > 0) {
+    //     html += `<div>Subtrends: ${trend.trends.length}</div><ul>`
+    //     trend.trends.forEach(subtrend => {
+    //         html += `<li>${subtrend.start.point.toFixed(8)} to ${subtrend.end.point.toFixed(8)}</li>`
+    //     })
+    //     html += '</ul>'
+    // }
+
+    if (trend.trends.length > 1) {
+        html += `
+            <div>Trend_Start: ${trend.trends[0].end.trendStart}</div>
+            <div>Trend_Finish: ${trend.trends[trend.trends.length -1].start.trendStart}</div>
+        `
     }
 
-    console.log("|TREND_Start|",trend.start.trendStart, trend.end.trendStart)
+    console.log("|M2_X|",trend.start.trendStart, trend.end.trendStart)
+
+    window.trendstartlines.push(trend.trends[0].start.trendStart)
+    window.trendstartlines.push(trend.trends[trend.trends.length - 1].end.trendStart)
 
     window.trendLineTooltip.innerHTML = html
     window.trendLineTooltip.style.left = `${mouseX + 10}px`
