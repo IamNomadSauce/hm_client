@@ -65,7 +65,9 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
 }
 
 function hideTrendlineTooltip() {
+    // console.log("Hide Trend Start/Stop")
     window.trendLineTooltip.style.display = 'none'
+    window.trendstartlines = []
 }
 
 window.showPointTooltip = function (point, mouseX, mouseY) {
