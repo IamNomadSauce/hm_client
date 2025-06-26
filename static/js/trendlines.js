@@ -31,12 +31,12 @@ function getTrendStartFinish(trend) {
 }
 
 function showTrendlineTooltip(trend, mouseX, mouseY) {
-    let html = `
-        <div>TrendDetails</div>
-        <div>Start: ${trend.start.point.toFixed(8)} at ${new Date(trend.start.time * 1000).toLocaleString()}</div>
-        <div>End: ${trend.end.point.toFixed(8)} at ${new Date(trend.end.time * 1000).toLocaleString()}</div>
-        <div>Status: ${trend.status || 'N/A'}</div>
-    `
+    // let html = `
+    //     <div>TrendDetails</div>
+    //     <div>Start: ${trend.start.point.toFixed(8)} at ${new Date(trend.start.time * 1000).toLocaleString()}</div>
+    //     <div>End: ${trend.end.point.toFixed(8)} at ${new Date(trend.end.time * 1000).toLocaleString()}</div>
+    //     <div>Status: ${trend.status || 'N/A'}</div>
+    // `
 
     // if (trend.trends && trend.trends.length > 0) {
     //     html += `<div>Subtrends: ${trend.trends.length}</div><ul>`
@@ -46,22 +46,25 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
     //     html += '</ul>'
     // }
 
-    if (trend.trends.length > 1) {
-        html += `
-            <div>Trend_Start: ${trend.trends[0].end.trendStart}</div>
-            <div>Trend_Finish: ${trend.trends[trend.trends.length -1].start.trendStart}</div>
-        `
-    }
+    // if (trend.trends.length > 1) {
+    //     html += `
+    //         <div>Trend_Start: ${trend.trends[0].end.trendStart}</div>
+    //         <div>Trend_Finish: ${trend.trends[trend.trends.length -1].start.trendStart}</div>
+    //     `
+    // }
 
     console.log("|M2_X|",trend.start.trendStart, trend.end.trendStart)
 
-    window.trendstartlines.push(trend.trends[0].start.trendStart)
-    window.trendstartlines.push(trend.trends[trend.trends.length - 1].end.trendStart)
 
-    window.trendLineTooltip.innerHTML = html
-    window.trendLineTooltip.style.left = `${mouseX + 10}px`
-    window.trendLineTooltip.style.top = `${mouseY + 10}px`
-    window.trendLineTooltip.style.display = 'block'
+    window.trendstartlines.push(trend.trends[0])
+    window.trendstartlines.push(trend.trends[trend.trends.length - 2])
+
+    console.log("trendstartlines", window.trendstartlines)
+
+    // window.trendLineTooltip.innerHTML = html
+    // window.trendLineTooltip.style.left = `${mouseX + 10}px`
+    // window.trendLineTooltip.style.top = `${mouseY + 10}px`
+    // window.trendLineTooltip.style.display = 'block'
 }
 
 function hideTrendlineTooltip() {

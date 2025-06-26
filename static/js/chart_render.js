@@ -353,16 +353,30 @@ window.drawCandlestickChart = function (data, start, end) {
     }
 
     if (trendstartlines) {
-        trendstartlines.forEach(trend => {
+        trendstartlines.forEach(subtrend => {
 
             // console.log("|TREND|", trend)
+            console.log("|TREND|",subtrend)
 
-            const trendY = height - margin - ((trend - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+            const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
             ctx.beginPath();
-            ctx.moveTo(margin, trendY);
-            ctx.lineTo(width - margin, trendY);
-            ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = subtrend.status === "done" ? "gold" : "gold";
+            ctx.lineWidth = 5;
             ctx.stroke();
+
+            // const trendY = height - margin - ((trend - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            // ctx.beginPath();
+            // ctx.moveTo(margin, trendY);
+            // ctx.lineTo(width - margin, trendY);
+            // ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+            // ctx.stroke();
         })
     }
 
