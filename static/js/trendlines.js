@@ -21,16 +21,17 @@ window.trendLineTooltip.style.borderRadius = '3px';
 window.trendLineTooltip.style.display = 'none';
 document.body.appendChild(window.trendLineTooltip);
 
-function getTrendStartFinish(trend) {
+
+function getTrendStartFinish(trend, trendends = []) {
     if (trend.trends.length() > 0) {
-
-
-
     }
+
+    return trendends
 
 }
 
 function showTrendlineTooltip(trend, mouseX, mouseY) {
+
     // let html = `
     //     <div>TrendDetails</div>
     //     <div>Start: ${trend.start.point.toFixed(8)} at ${new Date(trend.start.time * 1000).toLocaleString()}</div>
@@ -53,11 +54,11 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
     //     `
     // }
 
-    console.log("|M2_X|",trend.start.trendStart, trend.end.trendStart)
+    console.log("|M2_X|",trend.start.trendStart, trend.end.trendStart, trend.trends.length, trend.trends)
 
 
-    window.trendstartlines.push(trend.trends[0])
-    window.trendstartlines.push(trend.trends[trend.trends.length - 2])
+    // window.trendstartlines.push(trend.trends[0])
+    // window.trendstartlines.push(trend.trends[trend.trends.length - 2])
 
     console.log("trendstartlines", window.trendstartlines)
 

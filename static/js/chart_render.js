@@ -203,55 +203,55 @@ window.drawCandlestickChart = function (data, start, end) {
 
         trendlines.forEach((trendline, index) => {
             // Draw subtrends
-            trendline.trends.forEach(subtrend => {
-                const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-                const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-                const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-                const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                ctx.strokeStyle = subtrend.status === "done" ? "gray" : "gray";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                // Draw start point
-                const isStartHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.trend === subtrend && window.hoveredSubtrendPoint.type === 'start';
-                ctx.beginPath();
-                ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
-                ctx.fillStyle = 'gold';
-                ctx.fill();
-
-                // Draw end point
-                const isEndHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.trend === subtrend && window.hoveredSubtrendPoint.type === 'end';
-                ctx.beginPath();
-                ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
-                ctx.fillStyle = 'white';
-                ctx.fill();
-
-                // Store subtrend points with explicit price
-                if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-                    subtrendPoints.push({
-                        x: startX,
-                        y: startY,
-                        trend: subtrend, // Reference to the subtrend object
-                        index: index,
-                        type: 'start',
-                        price: subtrend.start.point // Explicitly store the subtrend’s start price
-                    });
-                }
-                if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-                    subtrendPoints.push({
-                        x: endX,
-                        y: endY,
-                        trend: subtrend,
-                        index: index,
-                        type: 'end',
-                        price: subtrend.end.point // Explicitly store the subtrend’s end price
-                    });
-                }
-            });
+            // trendline.trends.forEach(subtrend => {
+            //     const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            //     const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            //     const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            //     const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            //
+            //     ctx.beginPath();
+            //     ctx.moveTo(startX, startY);
+            //     ctx.lineTo(endX, endY);
+            //     ctx.strokeStyle = subtrend.status === "done" ? "gray" : "gray";
+            //     ctx.lineWidth = 2;
+            //     ctx.stroke();
+            //
+            //     // Draw start point
+            //     const isStartHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.trend === subtrend && window.hoveredSubtrendPoint.type === 'start';
+            //     ctx.beginPath();
+            //     ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
+            //     ctx.fillStyle = 'gold';
+            //     ctx.fill();
+            //
+            //     // Draw end point
+            //     const isEndHovered = window.hoveredSubtrendPoint && window.hoveredSubtrendPoint.trend === subtrend && window.hoveredSubtrendPoint.type === 'end';
+            //     ctx.beginPath();
+            //     ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
+            //     ctx.fillStyle = 'white';
+            //     ctx.fill();
+            //
+            //     // Store subtrend points with explicit price
+            //     if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
+            //         subtrendPoints.push({
+            //             x: startX,
+            //             y: startY,
+            //             trend: subtrend, // Reference to the subtrend object
+            //             index: index,
+            //             type: 'start',
+            //             price: subtrend.start.point // Explicitly store the subtrend’s start price
+            //         });
+            //     }
+            //     if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
+            //         subtrendPoints.push({
+            //             x: endX,
+            //             y: endY,
+            //             trend: subtrend,
+            //             index: index,
+            //             type: 'end',
+            //             price: subtrend.end.point // Explicitly store the subtrend’s end price
+            //         });
+            //     }
+            // });
 
             // Draw main trendline
             const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
@@ -352,34 +352,34 @@ window.drawCandlestickChart = function (data, start, end) {
         // console.log("Last Trendline", last_trend)
     }
 
-    if (trendstartlines) {
-        trendstartlines.forEach(subtrend => {
-
-            // console.log("|TREND|", trend)
-            console.log("|TREND|",subtrend)
-
-
-            const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-            const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-            const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-            const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-            ctx.strokeStyle = subtrend.status === "done" ? "gold" : "gold";
-            ctx.lineWidth = 5;
-            ctx.stroke();
-
-            // const trendY = height - margin - ((trend - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-            // ctx.beginPath();
-            // ctx.moveTo(margin, trendY);
-            // ctx.lineTo(width - margin, trendY);
-            // ctx.strokeStyle = 'rgba(100,100,100,0.5)';
-            // ctx.stroke();
-        })
-    }
-
+    // if (trendstartlines) {
+    //     trendstartlines.forEach(subtrend => {
+    //
+    //         // console.log("|TREND|", trend)
+    //         console.log("|TREND|",subtrend)
+    //
+    //
+    //         const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+    //         const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+    //         const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+    //         const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+    //
+    //         ctx.beginPath();
+    //         ctx.moveTo(startX, startY);
+    //         ctx.lineTo(endX, endY);
+    //         ctx.strokeStyle = subtrend.status === "done" ? "gold" : "gold";
+    //         ctx.lineWidth = 5;
+    //         ctx.stroke();
+    //
+    //         // const trendY = height - margin - ((trend - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+    //         // ctx.beginPath();
+    //         // ctx.moveTo(margin, trendY);
+    //         // ctx.lineTo(width - margin, trendY);
+    //         // ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+    //         // ctx.stroke();
+    //     })
+    // }
+	
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
 
