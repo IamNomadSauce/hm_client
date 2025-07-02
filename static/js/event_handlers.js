@@ -90,16 +90,6 @@ window.setupEventListeners = function () {
 
 
 
-canvas.addEventListener('click', function (event) {
-    console.log("Canvas Clicked")
-    showPointMenu(event.x, event.y)
-    if (window.hoveredPoint) {
-        const mouseX = event.pageX
-        const mouseY = event.pageY
-        showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
-    }
-})
-
 const showTriggerNotification = function (trigger) {
     const notification = document.createElement('div')
     notification.className = 'trigger-notification'
@@ -114,7 +104,7 @@ const showTriggerNotification = function (trigger) {
 }
 
 
-window.triggerHoverHandler = function (e, chartState) {
+const triggerHoverHandler = function (e, chartState) {
     const rect = canvas.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
     let isNearTrigger = false;
@@ -133,6 +123,7 @@ window.triggerHoverHandler = function (e, chartState) {
 };
 
 window.triggerClickHandler = function (e, chartState) {
+    console.log("Trigger Clicked")
     if (e.type !== 'click') return; // Only handle click events
 
     const rect = canvas.getBoundingClientRect();
@@ -142,6 +133,8 @@ window.triggerClickHandler = function (e, chartState) {
 
     let selectedTrigger = null;
     let triggerY = null;
+
+    console.log("Current Triggers", current_triggers)
 
     // Find the closest trigger to the click
     window.current_triggers.forEach(trigger => {
@@ -157,6 +150,8 @@ window.triggerClickHandler = function (e, chartState) {
 
     // Remove any existing menu
     document.querySelectorAll('.trigger-menu').forEach(el => el.remove());
+
+    console.log("Selected Trigger", selectedTrigger)
 
     // If a trigger was clicked, show the menu
     if (selectedTrigger) {
@@ -227,13 +222,14 @@ handleMouseMove = function (e, chartState, tradeGroups) {
     orderHoverHandler(e, chartState);
     tradeHoverHandler(e, chartState, tradeGroups);
     const isLineHover = lineHoverHandler(e, chartState);
-    const isTriggerHover = window.triggerHoverHandler(e, chartState);
+    const isTriggerHover = triggerHoverHandler(e, chartState);
     const isPointHover = pointHoverHandler(e, chartState);
     const isTrendLineHover = trendLineHoverHandler(e, chartState)
 
     if (isPointHover) {
         canvas.style.cursor = 'pointer'; // Point tooltip is shown by pointHoverHandler
     } else if (isTrendLineHover) {
+	console.log("Trend Hovered")
         canvas.style.cursor = 'pointer'; // Trend line tooltip is shown by trendLineHoverHandler
     } else if (isLineHover || isTriggerHover) {
         canvas.style.cursor = 'pointer';
@@ -647,7 +643,68 @@ canvas.addEventListener('mouseleave', function () {
 // });
 
 
-canvas.addEventListener('click', (e) => window.triggerClickHandler(e, chartState));
+canvas.addEventListener('click', function (event) {
+	window.triggerClickHandler(e, chartState);
+})
+
+canvas.addEventListener('click', function (event) {
+    console.log("Line Clicked", draw_lines)
+    if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
+        showLineMenu(event.pageX, event.pageY);
+        console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
+        console.log("Line type", draw_lines[activeLineIndex].type)
+        if (draw_lines[activeLineIndex].type) {
+            console.log("Line type:", draw_lines[activeLineIndex].type);
+        }
+    }
+});
+
+canvas.addEventListener('click', function (event) {
+    console.log("click2")
+
+    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseY = event.clientY - rect.top;
+        const chartState = drawCandlestickChart(stockData, start, end);
+        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+
+        const line = { price: price };
+        handleLineAction(window.currentTool, line);
+        drawCandlestickChart(stockData, start, end);
+        window.updateSidebar();
+    }
+});
+
+canvas.addEventListener('click', function (event) {
+    console.log("Click3")
+    // Existing trigger menu handler
+    window.triggerClickHandler(event, chartState);
+
+    // New trade tool handler
+    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseY = event.clientY - rect.top;
+        const chartState = drawCandlestickChart(stockData, start, end);
+        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+        const line = { price: price };
+        handleLineAction(window.currentTool, line);
+        drawCandlestickChart(stockData, start, end);
+        window.updateSidebar();
+    }
+});
+
+canvas.addEventListener('click', function (event) {
+    console.log("Canvas Clicked 1")
+    // showPointMenu(event.x, event.y)
+    // if (window.hoveredPoint) {
+    //     const mouseX = event.pageX
+    //     const mouseY = event.pageY
+    //     showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
+    // }
+})
+
+
+
 canvas.addEventListener('mouseleave', function (event) {
     // console.log("Canvas Leave");
 
@@ -833,17 +890,6 @@ document.querySelectorAll('.line-menu-item').forEach(item => {
     });
 });
 
-canvas.addEventListener('click', function (event) {
-    console.log("Line Clicked", draw_lines)
-    if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
-        showLineMenu(event.pageX, event.pageY);
-        console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
-        console.log("Line type", draw_lines[activeLineIndex].type)
-        if (draw_lines[activeLineIndex].type) {
-            console.log("Line type:", draw_lines[activeLineIndex].type);
-        }
-    }
-});
 
 document.addEventListener('DOMContentLoaded', function () {
     console.log("DOM Loaded");
@@ -917,35 +963,4 @@ window.hideLineMenu = function () {
     const menu = document.getElementById('lineMenu');
     menu.style.display = 'none';
 }
-
-canvas.addEventListener('click', function (event) {
-    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseY = event.clientY - rect.top;
-        const chartState = drawCandlestickChart(stockData, start, end);
-        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-
-        const line = { price: price };
-        handleLineAction(window.currentTool, line);
-        drawCandlestickChart(stockData, start, end);
-        window.updateSidebar();
-    }
-});
-
-canvas.addEventListener('click', function (event) {
-    // Existing trigger menu handler
-    window.triggerClickHandler(event, chartState);
-
-    // New trade tool handler
-    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseY = event.clientY - rect.top;
-        const chartState = drawCandlestickChart(stockData, start, end);
-        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-        const line = { price: price };
-        handleLineAction(window.currentTool, line);
-        drawCandlestickChart(stockData, start, end);
-        window.updateSidebar();
-    }
-});
 
