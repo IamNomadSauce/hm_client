@@ -230,6 +230,7 @@ handleMouseMove = function (e, chartState, tradeGroups) {
         canvas.style.cursor = 'pointer'; // Point tooltip is shown by pointHoverHandler
     } else if (isTrendLineHover) {
 	console.log("Trend Hovered")
+	window.hoveredTrendline = true
         canvas.style.cursor = 'pointer'; // Trend line tooltip is shown by trendLineHoverHandler
     } else if (isLineHover || isTriggerHover) {
         canvas.style.cursor = 'pointer';
@@ -644,63 +645,64 @@ canvas.addEventListener('mouseleave', function () {
 
 
 canvas.addEventListener('click', function (event) {
-	window.triggerClickHandler(e, chartState);
+	window.triggerClickHandler(event, chartState);
 })
 
-canvas.addEventListener('click', function (event) {
-    console.log("Line Clicked", draw_lines)
-    if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
-        showLineMenu(event.pageX, event.pageY);
-        console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
-        console.log("Line type", draw_lines[activeLineIndex].type)
-        if (draw_lines[activeLineIndex].type) {
-            console.log("Line type:", draw_lines[activeLineIndex].type);
-        }
-    }
-});
+// canvas.addEventListener('click', function (event) {
+//     console.log("Line Clicked", draw_lines)
+//     if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
+//         showLineMenu(event.pageX, event.pageY);
+//         console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
+//         console.log("Line type", draw_lines[activeLineIndex].type)
+//         if (draw_lines[activeLineIndex].type) {
+//             console.log("Line type:", draw_lines[activeLineIndex].type);
+//         }
+//     }
+// });
+//
+// canvas.addEventListener('click', function (event) {
+//     console.log("click2")
+//
+//     if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
+//         const rect = canvas.getBoundingClientRect();
+//         const mouseY = event.clientY - rect.top;
+//         const chartState = drawCandlestickChart(stockData, start, end);
+//         const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+//
+//         const line = { price: price };
+//         handleLineAction(window.currentTool, line);
+//         drawCandlestickChart(stockData, start, end);
+//         window.updateSidebar();
+//     }
+// });
 
-canvas.addEventListener('click', function (event) {
-    console.log("click2")
-
-    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseY = event.clientY - rect.top;
-        const chartState = drawCandlestickChart(stockData, start, end);
-        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-
-        const line = { price: price };
-        handleLineAction(window.currentTool, line);
-        drawCandlestickChart(stockData, start, end);
-        window.updateSidebar();
-    }
-});
-
-canvas.addEventListener('click', function (event) {
-    console.log("Click3")
-    // Existing trigger menu handler
-    window.triggerClickHandler(event, chartState);
-
-    // New trade tool handler
-    if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseY = event.clientY - rect.top;
-        const chartState = drawCandlestickChart(stockData, start, end);
-        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-        const line = { price: price };
-        handleLineAction(window.currentTool, line);
-        drawCandlestickChart(stockData, start, end);
-        window.updateSidebar();
-    }
-});
+// canvas.addEventListener('click', function (event) {
+//     console.log("Click3")
+//     // Existing trigger menu handler
+//     window.triggerClickHandler(event, chartState);
+//
+//     // New trade tool handler
+//     if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
+//         const rect = canvas.getBoundingClientRect();
+//         const mouseY = event.clientY - rect.top;
+//         const chartState = drawCandlestickChart(stockData, start, end);
+//         const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+//         const line = { price: price };
+//         handleLineAction(window.currentTool, line);
+//         drawCandlestickChart(stockData, start, end);
+//         window.updateSidebar();
+//     }
+// });
 
 canvas.addEventListener('click', function (event) {
     console.log("Canvas Clicked 1")
+    if (window.hoveredPoint) {
+        const mouseX = event.pageX
+        const mouseY = event.pageY
+        showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
+    }
+    
     // showPointMenu(event.x, event.y)
-    // if (window.hoveredPoint) {
-    //     const mouseX = event.pageX
-    //     const mouseY = event.pageY
-    //     showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
-    // }
 })
 
 

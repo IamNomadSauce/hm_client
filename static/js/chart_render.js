@@ -1,5 +1,6 @@
 window.hoveredPoint = null
 window.point = null
+window.hoveredTrendline = null
 window.hoveredTrendlinePoint = null
 window.hoveredSubtrendPoint = null
 window.trendlinePoints = []
