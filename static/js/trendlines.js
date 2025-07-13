@@ -1,4 +1,5 @@
-// Create and initialize the tooltip element
+// trendlines.js
+
 console.log("trendlines.js")
 
 window.pointTooltip = document.createElement('div');
@@ -54,13 +55,13 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
     //     `
     // }
 
-    console.log("|M2_X|",trend.start.trendStart, trend.end.trendStart, trend.trends.length, trend.trends)
+    // console.log("|M2_X|",trend.start.trendStart, trend.end.trendStart, trend.trends.length, trend.trends)
 
 
     // window.trendstartlines.push(trend.trends[0])
     // window.trendstartlines.push(trend.trends[trend.trends.length - 2])
 
-    console.log("trendstartlines", window.trendstartlines)
+    // console.log("trendstartlines", window.trendstartlines)
 
     // window.trendLineTooltip.innerHTML = html
     // window.trendLineTooltip.style.left = `${mouseX + 10}px`
@@ -69,7 +70,7 @@ function showTrendlineTooltip(trend, mouseX, mouseY) {
 }
 
 function hideTrendlineTooltip() {
-    console.log("Hide Trend Start/Stop")
+    // console.log("Hide Trend Start/Stop")
     window.trendLineTooltip.style.display = 'none'
     window.trendstartlines = []
 }

@@ -1,3 +1,5 @@
+// chart_render.js
+
 window.hoveredPoint = null
 window.point = null
 window.hoveredTrendline = null
@@ -6,6 +8,8 @@ window.hoveredSubtrendPoint = null
 window.trendlinePoints = []
 window.subtrendPoints = []
 window.trendstartlines = []
+window.currentTrendlines = window.trendlines || []
+window.trendlinePath = []
 var price = 0.0
 
 window.canvas = document.getElementById('candlestickChart');
@@ -13,7 +17,7 @@ window.ctx = canvas.getContext('2d');
 
 window.chartState = null;
 
-window.updateChartState = function (ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime) {
+window.updateChartState = function (ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime, trendlines) {
     chartState = {
         ctx,
         width,
@@ -22,7 +26,8 @@ window.updateChartState = function (ctx, width, height, margin, minPrice, maxPri
         minPrice,
         maxPrice,
         firstCandleTime,
-        lastCandleTime
+        lastCandleTime,
+        trendlines
     }
 }
 
@@ -47,7 +52,7 @@ window.drawCandlestickChart = function (data, start, end) {
     const minPrice = Math.min(...visibleData.map(d => d.Low));
     const maxPrice = Math.max(...visibleData.map(d => d.High));
 
-    window.updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime);
+    window.updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime, window.currentTrendlines);
 
     // Draw candles
     visibleData.forEach((d, i) => {
@@ -198,11 +203,11 @@ window.drawCandlestickChart = function (data, start, end) {
     }
 
     // Draw trends and metatrends
-    if (trendlines && window.meta_trends_toggle) {
+    if (chartState.trendlines && window.meta_trends_toggle) {
         trendlinePoints = []; // Reset points array each redraw
         subtrendPoints = [];
 
-        trendlines.forEach((trendline, index) => {
+        chartState.trendlines.forEach((trendline, index) => {
             // Draw subtrends
             // trendline.trends.forEach(subtrend => {
             //     const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
