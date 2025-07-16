@@ -305,20 +305,20 @@ function trendLineHoverHandler(e, chartState) {
         }
 
         // Subtrend coordinates
-        // if (trendline.trends && trendline.trends.length > 0) {
-        //     trendline.trends.forEach(subtrend => {
-        //         const subStartX = chartState.margin + ((subtrend.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-        //         const subEndX = chartState.margin + ((subtrend.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-        //         const subStartY = chartState.height - chartState.margin - ((subtrend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-        //         const subEndY = chartState.height - chartState.margin - ((subtrend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-        //
-        //         const subDistance = distanceToLineSegment(mouseX, mouseY, subStartX, subStartY, subEndX, subEndY);
-        //         if (subDistance < minDistance) {
-        //             minDistance = subDistance;
-        //             closestTrend = subtrend;
-        //         }
-        //     });
-        // }
+        if (trendline.trends && trendline.trends.length > 0) {
+            trendline.trends.forEach(subtrend => {
+                const subStartX = chartState.margin + ((subtrend.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+                const subEndX = chartState.margin + ((subtrend.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+                const subStartY = chartState.height - chartState.margin - ((subtrend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+                const subEndY = chartState.height - chartState.margin - ((subtrend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+
+                const subDistance = distanceToLineSegment(mouseX, mouseY, subStartX, subStartY, subEndX, subEndY);
+                if (subDistance < minDistance) {
+                    minDistance = subDistance;
+                    closestTrend = subtrend;
+                }
+            });
+        }
     });
     const threshold = 5
     if (minDistance < threshold) {

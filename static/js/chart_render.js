@@ -360,20 +360,22 @@ window.drawCandlestickChart = function (data, start, end) {
 
     // TODO
     if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
-        // window.hoveredTrendline.trends.forEach(subtrend => {
-        //     const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width -2 * margin)
-        //     const endx = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin)
-        //     const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
-        //     const endY - height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
+        console.log("Hovering Over Trendline Show Subtrends", window.hoveredTrendline.trends.length)
+        window.hoveredTrendline.trends.forEach(subtrend => {
+            // console.log("Cycling...", subtrend)
+            const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width -2 * margin)
+            const endx = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin)
+            const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
+            const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
         //
-        //     ctx.beginPath()
-        //     ctx.moveTo(startX, startY)
-        //     ctx.lineTo(endx, endY)
-        //     ctx.strokeStyle = "rgba(255, 215, 0, 0.5)"
-        //     ctx.lineWidth = 1
-        //     ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(startX, startY)
+            ctx.lineTo(endx, endY)
+            ctx.strokeStyle = "rgba(255, 215, 0, 0.5)"
+            ctx.lineWidth = 1
+            ctx.stroke()
         //
-        // })
+        })
     }
 
     // if (trendstartlines) {
