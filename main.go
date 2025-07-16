@@ -510,6 +510,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func largeArcFlag(angleDiff float64) string {
+	if angleDiff > 180 {
+		return "1"
+	}
+	return "0"
+}
+
 func financeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Finance Page Request")
 
@@ -564,6 +571,33 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return aFloat / bFloat
 		},
+		"largeArcFlag": largeArcFlag,
+		"add":          func(a, b float64) float64 { return a + b },
+		"sub":          func(a, b float64) float64 { return a - b },
+		"mul":          func(a, b float64) float64 { return a * b },
+		"div":          func(a, b float64) float64 { return a / b },
+		"cos":          math.Cos,
+		"sin":          math.Sin,
+		"degToRad":     func(deg float64) float64 { return deg * math.Pi / 180 },
+		"gt": func(a, b interface{}) bool {
+			switch a := a.(type) {
+			case int:
+				switch b := b.(type) {
+				case int:
+					return a > b
+				case float64:
+					return float64(a) > b
+				}
+			case float64:
+				switch b := b.(type) {
+				case int:
+					return a > float64(b)
+				case float64:
+					return a > b
+				}
+			}
+			return false // Default case if types are unsupported
+		},
 	})
 
 	// Parse all template files
@@ -596,28 +630,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// for _, exchange := range exchanges {
-	// 	// 	fmt.Println("\n----------------------------")
-	// 	// 	fmt.Println("Exchange:", exchange.Name)
-	// 	// 	fmt.Println("Watchlist:", exchange.Watchlist)
-	// 	// 	fmt.Println("Timeframes:", exchange.Timeframes)
-	// 	// 	fmt.Println("AvailableProducts:", len(exchange.AvailableProducts))
-	// 	// 	fmt.Println("Fills", len(exchange.Fills))
-	// 	// 	fmt.Println("\n----------------------------")
-	// 	// log.Printf("Trendlines for %+v", exchange.Trendlines)
-	// }
-
 	selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
 	if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
 		selectedIndex = 0
 	}
 
 	selectedExchange := exchanges[selectedIndex]
-
-	// for _, fill := range selectedExchange.Fills {
-	// 	log.Println(fill)
-
-	// }
 
 	productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
 	if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {
@@ -682,12 +700,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex     int
 		SelectedTimeframe  model.Timeframe
 		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
-		BaseTrends []model.Trendline
+		BaseTrends         []model.Trendline
 		Trendlines         []model.Trendline
-		Candles       []model.Candle
-		Colors        []string
-		TotalValue    float64
-		PortfolioData []PortfolioItem
+		Candles            []model.Candle
+		Colors             []string
+		TotalValue         float64
+		PortfolioData      []PortfolioItem
 	}{
 		Exchanges:          exchanges,
 		SelectedExchange:   selectedExchange,
@@ -697,12 +715,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		TimeframeIndex:     timeframeIndex,
 		SelectedTimeframe:  selectedTimeframe,
 		FilteredTrendlines: FilteredTrendlines,
-		BaseTrends: trendlines,
+		BaseTrends:         trendlines,
 		Trendlines:         trendZilla,
-		Candles:       candles,
-		Colors:        colors,
-		TotalValue:    totalValue,
-		PortfolioData: preparePortfolioData(selectedExchange.Portfolio),
+		Candles:            candles,
+		Colors:             colors,
+		TotalValue:         totalValue,
+		PortfolioData:      preparePortfolioData(selectedExchange.Portfolio),
 	}
 
 	// Use a buffer to render the template first
@@ -1131,16 +1149,16 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 			// Determine the label and color based on the trend
 			if c.End.Point < b.End.Point && c.End.Point > a.End.Point {
 				c.End.Label = "HL"
-				c.Color = "green"
+				c.End.Color = "cyan"
 			} else if c.End.Point < a.End.Point && b.End.Point > a.End.Point {
 				c.End.Label = "LL"
-				c.Color = "red"
+				c.End.Color = "red"
 			} else if c.End.Point > b.End.Point && c.End.Point > a.End.Point {
 				c.End.Label = "HH"
-				c.Color = "green"
+				c.End.Color = "green"
 			} else if c.End.Point < a.End.Point && b.End.Point < c.End.Point {
 				c.End.Label = "LH"
-				c.Color = "red"
+				c.End.Color = "yellow"
 			}
 			fmt.Printf("%s", c.Label)
 
@@ -1188,7 +1206,7 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 			if direction == "up" { // Continuation
 				// log.Println("Continuation HH", direction, end.Point)
 				current.End = end
-				current.End.Color = "gray"
+				current.End.Color = "gold"
 			} else if direction == "down" { // New Trend
 				// log.Println("New Trend HH", end.Point)
 				return_trends = append(return_trends, current)
@@ -1229,37 +1247,44 @@ type PortfolioItem struct {
 	Value      float64 `json:"value"`
 	Color      string  `json:"color"`
 	Percentage float64 `json:"percentage"`
+	StartAngle float64
+	EndAngle   float64
 }
 
 func preparePortfolioData(portfolio []model.Asset) []PortfolioItem {
 	var total float64
-
-	// Calculate total including hold values
 	for _, asset := range portfolio {
 		holdValue, _ := strconv.ParseFloat(asset.Hold.Value, 64)
 		total += asset.Value + holdValue
 	}
 
 	colors := []string{
-		"#3e3e3e", " #82e0aa", "#aeb6bf", "#52be80",
-		"#bfc9ca", "#Fe74c3c", " #5499c7", "#34495e",
+		"#3e3e3e", "#82e0aa", "#aeb6bf", "#52be80",
+		"#bfc9ca", "#Fe74c3c", "#5499c7", "#34495e",
 	}
 
 	var items []PortfolioItem
+	cumulativePercentage := 0.0
 	for i, asset := range portfolio {
 		holdValue, _ := strconv.ParseFloat(asset.Hold.Value, 64)
 		totalAssetValue := asset.Value + holdValue
 		percentage := (totalAssetValue / total) * 100
+
+		startAngle := (cumulativePercentage / 100) * 360
+		cumulativePercentage += percentage
+		endAngle := (cumulativePercentage / 100) * 360
 
 		item := PortfolioItem{
 			Asset:      asset.Asset,
 			Value:      totalAssetValue,
 			Color:      colors[i%len(colors)],
 			Percentage: percentage,
+			StartAngle: startAngle,
+			EndAngle:   endAngle,
 		}
 
 		items = append(items, item)
-		log.Println(item.Asset, item.Percentage)
+		log.Println(item.Asset, item.Percentage, item.StartAngle, item.EndAngle)
 	}
 
 	return items

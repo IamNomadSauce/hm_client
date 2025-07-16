@@ -76,6 +76,7 @@ function hideTrendlineTooltip() {
 }
 
 window.showPointTooltip = function (point, mouseX, mouseY) {
+    console.log("showPointTooltip: POINT", point)
     const trend = point.trend; // Use point.trend instead of point.trendline
     const time = point.type === 'start' ? trend.start.time : trend.end.time;
     const price = point.price; // Use the stored price directly
@@ -83,9 +84,15 @@ window.showPointTooltip = function (point, mouseX, mouseY) {
     // Safely determine subtrends count, default to 0 if trend.trends is undefined
     const subTrendsCount = trend.trends ? trend.trends.length : 0;
 
+    console.log("TREND", point.trend)
+    console.log("TREND-END", point.trend.end)
+    console.log("POINT", point)
+
     window.pointTooltip.innerHTML = `
         <div>Trendline Index: ${point.index + 1}</div>
         <div>Point: ${point.type}</div>
+        <div>Color: ${trend.end.color}</div>
+        <div>Label: ${trend.end.label}</div>
         <div>Time: ${new Date(time * 1000).toLocaleString()}</div>
         <div>Price: ${price.toFixed(8)}</div>
         <div>SubTrends: ${subTrendsCount}</div>

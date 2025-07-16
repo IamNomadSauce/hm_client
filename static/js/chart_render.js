@@ -268,7 +268,7 @@ window.drawCandlestickChart = function (data, start, end) {
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = trendline.status === "done" ? "gray" : "gold";
+            ctx.strokeStyle = trendline.status === "done" ? trendline.end.color : trendline.end.color;
             ctx.lineWidth = 2;
             ctx.stroke();
 
@@ -276,7 +276,7 @@ window.drawCandlestickChart = function (data, start, end) {
             const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'start';
             ctx.beginPath();
             ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
-            ctx.fillStyle = 'gold';
+            ctx.fillStyle = trendline.end.color;
             ctx.fill();
 
             // Draw end point
@@ -326,7 +326,7 @@ window.drawCandlestickChart = function (data, start, end) {
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = trendline.status == "done" ? "gray" : "gray";
+            ctx.strokeStyle = trendline.status == "done" ? "pink" : "white";
             // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
             ctx.lineWidth = 2;
             ctx.stroke();
@@ -356,6 +356,24 @@ window.drawCandlestickChart = function (data, start, end) {
 
         let last_trend = basetrends[basetrends.length - 1]
         // console.log("Last Trendline", last_trend)
+    }
+
+    // TODO
+    if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
+        // window.hoveredTrendline.trends.forEach(subtrend => {
+        //     const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width -2 * margin)
+        //     const endx = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin)
+        //     const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
+        //     const endY - height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
+        //
+        //     ctx.beginPath()
+        //     ctx.moveTo(startX, startY)
+        //     ctx.lineTo(endx, endY)
+        //     ctx.strokeStyle = "rgba(255, 215, 0, 0.5)"
+        //     ctx.lineWidth = 1
+        //     ctx.stroke()
+        //
+        // })
     }
 
     // if (trendstartlines) {

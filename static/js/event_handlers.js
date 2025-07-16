@@ -305,22 +305,25 @@ function trendLineHoverHandler(e, chartState) {
         }
 
         // Subtrend coordinates
-        // trendline.trends.forEach(subtrend => {
-        //     const subStartX = chartState.margin + ((subtrend.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-        //     const subEndX = chartState.margin + ((subtrend.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-        //     const subStartY = chartState.height - chartState.margin - ((subtrend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-        //     const subEndY = chartState.height - chartState.margin - ((subtrend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+        // if (trendline.trends && trendline.trends.length > 0) {
+        //     trendline.trends.forEach(subtrend => {
+        //         const subStartX = chartState.margin + ((subtrend.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+        //         const subEndX = chartState.margin + ((subtrend.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
+        //         const subStartY = chartState.height - chartState.margin - ((subtrend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+        //         const subEndY = chartState.height - chartState.margin - ((subtrend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
         //
-        //     const subDistance = distanceToLineSegment(mouseX, mouseY, subStartX, subStartY, subEndX, subEndY);
-        //     if (subDistance < minDistance) {
-        //         minDistance = subDistance;
-        //         closestTrend = subtrend;
-        //     }
-        // });
+        //         const subDistance = distanceToLineSegment(mouseX, mouseY, subStartX, subStartY, subEndX, subEndY);
+        //         if (subDistance < minDistance) {
+        //             minDistance = subDistance;
+        //             closestTrend = subtrend;
+        //         }
+        //     });
+        // }
     });
     const threshold = 5
     if (minDistance < threshold) {
         showTrendlineTooltip(closestTrend, mouseX, mouseY)
+        console.log("Trendline Hovered", closestTrend)
         // return true
         return closestTrend
     } else {
@@ -653,6 +656,7 @@ canvas.addEventListener('click', function (event) {
 	if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
         window.trendlinePath.push(window.hoveredTrendline)
         window.currentTrendlines = window.hoveredTrendline.trends
+        console.log("hoveredTrendline.trends", window.hoveredTrendline.trends)
         window.drawCandlestickChart(window.stockData, window.start, window.end)
 		// clickTrendline(event, chartState)
 	} else if (!window.hoveredTrendline && window.trendlinePath.length > 0) {
@@ -669,8 +673,20 @@ canvas.addEventListener('click', function (event) {
         const mouseX = event.pageX
         const mouseY = event.pageY
         showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
+    } else {
+    // showPointMenu(event.x, event.y)
     }
 })
+
+// canvas.addEventListener('click', function (event) {
+//     console.log("Canvas Clicked 1")
+//     if (window.hoveredPoint) {
+//         const mouseX = event.pageX
+//         const mouseY = event.pageY
+//         showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
+//     }
+//     // showPointMenu(event.x, event.y)
+// })
 
 function clickTrendline(event, chartState) {
     console.log("Trend Click ChartState", chartState)
@@ -722,16 +738,6 @@ function clickTrendline(event, chartState) {
 //     }
 // });
 
-canvas.addEventListener('click', function (event) {
-    console.log("Canvas Clicked 1")
-    if (window.hoveredPoint) {
-        const mouseX = event.pageX
-        const mouseY = event.pageY
-        showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
-    }
-    
-    // showPointMenu(event.x, event.y)
-})
 
 
 

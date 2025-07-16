@@ -249,20 +249,35 @@
             </tbody>
           </table>
         </div>
-        <div class="col-4">
-          <svg id="portfolioPie" viewBox="0 0 100 100" class="portfolio-pie">
-            <circle cx="50" cy="50" r="45" fill="#212529" />
-            {{range $index, $item := .PortfolioData}}
-            <circle class="pie-segment" id="pie-segment" r="45" cx="50" cy="50" fill="transparent"
-              stroke="{{$item.Color}}" stroke-width="10" stroke-dasharray="{{$item.Percentage}} 100"
-              transform="rotate({{multiply $index (divide 360 (len $.PortfolioData))}} 50 50)"
-              data-asset="{{$item.Asset}}" data-value="{{printf " %.2f" $item.Value}}" data-percentage="{{printf " %.1f"
-              $item.Percentage}}" />
-            {{end}}
-          </svg>
-        </div>
-      </div>
     </div>
+      <div class="col-4">
+        <svg id="portfolioPie" viewBox="0 0 100 100" class="portfolio-pie">
+          {{ $cx := 50.0 }}
+          {{ $cy := 50.0 }}
+          {{ $r := 45.0 }}
+          {{range $item := .PortfolioData}}
+            {{ $startAngle := $item.StartAngle }}
+            {{ $endAngle := $item.EndAngle }}
+            {{ $largeArc := largeArcFlag (sub $endAngle $startAngle) }}
+            {{ $xStart := add $cx (mul $r (cos (degToRad $startAngle))) }}
+            {{ $yStart := add $cy (mul $r (sin (degToRad $startAngle))) }}
+            {{ $xEnd := add $cx (mul $r (cos (degToRad $endAngle))) }}
+            {{ $yEnd := add $cy (mul $r (sin (degToRad $endAngle))) }}
+            <path d="M {{$cx}} {{$cy}} L {{$xStart}} {{$yStart}} A {{$r}} {{$r}} 0 {{$largeArc}} 1 {{$xEnd}} {{$yEnd}} Z"
+              fill="{{$item.Color}}"
+              data-asset="{{$item.Asset}}"
+              data-value="{{printf "%.2f" $item.Value}}"
+              data-percentage="{{printf "%.1f" $item.Percentage}}" />
+            {{ $midAngle := add $startAngle (div (sub $endAngle $startAngle) 2) }}
+            {{ $labelX := add $cx (mul 30 (cos (degToRad $midAngle))) }}
+            {{ $labelY := add $cy (mul 30 (sin (degToRad $midAngle))) }}
+            <text x="{{$labelX}}" y="{{$labelY}}" text-anchor="middle" fill="white" font-size="5">
+              {{$item.Asset}}
+            </text>
+          {{end}}
+        </svg>
+    </div>
+  </div>
     <div>
       <!-- Chart Section -->
       {{if .SelectedProduct.ProductID}}
