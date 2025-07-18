@@ -361,6 +361,7 @@ window.drawCandlestickChart = function (data, start, end) {
     // TODO
     if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
         console.log("Hovering Over Trendline Show Subtrends", window.hoveredTrendline.trends.length)
+        console.log("Subtrends len", window.hoveredTrendline.trends.length)
         window.hoveredTrendline.trends.forEach(subtrend => {
             // console.log("Cycling...", subtrend)
             const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width -2 * margin)

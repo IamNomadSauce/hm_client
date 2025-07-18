@@ -1126,7 +1126,7 @@ func buildTrendlines(trendlines []model.Trendline, depth int) []model.Trendline 
 
 		// Find end index where trendlines[k].Start.Time > v.End.Time
 		endIdx := sort.Search(len(trendlines), func(k int) bool {
-			return trendlines[k].Start.Time > v.End.Time
+			return trendlines[k].End.Time > v.End.Time
 		})
 
 		v.TrendLines = trendlines[startIdx:endIdx]
@@ -1218,6 +1218,9 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				current.End.Color = "green"
 				direction = "up"
 			}
+		} else if end.Label == "HL" {
+
+		} else if end.Label == "LH" {
 		}
 	}
 
