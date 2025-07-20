@@ -7,7 +7,7 @@ import (
 	"hm_client/api"
 	"hm_client/model"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -25,6 +25,7 @@ func main() {
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/finance", financeHandler)
+	http.HandleFunc("/horizon", horizonAcctHandler)
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/create-trade", newTradeBlockHandler)
@@ -53,7 +54,7 @@ func main() {
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("Error reading response body: %v", err)
 	}
@@ -348,7 +349,7 @@ func newTradeBlockHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error reading response body: %v", err)
 		return
@@ -869,51 +870,51 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 		if current.Direction == "up" {
 
 			// Higher High && Lower Low
-			// if candle.High > current.End.Point && candle.Low < current.End.Inv {
-			// 	if candle.Close > candle.Open { // Green Candle
-			// 		current.End = model.Point{
-			// 			Time:       candle.Timestamp,
-			// 			Point:      candle.High,
-			// 			Inv:        candle.Low,
-			// 			TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 		}
-			// 		current.Status = "done"
-			// 		trendlines = append(trendlines, current)
-			// 		current = model.Trendline{
-			// 			Start: current.End,
-			// 			End: model.Point{
-			// 				Time:       candle.Timestamp,
-			// 				Point:      candle.Low,
-			// 				Inv:        candle.High,
-			// 				TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 			},
-			// 			Status:    "current",
-			// 			Direction: "down",
-			// 		}
-			// 	} else { // Red Candle
-			// 		current.End = model.Point{
-			// 			Time:       candle.Timestamp,
-			// 			Point:      candle.High,
-			// 			Inv:        candle.Low,
-			// 			TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 		}
-			// 		current.Status = "done"
-			// 		trendlines = append(trendlines, current)
+			if candle.High > current.End.Point && candle.Low < current.End.Inv {
+				if candle.Close > candle.Open { // Green Candle
+					current.End = model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.High,
+						Inv:        candle.Low,
+						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+					}
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.Low,
+							Inv:        candle.High,
+							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+						},
+						Status:    "current",
+						Direction: "down",
+					}
+				} else { // Red Candle
+					current.End = model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.High,
+						Inv:        candle.Low,
+						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+					}
+					current.Status = "done"
+					trendlines = append(trendlines, current)
 
-			// 		current = model.Trendline{
-			// 			Start: current.End,
-			// 			End: model.Point{
-			// 				Time:       candle.Timestamp,
-			// 				Point:      candle.Low,
-			// 				Inv:        candle.High,
-			// 				TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 			},
-			// 			Direction: "down",
-			// 			Status:    "current",
-			// 		}
-			// 	}
-			// 	continue
-			// }
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.Low,
+							Inv:        candle.High,
+							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+						},
+						Direction: "down",
+						Status:    "current",
+					}
+				}
+				continue
+			}
 
 			// Higher High in uptrend  (continuation)
 			if candle.High > current.End.Point {
@@ -954,51 +955,51 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 		} else if current.Direction == "down" {
 
 			// Lower Low && Higher High in downtrend
-			// if candle.Low < current.End.Point && candle.High > current.End.Inv {
-			// 	if candle.Close > candle.Open { // Green Candle
-			// 		current.End = model.Point{
-			// 			Time:       candle.Timestamp,
-			// 			Point:      candle.Low,
-			// 			Inv:        candle.High,
-			// 			TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 		}
-			// 		current.Status = "done"
-			// 		trendlines = append(trendlines, current)
-			// 		current = model.Trendline{
-			// 			Start: current.End,
-			// 			End: model.Point{
-			// 				Time:       candle.Timestamp,
-			// 				Point:      candle.High,
-			// 				Inv:        candle.Low,
-			// 				TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 			},
-			// 			Status:    "current",
-			// 			Direction: "up",
-			// 		}
-			// 	} else { // Red Candle
-			// 		current.End = model.Point{
-			// 			Time:       candle.Timestamp,
-			// 			Point:      candle.Low,
-			// 			Inv:        candle.High,
-			// 			TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 		}
-			// 		current.Status = "done"
-			// 		trendlines = append(trendlines, current)
+			if candle.Low < current.End.Point && candle.High > current.End.Inv {
+				if candle.Close > candle.Open { // Green Candle
+					current.End = model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.Low,
+						Inv:        candle.High,
+						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+					}
+					current.Status = "done"
+					trendlines = append(trendlines, current)
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.High,
+							Inv:        candle.Low,
+							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+						},
+						Status:    "current",
+						Direction: "up",
+					}
+				} else { // Red Candle
+					current.End = model.Point{
+						Time:       candle.Timestamp,
+						Point:      candle.Low,
+						Inv:        candle.High,
+						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+					}
+					current.Status = "done"
+					trendlines = append(trendlines, current)
 
-			// 		current = model.Trendline{
-			// 			Start: current.End,
-			// 			End: model.Point{
-			// 				Time:       candle.Timestamp,
-			// 				Point:      candle.High,
-			// 				Inv:        candle.Low,
-			// 				TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-			// 			},
-			// 			Direction: "up",
-			// 			Status:    "current",
-			// 		}
-			// 	}
-			// 	continue
-			// }
+					current = model.Trendline{
+						Start: current.End,
+						End: model.Point{
+							Time:       candle.Timestamp,
+							Point:      candle.High,
+							Inv:        candle.Low,
+							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+						},
+						Direction: "up",
+						Status:    "current",
+					}
+				}
+				continue
+			}
 
 			// Lower Low in downtrend  (continuation)
 			if candle.Low < current.End.Point {
@@ -1092,8 +1093,6 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 
 	return trendlines, nil
 }
-
-var maxTrendDepth = 2
 
 var totalTrends = 0
 
@@ -1291,4 +1290,39 @@ func preparePortfolioData(portfolio []model.Asset) []PortfolioItem {
 	}
 
 	return items
+}
+
+func horizonAcctHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Horizon Account")
+	err := godotenv.Load()
+
+	acct_id := os.Getenv("HORIZON_ID")
+	url := "https://horizon.stellar.org/accounts/" + acct_id
+
+	client := http.Client{}
+
+	req, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		log.Println("Error connecting to horizon", err)
+		return
+	}
+
+	req.Header.Add("Accept", "application/json")
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(string(body))
 }
