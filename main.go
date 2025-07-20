@@ -1297,7 +1297,7 @@ func horizonAcctHandler(w http.ResponseWriter, r *http.Request) {
 	err := godotenv.Load()
 
 	acct_id := os.Getenv("HORIZON_ID")
-	url := "https://horizon.stellar.org/accounts/" + acct_id
+	url := "https://horizon.stellar.org/accounts/" + acct_id + "/transactions"
 
 	client := http.Client{}
 
