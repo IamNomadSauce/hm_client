@@ -67,6 +67,113 @@ func main() {
 	fmt.Println("Received Data:", string(body))
 }
 
+// renderTemplate executes the given template files and writes the output to the ResponseWriter.
+func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, files ...string) {
+	// 1. Create a new template with the base name and add the shared function map.
+	var funcMap = template.FuncMap{
+		"multiply": func(a, b interface{}) float64 {
+			var aFloat, bFloat float64
+
+			switch v := a.(type) {
+			case int:
+				aFloat = float64(v)
+			case float64:
+				aFloat = v
+			default:
+				return 0
+			}
+
+			switch v := b.(type) {
+			case int:
+				bFloat = float64(v)
+			case float64:
+				bFloat = v
+			default:
+				return 0
+			}
+
+			return aFloat * bFloat
+		},
+		"divide": func(a, b interface{}) float64 {
+			var aFloat, bFloat float64
+
+			switch v := a.(type) {
+			case int:
+				aFloat = float64(v)
+			case float64:
+				aFloat = v
+			default:
+				return 0
+			}
+
+			switch v := b.(type) {
+			case int:
+				bFloat = float64(v)
+			case float64:
+				bFloat = v
+			default:
+				return 0
+			}
+
+			if bFloat == 0 {
+				return 0
+			}
+			return aFloat / bFloat
+		},
+		"largeArcFlag": largeArcFlag,
+		"add":          func(a, b float64) float64 { return a + b },
+		"sub":          func(a, b float64) float64 { return a - b },
+		"mul":          func(a, b float64) float64 { return a * b },
+		"div":          func(a, b float64) float64 { return a / b },
+		"cos":          math.Cos,
+		"sin":          math.Sin,
+		"degToRad":     func(deg float64) float64 { return deg * math.Pi / 180 },
+		"gt": func(a, b interface{}) bool {
+			switch a := a.(type) {
+			case int:
+				switch b := b.(type) {
+				case int:
+					return a > b
+				case float64:
+					return float64(a) > b
+				}
+			case float64:
+				switch b := b.(type) {
+				case int:
+					return a > float64(b)
+				case float64:
+					return a > b
+				}
+			}
+			return false // Default case if types are unsupported
+		},
+	}
+
+	tmpl, err := template.New(baseTmpl).Funcs(funcMap).ParseFiles(files...)
+	if err != nil {
+		log.Printf("Error parsing template files: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// 2. Execute the template into a buffer to catch errors before writing to the response.
+	//    This prevents partial HTML pages from being sent if an error occurs during execution.
+	buf := new(bytes.Buffer)
+	err = tmpl.ExecuteTemplate(buf, baseTmpl, data)
+	if err != nil {
+		log.Printf("Error executing template %s: %v", baseTmpl, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// 3. Set the content type and write the buffer to the http.ResponseWriter.
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, err = buf.WriteTo(w)
+	if err != nil {
+		log.Printf("Error writing template to response: %v", err)
+	}
+}
+
 func cancelOrderHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Cancel Order Handler")
 
@@ -494,21 +601,11 @@ func tradeEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Home Request")
-	tmpl, err := template.ParseFiles(
+	renderTemplate(w, "base.html", nil,
 		"templates/base.html",
 		"templates/home.html",
 		"templates/components/navbar.html",
 	)
-	if err != nil {
-		http.Error(w, "Error parsing template", http.StatusInternalServerError)
-	}
-
-	err = tmpl.Execute(w, nil)
-	if err != nil {
-		http.Error(w, "Error executing temlate", http.StatusInternalServerError)
-		fmt.Println("Error executing template", err)
-	}
-
 }
 
 func largeArcFlag(angleDiff float64) string {
@@ -521,100 +618,7 @@ func largeArcFlag(angleDiff float64) string {
 func financeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Finance Page Request")
 
-	// Create template with functions and specify the base template name
-	tmpl := template.New("base.html").Funcs(template.FuncMap{
-		"multiply": func(a, b interface{}) float64 {
-			var aFloat, bFloat float64
-
-			switch v := a.(type) {
-			case int:
-				aFloat = float64(v)
-			case float64:
-				aFloat = v
-			default:
-				return 0
-			}
-
-			switch v := b.(type) {
-			case int:
-				bFloat = float64(v)
-			case float64:
-				bFloat = v
-			default:
-				return 0
-			}
-
-			return aFloat * bFloat
-		},
-		"divide": func(a, b interface{}) float64 {
-			var aFloat, bFloat float64
-
-			switch v := a.(type) {
-			case int:
-				aFloat = float64(v)
-			case float64:
-				aFloat = v
-			default:
-				return 0
-			}
-
-			switch v := b.(type) {
-			case int:
-				bFloat = float64(v)
-			case float64:
-				bFloat = v
-			default:
-				return 0
-			}
-
-			if bFloat == 0 {
-				return 0
-			}
-			return aFloat / bFloat
-		},
-		"largeArcFlag": largeArcFlag,
-		"add":          func(a, b float64) float64 { return a + b },
-		"sub":          func(a, b float64) float64 { return a - b },
-		"mul":          func(a, b float64) float64 { return a * b },
-		"div":          func(a, b float64) float64 { return a / b },
-		"cos":          math.Cos,
-		"sin":          math.Sin,
-		"degToRad":     func(deg float64) float64 { return deg * math.Pi / 180 },
-		"gt": func(a, b interface{}) bool {
-			switch a := a.(type) {
-			case int:
-				switch b := b.(type) {
-				case int:
-					return a > b
-				case float64:
-					return float64(a) > b
-				}
-			case float64:
-				switch b := b.(type) {
-				case int:
-					return a > float64(b)
-				case float64:
-					return a > b
-				}
-			}
-			return false // Default case if types are unsupported
-		},
-	})
-
-	// Parse all template files
-	tmpl, err := tmpl.ParseFiles(
-		"templates/base.html",
-		"templates/finance.html",
-		"templates/components/navbar.html",
-		"templates/components/chart.html",
-	)
-	if err != nil {
-		log.Printf("Error parsing template: %v", err)
-		http.Error(w, "Error parsing template", http.StatusInternalServerError)
-		return
-	}
-
-	err = godotenv.Load()
+	err := godotenv.Load()
 	if err != nil {
 		log.Println("Error loading .env file:", err)
 		// Decide whether to return or continue based on your requirements
@@ -724,21 +728,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		PortfolioData:      preparePortfolioData(selectedExchange.Portfolio),
 	}
 
-	// Use a buffer to render the template first
-	var buf bytes.Buffer
-	err = tmpl.ExecuteTemplate(&buf, "base.html", data)
-	if err != nil {
-		log.Printf("Error executing template: %v", err)
-		http.Error(w, "Error executing template: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// If template execution was successful, write the result to the response
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err = buf.WriteTo(w)
-	if err != nil {
-		log.Printf("Error writing response: %v", err)
-	}
+	renderTemplate(w, "base.html", data,
+		"templates/base.html",
+		"templates/finance.html",
+		"templates/components/navbar.html",
+		"templates/components/chart.html",
+	)
 }
 
 // MakeTrendlines generates trendlines based on the given candles.
@@ -1297,7 +1292,7 @@ func horizonAcctHandler(w http.ResponseWriter, r *http.Request) {
 	err := godotenv.Load()
 
 	acct_id := os.Getenv("HORIZON_ID")
-	url := "https://horizon.stellar.org/accounts/" + acct_id + "/transactions"
+	url := "https://horizon.stellar.org/accounts/" + acct_id
 
 	client := http.Client{}
 
