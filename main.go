@@ -1291,33 +1291,48 @@ func horizonAcctHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Horizon Account")
 	err := godotenv.Load()
 
-	acct_id := os.Getenv("HORIZON_ID")
-	url := "https://horizon.stellar.org/accounts/" + acct_id
-
-	client := http.Client{}
-
-	req, err := http.NewRequest("GET", url, nil)
-
-	if err != nil {
-		log.Println("Error connecting to horizon", err)
+	acctID := os.Getenv("HORIZON_ID")
+	if acctID == "" {
+		log.Println("Horizon_id not set in .env file")
+		http.Error(w, "Horizon Account ID is not configured", http.StatusInternalServerError)
 		return
 	}
 
-	req.Header.Add("Accept", "application/json")
-
-	res, err := client.Do(req)
+	account, err := api.GetAccountDetails(acctID)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Printf("Error getting account details: %v", err)
 	}
 
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
+	trades, err := api.GetTrades(acctID)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Printf("Error getting trades: %v", err)
 	}
 
-	fmt.Println(string(body))
+	offers, err := api.GetOffers(acctID)
+	if err != nil {
+		log.Printf("Error getting offers: %v", err)
+	}
+
+	payments, err := api.GetPayments(acctID)
+	if err != nil {
+		log.Printf("Error getting payments: %v", err)
+	}
+
+	data := struct {
+		Account  model.HorizonAccount
+		Trades   model.HorizonTradeResponse
+		Offers   model.HorizonOfferResponse
+		Payments model.HorizonPaymentResponse
+	}{
+		Account:  account,
+		Trades:   trades,
+		Offers:   offers,
+		Payments: payments,
+	}
+
+	renderTemplate(w, "base.html", data,
+		"templates/base.html",
+		"templates/horizon.html",
+		"templates/components/navbar.html",
+	)
 }

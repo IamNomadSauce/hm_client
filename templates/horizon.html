@@ -1,3 +1,149 @@
 {{define "content"}}
-<but
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Stellar Account Details</h2>
+
+    {{if .Account.ID}}
+    <div class="card bg-dark border-secondary mb-4 text-light">
+        <div class="card-header">
+            <h5 class="mb-0">Account Summary</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Account ID:</strong> {{.Account.ID}}</p>
+            <p><strong>Sequence:</strong> {{.Account.Sequence}}</p>
+        </div>
+    </div>
+
+    <!-- Balances -->
+    <h4 class="mb-3">Balances</h4>
+    <div class="table-responsive mb-4">
+        <table class="table table-dark table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th>Balance</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Account.Balances}}
+                <tr>
+                    <td>{{if .AssetCode}}{{.AssetCode}}{{else}}XLM{{end}}</td>
+                    <td>{{.Balance}}</td>
+                    <td>{{.AssetType}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Nav Tabs -->
+    <ul class="nav nav-pills mb-3" id="horizon-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="trades-tab" data-bs-toggle="pill" data-bs-target="#trades" type="button" role="tab">Trades</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="offers-tab" data-bs-toggle="pill" data-bs-target="#offers" type="button" role="tab">Offers</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="payments-tab" data-bs-toggle="pill" data-bs-target="#payments" type="button" role="tab">Payments</button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="horizon-tabContent">
+        <!-- Trades Tab -->
+        <div class="tab-pane fade show active" id="trades" role="tabpanel">
+            <h4 class="mb-3">Recent Trades</h4>
+            <div class="table-responsive">
+                <table class="table table-dark table-striped">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Base (Sold)</th>
+                            <th>Counter (Bought)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Trades.Embedded.Records}}
+                        <tr>
+                            <td>{{.LedgerCloseTime.Format "2006-01-02 15:04:05"}}</td>
+                            <td>{{.BaseAmount}} {{if .BaseAssetCode}}{{.BaseAssetCode}}{{else}}XLM{{end}}</td>
+                            <td>{{.CounterAmount}} {{if .CounterAssetCode}}{{.CounterAssetCode}}{{else}}XLM{{end}}</td>
+                        </tr>
+                        {{else}}
+                        <tr><td colspan="3">No recent trades found.</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Offers Tab -->
+        <div class="tab-pane fade" id="offers" role="tabpanel">
+            <h4 class="mb-3">Active Offers</h4>
+            <div class="table-responsive">
+                <table class="table table-dark table-striped">
+                    <thead>
+                        <tr>
+                            <th>Selling</th>
+                            <th>Buying</th>
+                            <th>Amount</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Offers.Embedded.Records}}
+                        <tr>
+                            <td>{{.Selling.AssetCode}}</td>
+                            <td>{{.Buying.AssetCode}}</td>
+                            <td>{{.Amount}}</td>
+                            <td>{{.Price}}</td>
+                        </tr>
+                        {{else}}
+                        <tr><td colspan="4">No active offers found.</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payments Tab -->
+        <div class="tab-pane fade" id="payments" role="tabpanel">
+            <h4 class="mb-3">Recent Payments</h4>
+            <div class="table-responsive">
+                <table class="table table-dark table-striped">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Payments.Embedded.Records}}
+                        <tr>
+                            <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
+                            <td>{{.Type}}</td>
+                            <td title="{{.From}}">{{printf "%.10s..." .From}}</td>
+                            <td title="{{.To}}">{{printf "%.10s..." .To}}</td>
+                            <td>{{.Amount}} {{if .AssetCode}}{{.AssetCode}}{{else}}XLM{{end}}</td>
+                        </tr>
+                        {{else}}
+                        <tr><td colspan="5">No recent payments found.</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{else}}
+    <div class="alert alert-danger" role="alert">
+        Could not load account details. Please check your HORIZON_ID in the .env file.
+    </div>
+    {{end}}
+</div>
 {{end}}
+
