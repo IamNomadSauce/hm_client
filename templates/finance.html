@@ -115,7 +115,37 @@
               </div>
               {{end}}
             </div>
-
+            <!---->
+            <!-- <div class="row mt-3"> -->
+            <!--     <div class="col"> -->
+            <!--         <h5>Candle Debugger</h5> -->
+            <!--         <div class="d-flex align-items-center gap-2"> -->
+            <!--             <form action="/finance" method="GET" class="mb-0"> -->
+            <!--                 <input type="hidden" name="selected_index" value="{{.SelectedIndex}}"> -->
+            <!--                 <input type="hidden" name="product_index" value="{{.ProductIndex}}"> -->
+            <!--                 <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}"> -->
+            <!--                 <input type="hidden" name="candle_offset" value="{{addInt .CandleOffset 10}}"> -->
+            <!--                 <button type="submit" class="btn btn-sm btn-info" {{if ge .CandleOffset (subInt .TotalCandleCount 1)}}disabled{{end}}> -->
+            <!--                     &lt; Back -->
+            <!--                 </button> -->
+            <!--             </form> -->
+            <!---->
+            <!--             <span class="badge bg-secondary"> -->
+            <!--                 Viewing: {{len .Candles}} / {{.TotalCandleCount}} -->
+            <!--             </span> -->
+            <!---->
+            <!--             <form action="/finance" method="GET" class="mb-0"> -->
+            <!--                 <input type="hidden" name="selected_index" value="{{.SelectedIndex}}"> -->
+            <!--                 <input type="hidden" name="product_index" value="{{.ProductIndex}}"> -->
+            <!--                 <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}"> -->
+            <!--                 <input type="hidden" name="candle_offset" value="{{subInt .CandleOffset 10}}"> -->
+            <!--                 <button type="submit" class="btn btn-sm btn-info" {{if le .CandleOffset 0}}disabled{{end}}> -->
+            <!--                     Forward &gt; -->
+            <!--                 </button> -->
+            <!--             </form> -->
+            <!--         </div> -->
+            <!--     </div> -->
+            <!-- </div> -->
           <!-- <div class="d-flex">
             <form action="">
               <button class="btn btn-sm btn-danger"><</button>

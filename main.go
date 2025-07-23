@@ -122,7 +122,9 @@ func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, fi
 		},
 		"largeArcFlag": largeArcFlag,
 		"add":          func(a, b float64) float64 { return a + b },
+		"addInt":       func(a, b int) int { return a + b },
 		"sub":          func(a, b float64) float64 { return a - b },
+		"subInt":       func(a, b int) int { return a - b },
 		"mul":          func(a, b float64) float64 { return a * b },
 		"div":          func(a, b float64) float64 { return a / b },
 		"cos":          math.Cos,
@@ -147,6 +149,8 @@ func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, fi
 			}
 			return false // Default case if types are unsupported
 		},
+		"ge": func(a, b int) bool { return a >= b },
+		"le": func(a, b int) bool { return a <= b },
 	}
 
 	tmpl, err := template.New(baseTmpl).Funcs(funcMap).ParseFiles(files...)
@@ -662,13 +666,41 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
 	}
 
-	// Candles
-	var candles []model.Candle
+	candleOffset, _ := strconv.Atoi(r.URL.Query().Get("candle_offset"))
+	if candleOffset < 0 {
+		candleOffset = 0
+	}
+
+	var allCandles []model.Candle
 
 	if selectedProduct.ProductID != "" && selectedTimeframe.TF != "" {
-		candles, err = api.GetCandles(strings.Replace(selectedProduct.ProductID, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
+		allCandles, err = api.GetCandles(strings.Replace(selectedProduct.ProductID, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
 		if err != nil {
 			log.Printf("Error fetching candles: %v", err)
+		}
+	}
+
+	if candleOffset >= len(allCandles) && len(allCandles) > 0 {
+		candleOffset = len(allCandles) - 1
+	}
+
+	var displayCandles []model.Candle
+	if len(allCandles) > 0 {
+		endIndex := len(allCandles) - candleOffset
+		if endIndex > 0 {
+			displayCandles = allCandles[:endIndex]
+		}
+	}
+
+	var trendlines []model.Trendline
+	var trendZilla []model.Trendline
+	if len(displayCandles) > 0 {
+		trendlines, err = makeAPITrendlines(displayCandles)
+		if err != nil {
+			log.Printf("Error making API trendlines: %v", err)
+		}
+		if len(trendlines) > 0 {
+			trendZilla = buildTrendlines(trendlines, 0)
 		}
 	}
 
@@ -691,11 +723,6 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Exchange", selectedExchange.Name)
 	log.Printf("Asset: %s", selectedProduct.ProductID)
 
-	trendlines, err := makeAPITrendlines(candles)
-
-	log.Println("Building Trends\n")
-	trendZilla := buildTrendlines(trendlines, 0)
-
 	data := struct {
 		Exchanges          []model.Exchange
 		SelectedExchange   model.Exchange
@@ -711,6 +738,8 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		Colors             []string
 		TotalValue         float64
 		PortfolioData      []PortfolioItem
+		CandleOffset       int
+		TotalCandleCount   int
 	}{
 		Exchanges:          exchanges,
 		SelectedExchange:   selectedExchange,
@@ -722,10 +751,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		FilteredTrendlines: FilteredTrendlines,
 		BaseTrends:         trendlines,
 		Trendlines:         trendZilla,
-		Candles:            candles,
+		Candles:            displayCandles,
 		Colors:             colors,
 		TotalValue:         totalValue,
 		PortfolioData:      preparePortfolioData(selectedExchange.Portfolio),
+		CandleOffset:       candleOffset,
+		TotalCandleCount:   len(allCandles),
 	}
 
 	renderTemplate(w, "base.html", data,
@@ -738,16 +769,15 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 // MakeTrendlines generates trendlines based on the given candles.
 func makeTrendlines(candles []model.Candle) ([]model.Trendline, error) {
-	var trendlines []model.Trendline
 
 	// Return empty slice if no candles are provided
 	if len(candles) == 0 {
-		return trendlines, fmt.Errorf("No candles given to makeTrendlines")
+		return []model.Trendline{}, nil
 	}
 
-	// for i, j := 0, len(candles)-1; i < j; i, j = i+1, j-1 {
-	// 	candles[i], candles[j] = candles[j], candles[i]
-	// }
+	var trendlines []model.Trendline
+	var current = model.Trendline{}
+	sliced_candles := candles
 
 	counter := 0
 	// startT := time.Now()
@@ -765,14 +795,14 @@ func makeTrendlines(candles []model.Candle) ([]model.Trendline, error) {
 		TrendStart: candles[0].Close,
 		Inv:        candles[0].Close,
 	}
-	current := model.Trendline{
+	current = model.Trendline{
 		Start:     start,
 		End:       end,
 		Direction: "up",
 		Status:    "current",
 	}
 
-	for i, candle := range candles {
+	for i, candle := range sliced_candles {
 		// log.Println("Processing candle time: ", candle.Timestamp)
 		// Condition 1: Higher high in uptrend (continuation)
 		if candle.High > current.End.Point && current.Direction == "up" {
