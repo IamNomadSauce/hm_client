@@ -320,6 +320,8 @@ function trendLineHoverHandler(e, chartState) {
             });
         }
     });
+
+
     const threshold = 5
     if (minDistance < threshold) {
         showTrendlineTooltip(closestTrend, mouseX, mouseY)
