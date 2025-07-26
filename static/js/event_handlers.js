@@ -325,7 +325,7 @@ function trendLineHoverHandler(e, chartState) {
     const threshold = 5
     if (minDistance < threshold) {
         showTrendlineTooltip(closestTrend, mouseX, mouseY)
-        console.log("Trendline Hovered", closestTrend)
+        // console.log("Trendline Hovered", closestTrend)
         // return true
         return closestTrend
     } else {

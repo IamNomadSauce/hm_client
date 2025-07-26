@@ -908,23 +908,9 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 							Inv:        candle.High,
 							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
 						},
-						Status:    "done",
-						Direction: "down",
-					}
-					trendlines = append(trendlines, current)
-
-					current = model.Trendline{
-						Start: current.End,
-						End: model.Point{
-							Time:       candle.Timestamp,
-							Point:      candle.High,
-							Inv:        candle.Low,
-							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-						},
 						Status:    "current",
 						Direction: "down",
 					}
-
 				} else { // Red Candle
 					current.End = model.Point{
 						Time:       candle.Timestamp,
@@ -958,6 +944,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 					Inv:        candle.Low,
 					TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
 				}
+				current.Note = ""
 				counter = 0
 				continue
 			}

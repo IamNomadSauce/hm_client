@@ -52,11 +52,12 @@ type Exchange struct {
 type Trendline struct {
 	Start      Point       `json:"start"`
 	End        Point       `json:"end"`
-	Direction  string      `json:"type"`   // "up" or "down"
-	Status     string      `json:"status"` // "current" or "done"
+	Direction  string      `json:"type"`
+	Status     string      `json:"status"`
 	Label      string      `json:"label"`
 	Color      string      `json:"color"`
 	TrendLines []Trendline `json:"trends"`
+	Note       string      `json:"note"`
 }
 
 // Point represents a point in the trendline with time, price, inverse price, and trend start price.
