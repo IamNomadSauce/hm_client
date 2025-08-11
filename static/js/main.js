@@ -1,4 +1,4 @@
-console.log("Main Function")
+// console.log("Main Function")
 
 
 console.log("selected product", window.selectedProduct.product_id)
@@ -33,11 +33,11 @@ try {
     const triggers = (window.exchange.Triggers || []);
     console.log("Triggers", triggers)
     triggers.forEach(element => {
-        console.log(element)
+        console.log("Trigger:", element)
     });
     console.log("Selected Product", window.selectedProduct.product_id)
     
-    window.current_triggers = (window.exchange.Triggers || []).filter(t => filter(p => p.product_id == window.selectedProduct.product_id)) || []
+    // window.current_triggers = (window.exchange.Triggers || []).filter(t => filter(p => p.product_id == window.selectedProduct.product_id)) || []
     console.log("Current Triggers1", window.current_triggers)
 } catch (error) {
     console.log(error)
@@ -48,7 +48,7 @@ console.log("Current Triggers2", window.current_triggers)
 // drawCandlestickChart(stockData, start, end);
 
 function init() {
-    console.log("main.js INIT")
+    // console.log("main.js INIT")
     drawCandlestickChart(window.stockData, window.start, window.end)
     setupEventListeners()
     connectToBackend()

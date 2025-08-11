@@ -126,9 +126,19 @@
                             <input type="hidden" name="selected_index" value="{{.SelectedIndex}}">
                             <input type="hidden" name="product_index" value="{{.ProductIndex}}">
                             <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}">
+                            <input type="hidden" name="candle_offset" value="{{addInt .CandleOffset 50}}">
+                            <button type="submit" class="btn btn-sm btn-info" {{if ge .CandleOffset (subInt .TotalCandleCount 1)}}disabled{{end}}>
+                                &lt; 50
+                            </button>
+                        </form>
+
+                        <form action="/finance" method="GET" class="mb-0">
+                            <input type="hidden" name="selected_index" value="{{.SelectedIndex}}">
+                            <input type="hidden" name="product_index" value="{{.ProductIndex}}">
+                            <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}">
                             <input type="hidden" name="candle_offset" value="{{addInt .CandleOffset 10}}">
                             <button type="submit" class="btn btn-sm btn-info" {{if ge .CandleOffset (subInt .TotalCandleCount 1)}}disabled{{end}}>
-                                &lt; Back 10
+                                &lt; 10
                             </button>
                         </form>
 
@@ -139,7 +149,7 @@
                             <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}">
                             <input type="hidden" name="candle_offset" value="{{addInt .CandleOffset 1}}">
                             <button type="submit" class="btn btn-sm btn-info" {{if ge .CandleOffset (subInt .TotalCandleCount 1)}}disabled{{end}}>
-                                &lt; Back 1
+                                &lt; 1
                             </button>
                         </form>
 
@@ -154,7 +164,7 @@
                             <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}">
                             <input type="hidden" name="candle_offset" value="{{subInt .CandleOffset 1}}">
                             <button type="submit" class="btn btn-sm btn-info" {{if le .CandleOffset 0}}disabled{{end}}>
-                                Forward 1 &gt;
+                                1 &gt;
                             </button>
                         </form>
 
@@ -164,7 +174,17 @@
                             <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}">
                             <input type="hidden" name="candle_offset" value="{{subInt .CandleOffset 10}}">
                             <button type="submit" class="btn btn-sm btn-info" {{if le .CandleOffset 0}}disabled{{end}}>
-                                Forward 10 &gt;
+                                10 &gt;
+                            </button>
+                        </form>
+
+                        <form action="/finance" method="GET" class="mb-0">
+                            <input type="hidden" name="selected_index" value="{{.SelectedIndex}}">
+                            <input type="hidden" name="product_index" value="{{.ProductIndex}}">
+                            <input type="hidden" name="timeframe_index" value="{{.TimeframeIndex}}">
+                            <input type="hidden" name="candle_offset" value="{{subInt .CandleOffset 50}}">
+                            <button type="submit" class="btn btn-sm btn-info" {{if le .CandleOffset 0}}disabled{{end}}>
+                                50 &gt;
                             </button>
                         </form>
                     </div>

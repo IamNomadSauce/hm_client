@@ -115,7 +115,7 @@ function createTradeSetupSidebar() {
     window.tradeSetupData = null;
 
     function updateSidebarContent() {
-        console.log("Update Sidebar Content");
+        // console.log("Update Sidebar Content");
         const trigger = window.currentTradeSetup?.trigger;
         const entryLine = draw_lines.find(l => l.type === 'entry');
         const stopLine = draw_lines.find(l => l.type === 'stop');
@@ -292,7 +292,7 @@ function createTradeSetupSidebar() {
         chartContainer.style.marginRight = '0';
     }
 
-    console.log("Initial Sidebar Render");
+    // console.log("Initial Sidebar Render");
     updateSidebarContent();
 
     return () => {

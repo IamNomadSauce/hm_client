@@ -11,7 +11,7 @@ current_triggers = []
 
 
 window.setupEventListeners = function () {
-    console.log("Setup Event Listeners")
+    // console.log("Setup Event Listeners")
     canvas.addEventListener('mousemove', function (event) {
         // console.log("MOUSE MOVE INIT")
         const rect = canvas.getBoundingClientRect();
@@ -39,7 +39,7 @@ window.setupEventListeners = function () {
         mouseX = event.clientX - rect.left;
         mouseY = event.clientY - rect.top;
 
-        console.log("Current Tool:", window.currentTool)
+        // console.log("Current Tool:", window.currentTool)
         if (window.currentTool) {
             if (window.currentTool === 'line' || window.currentTool === 'trigger') {
                 chartState = drawCandlestickChart(window.stockData, window.start, window.end);
@@ -153,7 +153,7 @@ window.triggerClickHandler = function (e, chartState) {
     // Remove any existing menu
     document.querySelectorAll('.trigger-menu').forEach(el => el.remove());
 
-    console.log("Selected Trigger", selectedTrigger)
+    // console.log("Selected Trigger", selectedTrigger)
 
     // If a trigger was clicked, show the menu
     if (selectedTrigger) {
@@ -658,7 +658,7 @@ canvas.addEventListener('click', function (event) {
 	if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
         window.trendlinePath.push(window.hoveredTrendline)
         window.currentTrendlines = window.hoveredTrendline.trends
-        console.log("hoveredTrendline.trends", window.hoveredTrendline.trends)
+        // console.log("hoveredTrendline.trends", window.hoveredTrendline.trends)
         window.drawCandlestickChart(window.stockData, window.start, window.end)
 		// clickTrendline(event, chartState)
 	} else if (!window.hoveredTrendline && window.trendlinePath.length > 0) {
@@ -930,9 +930,9 @@ document.querySelectorAll('.line-menu-item').forEach(item => {
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    console.log("DOM Loaded");
+    // console.log("DOM Loaded");
     const trendlineButtons = document.querySelectorAll('.trendline-btn');
-    console.log("Trendline Buttons", trendlineButtons);
+    // console.log("Trendline Buttons", trendlineButtons);
     trendlineButtons.forEach(button => {
         button.addEventListener('click', function () {
             console.log("Trendline Dataset", this.dataset);

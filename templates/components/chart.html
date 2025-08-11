@@ -44,36 +44,35 @@
 <script src="/static/js/data_management.js"></script>
 
 <script>
-  
+    window.start = Math.max(0, window.end - 250);
+    window.end = window.stockData.length;
+    window.zoomFactor = 10;
+    window.draw_lines = [];
+    window.currentTool = null;
+    window.isDragging = false;
+    window.currentRiskPercentage = 0.5;
+    window.base_trends_toggle = false
+    window.meta_trends_toggle = true
 
-  window.start = Math.max(0, window.end - 250);
-  window.end = window.stockData.length;
-  window.zoomFactor = 10;
-  window.draw_lines = [];
-  window.currentTool = null;
-  window.isDragging = false;
-  window.currentRiskPercentage = 0.5;
-  window.base_trends_toggle = false
-  window.meta_trends_toggle = true
-
-  window.current_fills = window.exchange.Fills.filter(p => p.product_id === window.selectedProduct.product_id);
-  window.current_orders = window.exchange.Orders.filter(p => p.product_id === window.selectedProduct.product_id);
-  window.current_trades = window.exchange.Trades.filter(t => t.product_id === window.selectedProduct.product_id);
-  // window.current_triggers = window.exchange.Triggers.filter(t => t.product_id === window.selectedProduct.product_id) || [];
-  window.current_triggers = (window.exchange && window.exchange.Triggers ? window.exchange.Triggers : []).filter(t => t.product_id === window.selectedProduct.product_id) || [];
-
-window.drawCandlestickChart(window.stockData, window.start, window.end);
-
-function init() {
-  console.log("chart.html INIT")
+    window.current_fills = window.exchange.Fills.filter(p => p.product_id === window.selectedProduct.product_id);
+    window.current_orders = window.exchange.Orders.filter(p => p.product_id === window.selectedProduct.product_id);
+    window.current_trades = window.exchange.Trades.filter(t => t.product_id === window.selectedProduct.product_id);
+    // window.current_triggers = window.exchange.Triggers.filter(t => t.product_id === window.selectedProduct.product_id) || [];
+    console.log("Testing Exchange Triggers")
+    console.log("Exchange Triggers", window.exchanges.Triggers)
+    window.current_triggers = (window.exchange && window.exchange.Triggers ? window.exchange.Triggers : []).filter(t => t.product_id === window.selectedProduct.product_id) || [];
     window.drawCandlestickChart(window.stockData, window.start, window.end);
-    window.setupEventListeners();
-    window.connectToBackend();
-    window.updateSidebar = createTradeSetupSidebar();
-}
 
-document.addEventListener('DOMContentLoaded', init);
-window.addEventListener('resize', () => drawCandlestickChart(window.start, window.end));
+    function init() {
+        console.log("chart.html INIT")
+        window.drawCandlestickChart(window.stockData, window.start, window.end);
+        window.setupEventListeners();
+        window.connectToBackend();
+        window.updateSidebar = createTradeSetupSidebar();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('resize', () => drawCandlestickChart(window.start, window.end));
 
 </script>
 

@@ -386,7 +386,7 @@ func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Creating New Trigger: %v", trigger)
+	log.Printf("Creating New Trigger: %+v", trigger)
 
 	err := godotenv.Load()
 	if err != nil {
@@ -704,7 +704,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Println("\n------------------\nSelected Product:\n", selectedExchange.Name, selectedProduct, selectedTimeframe)
+	// fmt.Println("\n------------------\nSelected Product:\n", selectedExchange.Name, selectedProduct, selectedTimeframe)
 	// fmt.Println("Candles:", len(candles), "\n------------------------------\n")
 
 	colors := []string{
@@ -864,11 +864,13 @@ func makeTrendlines(candles []model.Candle) ([]model.Trendline, error) {
 }
 
 func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
+	if len(candles) == 0 {
+		return []model.Trendline{}, nil
+	}
+	log.Println("--- makeAPITrendlines Start ---")
 	trendlines := []model.Trendline{}
-
 	var current = model.Trendline{}
 	sliced_candles := candles
-
 	counter := 0
 
 	start := model.Point{
@@ -889,72 +891,24 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 		Direction: "up",
 		Status:    "current",
 	}
+	log.Printf("  [Init] First candle Low: %.2f, High: %.2f", candles[0].Low, candles[0].High)
+	log.Printf("  [Init] Current trend start: %.2f, end: %.2f", current.Start.Point, current.End.Point)
 
 	for index, candle := range sliced_candles {
-
 		if current.Direction == "up" {
-
-			// Higher High && Lower Low
-			if candle.High > current.End.Point && candle.Low < current.End.Inv {
-				if candle.Close > candle.Open { // Green Candle
-					current.Status = "done"
-					trendlines = append(trendlines, current)
-
-					current = model.Trendline{
-						Start: current.End,
-						End: model.Point{
-							Time:       candle.Timestamp,
-							Point:      candle.Low,
-							Inv:        candle.High,
-							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-						},
-						Status:    "current",
-						Direction: "down",
-					}
-				} else { // Red Candle
-					current.End = model.Point{
-						Time:       candle.Timestamp,
-						Point:      candle.High,
-						Inv:        candle.Low,
-						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-					}
-					current.Status = "done"
-					trendlines = append(trendlines, current)
-
-					current = model.Trendline{
-						Start: current.End,
-						End: model.Point{
-							Time:       candle.Timestamp,
-							Point:      candle.Low,
-							Inv:        candle.High,
-							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-						},
-						Direction: "down",
-						Status:    "current",
-					}
-				}
-				continue
-			}
-
-			// Higher High in uptrend  (continuation)
 			if candle.High > current.End.Point {
 				current.End = model.Point{
 					Time:       candle.Timestamp,
 					Point:      candle.High,
 					Inv:        candle.Low,
-					TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
+					TrendStart: math.Max(candle.Close, candle.Open),
 				}
-				current.Note = ""
 				counter = 0
-				continue
-			}
-
-			// Lower Low in uptrend (new trend)
-			if candle.Low < current.End.Inv || (index > 0 && candle.Low < candles[index-1].Low) {
-
+			} else if candle.Low < current.End.Inv || (index > 0 && candle.Low < candles[index-1].Low) {
 				counter++
-				if counter >= 0 { // Confirm reversal after 3 lower lows
+				if counter >= 1 {
 					current.Status = "done"
+					// log.Printf("  [Trend] Finalizing UP trend at index %d, end point %.2f", index, current.End.Point)
 					trendlines = append(trendlines, current)
 					current = model.Trendline{
 						Start: current.End,
@@ -962,67 +916,16 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 							Time:       candle.Timestamp,
 							Point:      candle.Low,
 							Inv:        candle.High,
-							TrendStart: math.Min(candle.Close, candle.Open), // (close > open) ? open : close
+							TrendStart: math.Min(candle.Close, candle.Open),
 						},
 						Direction: "down",
 						Status:    "current",
 					}
+					log.Printf("  [Trend] Starting DOWN trend at index %d, end point %.2f", index, current.End.Point)
 					counter = 0
 				}
-				continue
-
 			}
-
 		} else if current.Direction == "down" {
-
-			// Lower Low && Higher High in downtrend
-			if candle.Low < current.End.Point && candle.High > current.End.Inv {
-				if candle.Close > candle.Open { // Green Candle
-					current.End = model.Point{
-						Time:       candle.Timestamp,
-						Point:      candle.Low,
-						Inv:        candle.High,
-						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-					}
-					current.Status = "done"
-					trendlines = append(trendlines, current)
-					current = model.Trendline{
-						Start: current.End,
-						End: model.Point{
-							Time:       candle.Timestamp,
-							Point:      candle.High,
-							Inv:        candle.Low,
-							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-						},
-						Status:    "current",
-						Direction: "up",
-					}
-				} else { // Red Candle
-					current.End = model.Point{
-						Time:       candle.Timestamp,
-						Point:      candle.Low,
-						Inv:        candle.High,
-						TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-					}
-					current.Status = "done"
-					trendlines = append(trendlines, current)
-
-					current = model.Trendline{
-						Start: current.End,
-						End: model.Point{
-							Time:       candle.Timestamp,
-							Point:      candle.High,
-							Inv:        candle.Low,
-							TrendStart: math.Max(candle.Close, candle.Open), // (close > open) ? close : open
-						},
-						Direction: "up",
-						Status:    "current",
-					}
-				}
-				continue
-			}
-
-			// Lower Low in downtrend  (continuation)
 			if candle.Low < current.End.Point {
 				current.End = model.Point{
 					Time:       candle.Timestamp,
@@ -1031,16 +934,11 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 					TrendStart: math.Min(candle.Close, candle.Open),
 				}
 				counter = 0
-
-				continue
-
-			}
-
-			// Higher High in downtrend  (new trend)
-			if candle.High > current.End.Inv || (index > 0 && candle.High > candles[index-1].High) {
+			} else if candle.High > current.End.Inv || (index > 0 && candle.High > candles[index-1].High) {
 				counter++
-				if counter >= 0 { // Confirm reversal after 3 higher highs
+				if counter >= 1 {
 					current.Status = "done"
+					log.Printf("  [Trend] Finalizing DOWN trend at index %d, end point %.2f", index, current.End.Point)
 					trendlines = append(trendlines, current)
 					current = model.Trendline{
 						Start: current.End,
@@ -1053,65 +951,14 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 						Direction: "up",
 						Status:    "current",
 					}
+					log.Printf("  [Trend] Starting UP trend at index %d, end point %.2f", index, current.End.Point)
 					counter = 0
 				}
-
-				continue
-
 			}
-
 		}
-		// if current.StartTime == current.EndTime {
-		// 	current.StartTime = current.StartTime - 1
 	}
-
 	trendlines = append(trendlines, current)
-
-	// After generating trendlines, create a windowed slice of trendlines
-	// windowedTrends := windowArray(trendlines, 3)
-
-	// // Iterate over the windowed trendlines to assign labels and colors
-	// for i, window := range windowedTrends {
-	// 	if len(window) == 3 {
-	// 		a, b, c := window[0], window[1], window[2]
-
-	// 		// Determine the label and color based on the trend
-	// 		if c.End.Point < b.End.Point && c.End.Point > a.End.Point {
-	// 			c.End.Label = "HL"
-	// 			c.Color = "green"
-	// 		} else if c.End.Point < a.End.Point && b.End.Point > a.End.Point {
-	// 			c.End.Label = "LL"
-	// 			c.Color = "red"
-	// 		} else if c.End.Point > b.End.Point && c.End.Point > a.End.Point {
-	// 			c.End.Label = "HH"
-	// 			c.Color = "green"
-	// 		} else if c.End.Point < a.End.Point && b.End.Point < c.End.Point {
-	// 			c.End.Label = "LH"
-	// 			c.Color = "red"
-	// 		}
-	// 		fmt.Printf("%s", c.Label)
-
-	// 		//fmt.Printf("Trendline: %v %v\n", c.End.Time, c.Label)
-
-	// 		// Update the trendlines with the new labels and colors
-	// 		trendlines[i+2].End.Label = c.End.Label
-
-	// 		// // Seed the labels and colors for the first window
-	// 		// if i == 0 {
-	// 		// 	trendlines[i].Label = "L"
-	// 		// 	if a.End.Point > b.End.Point {
-	// 		// 		trendlines[i].Label = "H"
-	// 		// 	}
-	// 		// 	trendlines[i].Color = "white"
-	// 		// }
-	// 	}
-	// }
-
-	fmt.Printf("|%d| TRENDLINES\n", len(trendlines))
-	for _, trend := range trendlines {
-		fmt.Printf("%+v %s \n", trend.End.Label, trend.Color)
-	}
-
+	log.Printf("--- makeAPITrendlines End --- Returning %d trends.", len(trendlines))
 	return trendlines, nil
 }
 
