@@ -1249,6 +1249,7 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				temp_current.End = end
 				current = temp_current
 				current.L2H = current.End
+				current.L2G = current.Start
 				current.End.Color = "purple"
 				direction = "down"
 			}
@@ -1270,6 +1271,7 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				temp_current.End = end
 				current = temp_current
 				current.L2G = current.End
+				current.L2H = current.Start
 				current.End.Color = "green"
 				direction = "up"
 			}
