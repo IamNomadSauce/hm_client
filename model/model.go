@@ -58,6 +58,8 @@ type Trendline struct {
 	Color      string      `json:"color"`
 	TrendLines []Trendline `json:"trends"`
 	Note       string      `json:"note"`
+	L2H        Point       `json:"l2h"`
+	L2G        Point       `json:"l2g"`
 }
 
 // Point represents a point in the trendline with time, price, inverse price, and trend start price.

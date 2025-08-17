@@ -1,7 +1,7 @@
 
 function connectToBackend() {
     // console.log("Connect To Backend")
-    const backendURL = "http://192.168.1.17:31337";
+    const backendURL = "http://192.168.1.11:31337";
     // console.log("Connecting to SSE at:", backendURL);
 
     const eventSource = new EventSource(`${backendURL}/trigger/stream`);
