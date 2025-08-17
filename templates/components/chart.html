@@ -57,6 +57,7 @@
     window.current_fills = window.exchange.Fills.filter(p => p.product_id === window.selectedProduct.product_id);
     window.current_orders = window.exchange.Orders.filter(p => p.product_id === window.selectedProduct.product_id);
     window.current_trades = window.exchange.Trades.filter(t => t.product_id === window.selectedProduct.product_id);
+    window.current_trend = null
     // window.current_triggers = window.exchange.Triggers.filter(t => t.product_id === window.selectedProduct.product_id) || [];
     console.log("Testing Exchange Triggers")
     console.log("Exchange Triggers", window.exchanges.Triggers)

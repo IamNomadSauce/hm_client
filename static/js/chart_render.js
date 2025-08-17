@@ -108,6 +108,47 @@ window.drawCandlestickChart = function (data, start, end) {
     // Draw trade groups
     tradeGroups = {};
 
+    if (window.current_trend) {
+        trend = window.current_trend
+        console.log("Render current_trend", trend)
+
+        const l2hY = height - margin - ((trend.l2h.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(margin, l2hY);
+        ctx.lineTo(width - margin, l2hY);
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#b87100';
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const l2gY = height - margin - ((trend.l2g.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(margin, l2gY);
+        ctx.lineTo(width - margin, l2gY);
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#b87100';
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const start_inv_Y = height - margin - ((trend.start.inv - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(margin, start_inv_Y);
+        ctx.lineTo(width - margin, start_inv_Y);
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#b87100';
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const end_inv_Y = height - margin - ((trend.end.inv - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(margin, end_inv_Y);
+        ctx.lineTo(width - margin, end_inv_Y);
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#b87100';
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
     if (current_trades) {
         current_trades.forEach(trade => {
             if (!tradeGroups[trade.group_id]) {
@@ -185,8 +226,6 @@ window.drawCandlestickChart = function (data, start, end) {
             }
 
             const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-
-            // Draw the trigger line
             ctx.beginPath();
             ctx.moveTo(margin, triggerY);
             ctx.lineTo(width - margin, triggerY);

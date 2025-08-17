@@ -284,6 +284,9 @@ const pointHoverHandler = function (e, chartState) {
 };
 
 function trendLineHoverHandler(e, chartState) {
+    console.log("Trendline Hover Handler")
+    // console.log("ChartState:", chartState)
+
     const rect = canvas.getBoundingClientRect()
     const mouseX = e.clientX - rect.left
     const mouseY = e.clientY - rect.top
@@ -325,11 +328,12 @@ function trendLineHoverHandler(e, chartState) {
     const threshold = 5
     if (minDistance < threshold) {
         showTrendlineTooltip(closestTrend, mouseX, mouseY)
-        // console.log("Trendline Hovered", closestTrend)
-        // return true
+        console.log("Trendline Hovered", closestTrend)
+        window.current_trend = closestTrend
         return closestTrend
     } else {
         hideTrendlineTooltip()
+        window.current_trend = null
         // return false
         return null
     }
