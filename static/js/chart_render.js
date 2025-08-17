@@ -112,23 +112,25 @@ window.drawCandlestickChart = function (data, start, end) {
         trend = window.current_trend
         console.log("Render current_trend", trend)
 
-        const l2hY = height - margin - ((trend.l2h.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        ctx.beginPath();
-        ctx.moveTo(margin, l2hY);
-        ctx.lineTo(width - margin, l2hY);
-        ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = '#b87100';
-        ctx.stroke();
-        ctx.setLineDash([]);
+        // const l2hY = height - margin - ((trend.l2h.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        // ctx.beginPath();
+        // ctx.moveTo(margin, l2hY);
+        // ctx.lineTo(width - margin, l2hY);
+        // ctx.setLineDash([5, 5]);
+        // ctx.strokeStyle = '#b87100';
+        // ctx.stroke();
+        // ctx.setLineDash([]);
+        //
+        // const l2gY = height - margin - ((trend.l2g.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        // ctx.beginPath();
+        // ctx.moveTo(margin, l2gY);
+        // ctx.lineTo(width - margin, l2gY);
+        // ctx.setLineDash([5, 5]);
+        // ctx.strokeStyle = '#b87100';
+        // ctx.stroke();
+        // ctx.setLineDash([]);
 
-        const l2gY = height - margin - ((trend.l2g.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        ctx.beginPath();
-        ctx.moveTo(margin, l2gY);
-        ctx.lineTo(width - margin, l2gY);
-        ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = '#b87100';
-        ctx.stroke();
-        ctx.setLineDash([]);
+        // ------------- Range Lines
 
         const start_inv_Y = height - margin - ((trend.start.inv - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         ctx.beginPath();
@@ -138,7 +140,7 @@ window.drawCandlestickChart = function (data, start, end) {
         ctx.strokeStyle = '#b87100';
         ctx.stroke();
         ctx.setLineDash([]);
-
+        //
         const end_inv_Y = height - margin - ((trend.end.inv - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         ctx.beginPath();
         ctx.moveTo(margin, end_inv_Y);
@@ -147,6 +149,52 @@ window.drawCandlestickChart = function (data, start, end) {
         ctx.strokeStyle = '#b87100';
         ctx.stroke();
         ctx.setLineDash([]);
+        //
+        // const start_ts_Y = height - margin - ((trend.start.trendStart - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        // ctx.beginPath();
+        // ctx.moveTo(margin, start_ts_Y);
+        // ctx.lineTo(width - margin, start_ts_Y);
+        // ctx.setLineDash([5, 5]);
+        // ctx.strokeStyle = '#b87100';
+        // ctx.stroke();
+        // ctx.setLineDash([]);
+        //
+        // const end_ts_Y = height - margin - ((trend.end.trendStart - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        // ctx.beginPath();
+        // ctx.moveTo(margin, end_ts_Y);
+        // ctx.lineTo(width - margin, end_ts_Y);
+        // ctx.setLineDash([5, 5]);
+        // ctx.strokeStyle = '#b87100';
+        // ctx.stroke();
+        // ctx.setLineDash([]);
+        //
+
+
+
+        // ------------- Range Boxes
+        
+        const getY = (price) => height - margin - ((price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+        // --- Draw Start Box ---
+        const startPointY = getY(trend.start.point);
+        const startTrendStartY = getY(trend.start.trendStart);
+        const startBoxY = Math.min(startPointY, startTrendStartY);
+        const startBoxHeight = Math.abs(startPointY - startTrendStartY);
+
+        // Set the color for the start box (e.g., semi-transparent green)
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+        ctx.fillRect(margin, startBoxY, width - 2 * margin, startBoxHeight);
+
+        // --- Draw End Box ---
+        const endPointY = getY(trend.end.point);
+        const endTrendStartY = getY(trend.end.trendStart);
+        const endBoxY = Math.min(endPointY, endTrendStartY);
+        const endBoxHeight = Math.abs(endPointY - endTrendStartY);
+
+        // Set the color for the end box (e.g., semi-transparent red)
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+        ctx.fillRect(margin, endBoxY, width - 2 * margin, endBoxHeight);
+
     }
 
     if (current_trades) {
