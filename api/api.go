@@ -51,6 +51,9 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 			fmt.Println(asset.Asset)
 			fmt.Println(asset.Value)
 		}
+		// for _, order := range exchanges[exchange].Orders {
+		// 	log.Printf("GET_EXCHANGES_ORDER: %+v", order)
+		// }
 		fmt.Println("\n----------------------------\n")
 	}
 	// fmt.Println("Exchanges", exchanges)

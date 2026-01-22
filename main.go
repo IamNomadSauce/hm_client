@@ -645,6 +645,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	selectedExchange := exchanges[selectedIndex]
+	// log.Printf("Selected Exchange: Orders: %+v", selectedExchange.Orders)
 
 	productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
 	if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {
@@ -720,8 +721,12 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 
 	FilteredTrendlines := make(map[string][]model.Trendline)
 
-	log.Println("Exchange", selectedExchange.Name)
-	log.Printf("Asset: %s", selectedProduct.ProductID)
+	// log.Println("Exchange", selectedExchange.Name)
+	// log.Printf("Asset: %s", selectedProduct.ProductID)
+
+	// for _, order := range selectedExchange.Orders {
+	// 	log.Printf("ORDER: %+v", order)
+	// }
 
 	data := struct {
 		Exchanges          []model.Exchange
@@ -903,7 +908,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 				// --- UPDATED REVERSAL LOGIC ---
 				// Check for reversal: new high, new lower low, AND it's a red candle (Close < Open).
 				if candle.Low < current.End.Inv && candle.Close < candle.Open {
-					log.Printf("  [Reversal] UP->DOWN reversal on red candle at index %d. High: %.2f, Low: %.2f", index, candle.High, candle.Low)
+					// log.Printf("  [Reversal] UP->DOWN reversal on red candle at index %d. High: %.2f, Low: %.2f", index, candle.High, candle.Low)
 
 					// 1. Finalize the current uptrend at the new high.
 					current.End = model.Point{
@@ -958,7 +963,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 						Direction: "down",
 						Status:    "current",
 					}
-					log.Printf("  [Trend] Starting DOWN trend at index %d, end point %.2f", index, current.End.Point)
+					// log.Printf("  [Trend] Starting DOWN trend at index %d, end point %.2f", index, current.End.Point)
 					counter = 0
 				}
 			}
@@ -968,7 +973,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 				// --- UPDATED REVERSAL LOGIC ---
 				// Check for reversal: new low, new higher high, AND it's a green candle (Close > Open).
 				if candle.High > current.End.Inv && candle.Close > candle.Open {
-					log.Printf("  [Reversal] DOWN->UP reversal on green candle at index %d. Low: %.2f, High: %.2f", index, candle.Low, candle.High)
+					// log.Printf("  [Reversal] DOWN->UP reversal on green candle at index %d. Low: %.2f, High: %.2f", index, candle.Low, candle.High)
 
 					// 1. Finalize the current downtrend at the new low.
 					current.End = model.Point{
@@ -1011,7 +1016,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 				if counter >= 1 {
 					// Finalize the downtrend and start a new uptrend.
 					current.Status = "done"
-					log.Printf("  [Trend] Finalizing DOWN trend at index %d, end point %.2f", index, current.End.Point)
+					// log.Printf("  [Trend] Finalizing DOWN trend at index %d, end point %.2f", index, current.End.Point)
 					trendlines = append(trendlines, current)
 					current = model.Trendline{
 						Start: current.End,
@@ -1024,7 +1029,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 						Direction: "up",
 						Status:    "current",
 					}
-					log.Printf("  [Trend] Starting UP trend at index %d, end point %.2f", index, current.End.Point)
+					// log.Printf("  [Trend] Starting UP trend at index %d, end point %.2f", index, current.End.Point)
 					counter = 0
 				}
 			}
