@@ -159,8 +159,6 @@ func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, fi
 		return
 	}
 
-	// 2. Execute the template into a buffer to catch errors before writing to the response.
-	//    This prevents partial HTML pages from being sent if an error occurs during execution.
 	buf := new(bytes.Buffer)
 	err = tmpl.ExecuteTemplate(buf, baseTmpl, data)
 	if err != nil {
@@ -170,13 +168,12 @@ func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, fi
 	}
 
 
-	// 3. Set the content type and write the buffer to the http.ResponseWriter.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, err = buf.WriteTo(w)
 	if err != nil {
 		log.Printf("Error writing template to response: %v", err)
 	}
-	log.Println("Render Done")
+	// log.Println("Render Done")
 }
 
 func cancelOrderHandler(w http.ResponseWriter, r *http.Request) {
@@ -646,7 +643,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	selectedExchange := exchanges[selectedIndex]
-	// log.Printf("Selected Exchange: Orders: %+v", selectedExchange.Orders)
+	log.Printf("Selected Exchange: Orders: %+v", selectedExchange.Orders)
 
 	productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
 	if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {
@@ -695,7 +692,6 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 			displayCandles = allCandles[:endIndex]
 		}
 	}
-	log.Println("Post Candles")
 
 	var trendlines []model.Trendline
 	var trendZilla []model.Trendline

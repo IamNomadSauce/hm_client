@@ -303,10 +303,10 @@ func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
 
 	reverseCandles(candles)
 
-	log.Println("Get Candles Finished", len(candles))
-	for _, candle := range candles {
-		log.Println(candle, "\n")
-	}
+	// log.Println("Get Candles Finished", len(candles))
+	// for _, candle := range candles {
+	// 	log.Println(candle, "\n")
+	// }
 
 	return candles, nil
 }

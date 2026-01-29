@@ -94,6 +94,7 @@ window.drawCandlestickChart = function (data, start, end) {
     }
 
     // Draw orders
+	console.log("Current Orders", current_orders)
     if (current_orders) {
         current_orders.forEach(order => {
             const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
