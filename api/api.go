@@ -254,7 +254,7 @@ func AddToWatchlist(baseURL string, exchangeID int, productID string) error {
 }
 
 func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
-	// fmt.Println("Get Candles", product, timeframe, exchange)
+	fmt.Println("Get Candles", product, timeframe, exchange)
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Error loading .env file:", err)
@@ -302,6 +302,11 @@ func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
 	// fmt.Println("\n-------------------------------------\n", candles)
 
 	reverseCandles(candles)
+
+	log.Println("Get Candles Finished", len(candles))
+	for _, candle := range candles {
+		log.Println(candle, "\n")
+	}
 
 	return candles, nil
 }

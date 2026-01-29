@@ -58,7 +58,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading response body: %v", err)
 	}
-	fmt.Println("Test")
 
 	if resp.StatusCode != http.StatusOK {
 		log.Fatalf("Unexpected status code: %d", resp.StatusCode, string(body))
@@ -170,12 +169,14 @@ func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, fi
 		return
 	}
 
+
 	// 3. Set the content type and write the buffer to the http.ResponseWriter.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, err = buf.WriteTo(w)
 	if err != nil {
 		log.Printf("Error writing template to response: %v", err)
 	}
+	log.Println("Render Done")
 }
 
 func cancelOrderHandler(w http.ResponseWriter, r *http.Request) {
@@ -672,6 +673,8 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		candleOffset = 0
 	}
 
+	log.Println("Pre Candles")
+
 	var allCandles []model.Candle
 
 	if selectedProduct.ProductID != "" && selectedTimeframe.TF != "" {
@@ -692,6 +695,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 			displayCandles = allCandles[:endIndex]
 		}
 	}
+	log.Println("Post Candles")
 
 	var trendlines []model.Trendline
 	var trendZilla []model.Trendline
@@ -763,6 +767,8 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		CandleOffset:       candleOffset,
 		TotalCandleCount:   len(allCandles),
 	}
+
+	log.Println("Pre-Render Template")
 
 	renderTemplate(w, "base.html", data,
 		"templates/base.html",
@@ -1352,8 +1358,10 @@ func preparePortfolioData(portfolio []model.Asset) []PortfolioItem {
 		}
 
 		items = append(items, item)
-		log.Println(item.Asset, item.Percentage, item.StartAngle, item.EndAngle)
+		log.Println("Test", item.Asset, item.Percentage, item.StartAngle, item.EndAngle)
 	}
+
+	log.Println("Portfolio Done")
 
 	return items
 }
