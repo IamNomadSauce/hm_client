@@ -32,7 +32,7 @@ window.updateChartState = function (ctx, width, height, margin, minPrice, maxPri
 }
 
 window.drawCandlestickChart = function (data, start, end) {
-    console.log("DrawCandlestickChart\n", data, start, end)
+    // console.log("DrawCandlestickChart\n", data, start, end)
     // console.log(data, start, end)
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
@@ -78,13 +78,24 @@ window.drawCandlestickChart = function (data, start, end) {
     });
 
     // Draw fills
+    // console.log("Current Fills:", current_fills)
     if (current_fills) {
         current_fills.forEach(fill => {
-            const fillTime = new Date(fill.time).getTime() / 1000;
+	    let fillTime;
+
+	    if (typeof fill.time === 'string' && fill.time.includes('-')) {
+		    // Looks like ISO / date string
+		fillTime = new Date(fill.time).getTime() / 1000;
+	    } else {
+		    // Assume it's unix timestamp in seconds (number or numeric string)
+	    const timestamp = Number(fill.time);
+	   	 fillTime = Number.isFinite(timestamp) ? timestamp : NaN;
+	    }
             const firstCandleTime = visibleData[0].Timestamp;
             const timeRange = visibleData[visibleData.length - 1].Timestamp - firstCandleTime;
             const xPosition = margin + ((fillTime - firstCandleTime) / timeRange) * (width - 2 * margin);
             const fillY = height - margin - ((fill.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+	    console.log("FILL:", fill.time, xPosition)
 
             ctx.beginPath();
             ctx.arc(xPosition, fillY, 4, 0, 2 * Math.PI);
@@ -94,7 +105,7 @@ window.drawCandlestickChart = function (data, start, end) {
     }
 
     // Draw orders
-	console.log("Current Orders", current_orders)
+	// console.log("Current Orders", current_orders)
     if (current_orders) {
         current_orders.forEach(order => {
             const orderY = height - margin - ((order.Price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
@@ -111,7 +122,7 @@ window.drawCandlestickChart = function (data, start, end) {
 
     if (window.current_trend) {
         trend = window.current_trend
-        console.log("Render current_trend", trend)
+        // console.log("Render current_trend", trend)
 
         // const l2hY = height - margin - ((trend.l2h.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         // ctx.beginPath();

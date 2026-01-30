@@ -54,13 +54,23 @@
     window.base_trends_toggle = false
     window.meta_trends_toggle = true
 
+    // console.log("ALL Orders:", window.exchange.Orders.ProductID)
+    // console.log("ALL Fills:", window.exchange.Fills)
+
+    // window.exchange.Fills.forEach(t => {
+    //  console.log("ASSET FILL", t.product_id, window.selectedProduct.product_id)
+    // })
+
     window.current_fills = window.exchange.Fills.filter(p => p.product_id === window.selectedProduct.product_id);
-    window.current_orders = window.exchange.Orders.filter(p => p.product_id === window.selectedProduct.product_id);
-    window.current_trades = window.exchange.Trades.filter(t => t.product_id === window.selectedProduct.product_id);
+    window.product_orders = window.exchange.Orders.filter(p => p.ProductID === window.selectedProduct.product_id);
+    window.current_orders = product_orders.filter(p => p.Status != "filled")
+    window.current_trades = window.exchange.Trades.filter(t => t.ProductID === window.selectedProduct.product_id);
     window.current_trend = null
+
+
     // window.current_triggers = window.exchange.Triggers.filter(t => t.product_id === window.selectedProduct.product_id) || [];
-    console.log("Testing Exchange Triggers")
-    console.log("Exchange Triggers", window.exchanges.Triggers)
+    // console.log("Testing Exchange Triggers")
+    // console.log("Exchange Triggers", window.exchanges.Triggers)
     window.current_triggers = (window.exchange && window.exchange.Triggers ? window.exchange.Triggers : []).filter(t => t.product_id === window.selectedProduct.product_id) || [];
     window.drawCandlestickChart(window.stockData, window.start, window.end);
 
