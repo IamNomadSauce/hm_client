@@ -621,7 +621,7 @@ function trendLineHoverHandler(e, chartState) {
 		showTrendlineTooltip(closestTrend, mouseX, mouseY);
 		window.current_trend = closestTrend;
 		window.hoveredTrendline = closestTrend;  // ← make sure this is set every time
-		console.log("Hovered trend set:", closestTrend.id || closestTrend, "has subtrends:", !!closestTrend.trends?.length);
+		// console.log("Hovered trend set:", closestTrend.id || closestTrend, "has subtrends:", !!closestTrend.trends?.length);
 		return closestTrend;
 	} else {
 		hideTrendlineTooltip();
@@ -857,38 +857,64 @@ canvas.addEventListener('mouseleave', function() {
 });
 
 canvas.addEventListener('click', function(event) {
-	// Capture current hover state BEFORE any redraw
-	const hoveredAtClick = window.hoveredTrendline;
+	const hoveredPointAtClick = window.hoveredPoint;
+	const hoveredTrendAtClick = window.hoveredTrendline;
 
-	// Get fresh chart state (needed for other handlers like fill/order/line)
 	const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
 
-	// Run other click handlers (they use fresh state)
 	window.triggerClickHandler(event, currentChartState);
 	window.lineClickHandler(event, currentChartState);
 	window.orderClickHandler(event, currentChartState);
 	window.fillClickHandler(event, currentChartState);
 
-	// Now handle trendline navigation using the captured hover (not the possibly cleared one)
-	if (hoveredAtClick && hoveredAtClick.trends && hoveredAtClick.trends.length > 0) {
-		console.log("Entering subtrends — pushing:", hoveredAtClick);
-		window.trendlinePath.push(hoveredAtClick);
-		window.currentTrendlines = hoveredAtClick.trends;
-		window.drawCandlestickChart(window.stockData, window.start, window.end);
-	} else if (!hoveredAtClick && window.trendlinePath.length > 0) {
-		console.log("Exiting subtrends — popping");
-		window.trendlinePath.pop();
-		window.currentTrendlines = window.trendlinePath.length > 0
-			? window.trendlinePath[window.trendlinePath.length - 1].trends
-			: window.trendlines;
-		window.drawCandlestickChart(window.stockData, window.start, window.end);
+	// ──────────────────────────────────────────────
+	// Point menu takes priority — no subtrend change
+	// ──────────────────────────────────────────────
+	if (hoveredPointAtClick) {
+		console.log("Point clicked → menu only");
+		showTrendlinePointMenu(hoveredPointAtClick, event.pageX, event.pageY);
+		return;
 	}
 
-	// Point menu (unchanged)
-	if (window.hoveredPoint) {
-		const mouseX = event.pageX;
-		const mouseY = event.pageY;
-		showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY);
+	// ──────────────────────────────────────────────
+	// Trendline navigation: keep parents + show children
+	// ──────────────────────────────────────────────
+	let needsRedraw = false;
+
+	if (hoveredTrendAtClick && hoveredTrendAtClick.trends && hoveredTrendAtClick.trends.length > 0) {
+		console.log("Drill into subtrends:", hoveredTrendAtClick);
+		window.trendlinePath.push(hoveredTrendAtClick);
+		needsRedraw = true;
+	} else if (!hoveredTrendAtClick && window.trendlinePath.length > 0) {
+		console.log("Go up one level");
+		window.trendlinePath.pop();
+		needsRedraw = true;
+	}
+
+	if (needsRedraw) {
+		// Build the FULL visible trendlines: all in the path + current level's children
+		let visibleTrends = [];
+
+		// Add all ancestors (parents) from the path
+		for (let i = 0; i < window.trendlinePath.length; i++) {
+			visibleTrends.push(window.trendlinePath[i]);
+		}
+
+		// Add the current level's subtrends (children of the last in path)
+		if (window.trendlinePath.length > 0) {
+			const current = window.trendlinePath[window.trendlinePath.length - 1];
+			if (current.trends && current.trends.length > 0) {
+				visibleTrends = visibleTrends.concat(current.trends);
+			}
+		} else {
+			// Root level: show all top-level trendlines
+			visibleTrends = window.trendlines || [];
+		}
+
+		// Set this as what should be rendered
+		window.currentTrendlines = visibleTrends;
+
+		window.drawCandlestickChart(window.stockData, window.start, window.end);
 	}
 });
 
