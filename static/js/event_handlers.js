@@ -130,6 +130,36 @@ function calculateLineY(price, chartState) {
 		(chartState.height - 2 * chartState.margin);
 }
 
+function getFillTimestamp(fill) {
+	let timeVal = fill.time;
+
+	// 1. If it's already a number → assume seconds (Alpaca native number)
+	if (typeof timeVal === 'number' && !isNaN(timeVal)) {
+		return timeVal;
+	}
+
+	// 2. If it's a string → try to parse it smartly
+	if (typeof timeVal === 'string') {
+		// Case A: string that looks like a number (e.g. "1711548148")
+		if (/^\d{10}$/.test(timeVal.trim())) {   // 10-digit Unix seconds
+			const num = Number(timeVal.trim());
+			if (!isNaN(num)) {
+				return num;
+			}
+		}
+
+		// Case B: ISO string (Coinbase style)
+		const dt = new Date(timeVal);
+		if (!isNaN(dt.getTime())) {
+			return Math.floor(dt.getTime() / 1000);
+		}
+	}
+
+	console.warn("[getFillTimestamp] could not parse time:", fill.time,
+		"typeof:", typeof fill.time);
+	return NaN;
+}
+
 window.lineClickHandler = function(e, chartState) {
 	if (e.type !== 'click') return;
 
@@ -145,7 +175,7 @@ window.lineClickHandler = function(e, chartState) {
 
 	draw_lines.forEach((line, i) => {
 		const lineY = calculateLineY(line.price, chartState);
-		if (isMouseNearLine(mouseY, lineY, 8)) {   // slightly smaller tolerance for click
+		if (isMouseNearLine(mouseY, lineY, 8)) {
 			selectedLine = line;
 			selectedIndex = i;
 		}
@@ -154,12 +184,12 @@ window.lineClickHandler = function(e, chartState) {
 	if (!selectedLine) return;
 
 	// We found one → show menu
-	window.activeLineIndex = selectedIndex;   // keep for actions if needed
+	window.activeLineIndex = selectedIndex;
 
 	const menu = document.createElement('div');
 	menu.className = 'line-menu';
 	menu.style.position = 'absolute';
-	menu.style.left = `${e.pageX - 120}px`;   // center under cursor a bit
+	menu.style.left = `${e.pageX - 120}px`;
 	menu.style.top = `${e.pageY - 8}px`;
 	menu.style.background = '#1e1e2e';
 	menu.style.color = '#e0e0ff';
@@ -238,7 +268,7 @@ window.orderClickHandler = function(e, chartState) {
 	const menu = document.createElement('div');
 	menu.className = 'order-menu';
 	menu.style.position = 'absolute';
-	menu.style.left = `${e.pageX - 140}px`;   // shift left so it doesn't cover cursor
+	menu.style.left = `${e.pageX - 140}px`;
 	menu.style.top = `${e.pageY - 10}px`;
 	menu.style.background = '#1e1e2e';
 	menu.style.color = '#e0e0ff';
@@ -320,7 +350,7 @@ window.triggerClickHandler = function(e, chartState) {
 
 	// console.log("Selected Trigger", selectedTrigger)
 
-	// If a trigger was clicked, show the menu
+
 	if (selectedTrigger) {
 		const menu = document.createElement('div');
 		menu.className = 'trigger-menu';
@@ -350,18 +380,119 @@ window.triggerClickHandler = function(e, chartState) {
 
 		document.body.appendChild(menu);
 
-		// Add a global click listener to close the menu when clicking outside
+
 		const closeMenuOnOutsideClick = (event) => {
 			if (!menu.contains(event.target) && !event.target.classList.contains('trigger-menu-item')) {
 				menu.remove();
 				document.removeEventListener('click', closeMenuOnOutsideClick);
 			}
 		};
-		// Delay to avoid immediate closure from the current click
+
 		setTimeout(() => {
 			document.addEventListener('click', closeMenuOnOutsideClick);
 		}, 0);
 	}
+};
+
+window.fillClickHandler = function(e, chartState) {
+	if (e.type !== 'click') return;
+
+	const rect = canvas.getBoundingClientRect();
+	const mouseX = e.clientX - rect.left;
+	const mouseY = e.clientY - rect.top;
+
+	document.querySelectorAll('.fill-menu').forEach(el => el.remove());
+
+	let selectedFill = null;
+	let minDistance = Infinity;
+
+	const firstCandleTime = window.stockData[window.start]?.Timestamp;
+	const lastCandleTime = window.stockData[window.end - 1]?.Timestamp;
+
+	if (!firstCandleTime || !lastCandleTime || lastCandleTime <= firstCandleTime) {
+		console.warn("[fillClick] invalid chart time bounds");
+		return;
+	}
+
+	const timeRange = lastCandleTime - firstCandleTime;
+
+	current_fills.forEach(fill => {
+		const fillTs = getFillTimestamp(fill);
+
+		if (isNaN(fillTs) || fillTs < firstCandleTime || fillTs > lastCandleTime) {
+			return;
+		}
+
+		const xPosition = chartState.margin +
+			((fillTs - firstCandleTime) / timeRange) *
+			(chartState.width - 2 * chartState.margin);
+
+		const fillY = chartState.height - chartState.margin -
+			((fill.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
+			(chartState.height - 2 * chartState.margin);
+
+		const distance = Math.sqrt(
+			Math.pow(xPosition - mouseX, 2) +
+			Math.pow(fillY - mouseY, 2)
+		);
+
+		if (distance < minDistance && distance <= 16) {  // increased slightly for reliability
+			minDistance = distance;
+			selectedFill = fill;
+		}
+	});
+
+	if (!selectedFill) return;
+
+	// Create menu
+	const menu = document.createElement('div');
+	menu.className = 'fill-menu';
+	menu.style.position = 'absolute';
+	menu.style.left = `${e.pageX - 130}px`;
+	menu.style.top = `${e.pageY - 10}px`;
+	menu.style.background = '#1e1e2e';
+	menu.style.color = '#e0e0ff';
+	menu.style.padding = '10px 14px';
+	menu.style.border = '1px solid #4a4a6a';
+	menu.style.borderRadius = '6px';
+	menu.style.boxShadow = '0 4px 16px rgba(0,0,0,0.6)';
+	menu.style.zIndex = '1500';
+	menu.style.minWidth = '240px';
+	menu.style.pointerEvents = 'auto';
+	menu.style.userSelect = 'none';
+
+	// Format time nicely
+	const fillDate = new Date(selectedFill.time).toLocaleString([], {
+		month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+	});
+
+	menu.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 10px; color: #a5d8ff;">
+            Fill Details
+        </div>
+        <div>Price: <strong>${selectedFill.price.toFixed(8)}</strong></div>
+        <div>Size: <strong>${selectedFill.size}</strong></div>
+        <div>Time: ${fillDate}</div>
+        ${selectedFill.side ? `<div>Side: <strong>${selectedFill.side}</strong></div>` : ''}
+        ${selectedFill.orderId ? `<div>Order ID: ${selectedFill.orderId.slice(-8)}</div>` : ''}
+        ${selectedFill.tradeId ? `<div>Trade/Fill ID: ${selectedFill.tradeId}</div>` : ''}
+        ${selectedFill.fee ? `<div>Fee: ${selectedFill.fee} ${selectedFill.feeCurrency || ''}</div>` : ''}
+        <hr style="border-color: #4a4a6a; margin: 10px 0;">
+        <div style="color: #9ca3af; font-size: 0.9em;">
+            Click outside to close
+        </div>
+    `;
+
+	document.body.appendChild(menu);
+
+	// Auto-close on outside click
+	const closeListener = (ev) => {
+		if (!menu.contains(ev.target)) {
+			menu.remove();
+			document.removeEventListener('click', closeListener);
+		}
+	};
+	setTimeout(() => document.addEventListener('click', closeListener), 0);
 };
 
 function distanceToLineSegment(px, py, x1, y1, x2, y2) {
@@ -385,35 +516,24 @@ function distanceToLineSegment(px, py, x1, y1, x2, y2) {
 }
 
 handleMouseMove = function(e, chartState, tradeGroups) {
-	fillHoverHandler(e, chartState);
-	orderHoverHandler(e, chartState);
-	tradeHoverHandler(e, chartState, tradeGroups);
+	const isFillHover = fillHoverHandler(e, chartState)
+	// console.log("Is Fill Hovered", isFillHover)
+	const isOrderHover = orderHoverHandler(e, chartState);
+	const isTradeHover = tradeHoverHandler(e, chartState, tradeGroups);
 	const isLineHover = lineHoverHandler(e, chartState);
 	const isTriggerHover = triggerHoverHandler(e, chartState);
 	const isPointHover = pointHoverHandler(e, chartState);
 	const hoveredTrend = trendLineHoverHandler(e, chartState)
 
-	const isOrderHover = orderHoverHandler(e, chartState);  // rename return value if needed
 
-	if (isOrderHover || isLineHover || isTriggerHover) {
+	if (isFillHover || isOrderHover || isTradeHover || isLineHover ||
+		isTriggerHover || isPointHover || hoveredTrend) {
 		canvas.style.cursor = 'pointer';
 	} else {
 		canvas.style.cursor = 'default';
-	}
-
-	if (isPointHover) {
-		canvas.style.cursor = 'pointer';
-	} else if (hoveredTrend) {
-		// console.log("Trend Hovered")
-		window.hoveredTrendline = hoveredTrend
-		canvas.style.cursor = 'pointer';
-	} else if (isLineHover || isTriggerHover) {
-		canvas.style.cursor = 'pointer';
-	} else {
 		hidePointTooltip();
 		hideTrendlineTooltip();
-		window.hoveredTrendline = null
-		canvas.style.cursor = 'default';
+		window.hoveredTrendline = null;
 	}
 };
 
@@ -513,27 +633,70 @@ function trendLineHoverHandler(e, chartState) {
 }
 
 const fillHoverHandler = function(e, chartState) {
+	if (!current_fills?.length) return false;
+	if (window.end <= window.start + 1) return false;
+
 	const rect = canvas.getBoundingClientRect();
 	const mouseX = e.clientX - rect.left;
 	const mouseY = e.clientY - rect.top;
 
-	current_fills.forEach(fill => {
-		const fillTime = new Date(fill.time).getTime() / 1000;
-		const firstCandleTime = window.stockData[start].Timestamp;
-		const timeRange = window.stockData[end - 1].Timestamp - firstCandleTime;
-		const xPosition = chartState.margin + ((fillTime - firstCandleTime) / timeRange) * (chartState.width - 2 * chartState.margin);
-		const fillY = chartState.height - chartState.margin - ((fill.price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
+	const firstTs = window.stockData[window.start]?.Timestamp;
+	const lastTs = window.stockData[window.end - 1]?.Timestamp;
 
-		const distance = Math.sqrt(Math.pow(xPosition - mouseX, 2) + Math.pow(fillY - mouseY, 2));
-		if (distance < 8) {
-			chartState.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-			chartState.ctx.fillRect(mouseX + 10, mouseY - 40, 120, 60);
-			chartState.ctx.fillStyle = 'white';
+	if (!firstTs || !lastTs || lastTs <= firstTs) {
+		// console.warn("[fillHover] invalid chart time bounds");
+		return false;
+	}
+
+	const timeRange = lastTs - firstTs;
+
+	let isNearAnyFill = false;
+
+	current_fills.forEach(fill => {
+		const fillTs = getFillTimestamp(fill);
+
+		if (isNaN(fillTs)) {
+			// Already warned inside getFillTimestamp
+			return;
+		}
+
+		if (fillTs < firstTs || fillTs > lastTs) {
+			// console.log(`[fill] skipped - outside range ${fillTs} vs [${firstTs}–${lastTs}]`);
+			return;
+		}
+
+		if (fill.price < chartState.minPrice || fill.price > chartState.maxPrice) {
+			return;
+		}
+
+		const x = chartState.margin +
+			((fillTs - firstTs) / timeRange) *
+			(chartState.width - 2 * chartState.margin);
+
+		const y = calculateLineY(fill.price, chartState);
+
+		const distance = Math.hypot(x - mouseX, y - mouseY);
+
+		if (distance < 16) {
+			// console.log(`→ HIT! dist ${distance.toFixed(2)} | fillTs ${fillTs} | price ${fill.price} | time ${fill.time}`);
+			isNearAnyFill = true;
+
+			chartState.ctx.save();
+			chartState.ctx.fillStyle = 'rgba(20, 25, 40, 0.92)';
+			chartState.ctx.fillRect(mouseX + 14, mouseY - 58, 160, 80);
+			chartState.ctx.fillStyle = '#a5d8ff';
+			chartState.ctx.font = 'bold 13px Arial';
+			chartState.ctx.fillText(`Fill @ ${fill.price.toFixed(8)}`, mouseX + 20, mouseY - 40);
 			chartState.ctx.font = '12px Arial';
-			chartState.ctx.fillText(`Fill Price: ${fill.price}`, mouseX + 15, mouseY - 20);
-			chartState.ctx.fillText(`Size: ${fill.size}`, mouseX + 15, mouseY);
+			chartState.ctx.fillStyle = 'white';
+			chartState.ctx.fillText(`Size: ${fill.size}`, mouseX + 20, mouseY - 20);
+			chartState.ctx.fillText(`Click for details`, mouseX + 20, mouseY);
+			chartState.ctx.restore();
 		}
 	});
+
+	// console.log("[fillHover] final isNearAnyFill =", isNearAnyFill);
+	return isNearAnyFill;
 };
 
 const orderHoverHandler = function(e, chartState) {
@@ -558,65 +721,6 @@ const orderHoverHandler = function(e, chartState) {
 		canvas.style.cursor = 'default';
 	}
 };
-
-// const orderHoverHandler = function(e, chartState) {
-// 	const rect = canvas.getBoundingClientRect();
-// 	const mouseY = e.clientY - rect.top;
-//
-// 	current_orders.forEach(order => {
-// 		const orderY = chartState.height - chartState.margin -
-// 			((order.Price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-// 			(chartState.height - 2 * chartState.margin);
-//
-// 		if (Math.abs(mouseY - orderY) < 5) {
-// 			// Check if a menu already exists
-// 			let existingMenu = document.querySelector('.order-menu');
-//
-// 			if (!existingMenu) {
-// 				// Remove any existing menus
-// 				document.querySelectorAll('.order-menu').forEach(el => el.remove());
-//
-// 				// Create a new menu
-// 				const menu = document.createElement('div');
-// 				menu.className = 'order-menu';
-// 				menu.style.position = 'absolute';
-// 				menu.style.left = `${e.pageX - 150}px`;
-// 				menu.style.top = `${e.pageY - 10}px`;
-// 				menu.style.zIndex = '1000';
-// 				menu.style.pointerEvents = 'auto';
-//
-// 				// Populate menu content
-// 				menu.innerHTML = `
-//           <div><strong>Order Details</strong></div>
-//           <div>Side: ${order.Side}</div>
-//           <div>Product: ${order.ProductID}</div>
-//           <div>Price: ${order.Price}</div>
-//           <div>Size: ${order.Size}</div>
-//           <div>Status: ${order.Status}</div>
-//           <div class="cancel-button" onclick="cancelOrder('${order.OrderID}', ${order.XchID})">Cancel Order</div>
-//         `;
-//
-// 				// Add hover behavior to prevent premature removal
-// 				let isMouseOverMenu = false;
-//
-// 				// Keep track of hover state for the menu
-// 				menu.addEventListener('mouseenter', () => {
-// 					// console.log("Menu enter");
-// 					isMouseOverMenu = true;
-// 				});
-//
-// 				// Remove menu on mouse leave
-// 				menu.addEventListener('mouseleave', function() {
-// 					// console.log("Menu leave");
-// 					this.remove(); // Remove the menu when the mouse leaves it
-// 				});
-//
-// 				// Append the menu to the body
-// 				document.body.appendChild(menu);
-// 			}
-// 		}
-// 	});
-// };
 
 // Example minimal version
 const tradeHoverHandler = function(e, chartState, groups) {
@@ -646,71 +750,6 @@ const tradeHoverHandler = function(e, chartState, groups) {
 	}
 };
 
-// const tradeHoverHandler = function(e, chartState, groups) {
-// 	const rect = canvas.getBoundingClientRect();
-// 	const mouseY = e.clientY - rect.top;
-//
-// 	Object.values(groups).forEach(trades => {
-// 		trades.forEach(trade => {
-// 			const entryY = chartState.height - chartState.margin -
-// 				((trade.entry_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-// 				(chartState.height - 2 * chartState.margin);
-// 			const stopY = chartState.height - chartState.margin -
-// 				((trade.stop_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-// 				(chartState.height - 2 * chartState.margin);
-// 			const ptY = chartState.height - chartState.margin -
-// 				((trade.pt_price - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) *
-// 				(chartState.height - 2 * chartState.margin);
-//
-// 			if (isMouseNearLine(mouseY, entryY) || isMouseNearLine(mouseY, stopY) || isMouseNearLine(mouseY, ptY)) {
-// 				let existingMenu = document.querySelector('.trade-menu');
-//
-// 				if (!existingMenu) {
-// 					document.querySelectorAll('.trade-menu').forEach(el => el.remove());
-//
-// 					const menu = document.createElement('div');
-// 					menu.className = 'trade-menu';
-// 					menu.style.position = 'absolute';
-// 					menu.style.left = `${e.pageX - 150}px`;
-// 					menu.style.top = `${e.pageY - 10}px`;
-// 					menu.style.zIndex = '1000';
-// 					menu.style.pointerEvents = 'auto';
-//
-// 					const groupTrades = groups[trade.group_id];
-// 					menu.innerHTML = `
-//                 <div><strong>Trade Block ${trade.group_id}</strong></div>
-//                 <div>Side: ${trade.side}</div>
-//                 <div>Entry: ${trade.entry_price.toFixed(8)} (${trade.entry_status || 'PENDING'})</div>
-//                 <div>Stop: ${trade.stop_price.toFixed(8)} (${trade.stop_status || 'PENDING'})</div>
-//                 <div>Size: ${trade.size}</div>
-//                 <div>Created: ${new Date(trade.created_at).toLocaleString()}</div>
-//                 <div>Targets:</div>
-//                 ${groupTrades.map(t => {
-// 						const rr = ((Math.abs(t.pt_price - t.entry_price)) /
-// 							(Math.abs(t.entry_price - t.stop_price))).toFixed(2);
-// 						return `<div>PT${t.pt_amount}: ${t.pt_price.toFixed(8)} (${t.pt_status || 'PENDING'})
-//                             <span style="color: #ffff00"> R:R ${rr}</span></div>`;
-// 					}).join('')}
-//                 <div class="cancel-button" onclick="deleteTradeBlock('${trade.group_id}')">Delete Trade Block</div>
-//             `;
-//
-// 					menu.addEventListener('mouseenter', () => {
-// 						// console.log("Trade Menu enter");
-// 						menu.dataset.hovering = 'true';
-// 					});
-//
-// 					menu.addEventListener('mouseleave', function() {
-// 						// console.log("Trade Menu leave");
-// 						this.remove();
-// 					});
-//
-// 					document.body.appendChild(menu);
-// 				}
-// 			}
-// 		});
-// 	});
-// };
-
 const lineHoverHandler = function(e, chartState) {
 	const rect = canvas.getBoundingClientRect();
 	const mouseY = e.clientY - rect.top;
@@ -722,6 +761,7 @@ const lineHoverHandler = function(e, chartState) {
 		const lineY = calculateLineY(line.price, chartState); // ← helper, see below
 
 		if (isMouseNearLine(mouseY, lineY, 6)) {   // slightly larger hit area is ok for hover
+			console.log("lineHoverHandler: Hovered")
 			isNearAnyLine = true;
 			window.activeLineIndex = index;         // still track for click
 			canvas.style.cursor = 'pointer';
@@ -817,114 +857,38 @@ canvas.addEventListener('mouseleave', function() {
 	canvas.style.cursor = 'crosshair';
 });
 
-// canvas.addEventListener('click', function (event) {
-//     if (window.hoveredTrendlinePoint) {
-//         const mouseX = event.pageX;
-//         const mouseY = event.pageY;
-//         // Find the current point object since trendlinePoints is recalculated on redraw
-//         const point = trendlinePoints.find(p =>
-//             p.trendline === window.hoveredTrendlinePoint.trendline &&
-//             p.type === window.hoveredTrendlinePoint.type
-//         );
-//         if (point) {
-//             showTrendlinePointMenu(point, mouseX, mouseY);
-//         }
-//     }
-// });
-
 canvas.addEventListener('click', function(event) {
-	window.triggerClickHandler(event, chartState);
+	// Always use fresh chart state for accurate coordinates
+	const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
+
+	window.triggerClickHandler(event, currentChartState);
+	window.lineClickHandler(event, currentChartState);
+	window.orderClickHandler(event, currentChartState);
+	window.fillClickHandler(event, currentChartState);
+
+	// Your trendline navigation logic...
 	if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
-		window.trendlinePath.push(window.hoveredTrendline)
-		window.currentTrendlines = window.hoveredTrendline.trends
-		// console.log("hoveredTrendline.trends", window.hoveredTrendline.trends)
-		window.drawCandlestickChart(window.stockData, window.start, window.end)
-		// clickTrendline(event, chartState)
+		window.trendlinePath.push(window.hoveredTrendline);
+		window.currentTrendlines = window.hoveredTrendline.trends;
+		window.drawCandlestickChart(window.stockData, window.start, window.end);
 	} else if (!window.hoveredTrendline && window.trendlinePath.length > 0) {
-		window.trendlinePath.pop()
-		if (window.trendlinePath.length > 0) {
-			window.currentTrendlines = window.trendlinePath[window.trendlinePath.length - 1].trends
-		} else {
-			window.currentTrendlines = window.trendlines
-		}
-		window.drawCandlestickChart(window.stockData, window.start, window.end)
+		window.trendlinePath.pop();
+		window.currentTrendlines = window.trendlinePath.length > 0
+			? window.trendlinePath[window.trendlinePath.length - 1].trends
+			: window.trendlines;
+		window.drawCandlestickChart(window.stockData, window.start, window.end);
 	}
-
-	window.lineClickHandler(event, chartState)
-	window.orderClickHandler(event, chartState);
-
 
 	if (window.hoveredPoint) {
-		const mouseX = event.pageX
-		const mouseY = event.pageY
-		showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
-	} else {
-		// showPointMenu(event.x, event.y)
+		const mouseX = event.pageX;
+		const mouseY = event.pageY;
+		showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY);
 	}
-})
-
-// canvas.addEventListener('click', function (event) {
-//     console.log("Canvas Clicked 1")
-//     if (window.hoveredPoint) {
-//         const mouseX = event.pageX
-//         const mouseY = event.pageY
-//         showTrendlinePointMenu(window.hoveredPoint, mouseX, mouseY)
-//     }
-//     // showPointMenu(event.x, event.y)
-// })
+});
 
 function clickTrendline(event, chartState) {
 	console.log("Trend Click ChartState", chartState)
 }
-
-// canvas.addEventListener('click', function (event) {
-//     console.log("Line Clicked", draw_lines)
-//     if (activeLineIndex >= 0 && draw_lines[activeLineIndex]) {
-//         showLineMenu(event.pageX, event.pageY);
-//         console.log("Line clicked - Price:", draw_lines[activeLineIndex].price);
-//         console.log("Line type", draw_lines[activeLineIndex].type)
-//         if (draw_lines[activeLineIndex].type) {
-//             console.log("Line type:", draw_lines[activeLineIndex].type);
-//         }
-//     }
-// });
-//
-// canvas.addEventListener('click', function (event) {
-//     console.log("click2")
-//
-//     if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
-//         const rect = canvas.getBoundingClientRect();
-//         const mouseY = event.clientY - rect.top;
-//         const chartState = drawCandlestickChart(stockData, start, end);
-//         const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-//
-//         const line = { price: price };
-//         handleLineAction(window.currentTool, line);
-//         drawCandlestickChart(stockData, start, end);
-//         window.updateSidebar();
-//     }
-// });
-
-// canvas.addEventListener('click', function (event) {
-//     console.log("Click3")
-//     // Existing trigger menu handler
-//     window.triggerClickHandler(event, chartState);
-//
-//     // New trade tool handler
-//     if (window.currentTool && ['trigger', 'entry', 'stop', 'pt'].includes(window.currentTool)) {
-//         const rect = canvas.getBoundingClientRect();
-//         const mouseY = event.clientY - rect.top;
-//         const chartState = drawCandlestickChart(stockData, start, end);
-//         const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-//         const line = { price: price };
-//         handleLineAction(window.currentTool, line);
-//         drawCandlestickChart(stockData, start, end);
-//         window.updateSidebar();
-//     }
-// });
-
-
-
 
 canvas.addEventListener('mouseleave', function(event) {
 	// console.log("Canvas Leave");
@@ -978,26 +942,6 @@ document.getElementById('chartContainer').addEventListener('wheel', function(eve
 window.addEventListener('resize', function() {
 	chartState = drawCandlestickChart(window.stockData, start, end);
 });
-
-// document.getElementById('line').addEventListener('click', function () {
-//     console.log("Line Selected")
-//     if (window.currentTool == 'line' || window.currentTool == 'box') {
-//         window.currentTool = null
-//     }
-//     else {
-
-//         window.currentTool = 'line'
-//     }
-// })
-// document.getElementById('box').addEventListener('click', function () {
-//     if (window.currentTool == 'line' || window.currentTool == 'box') {
-//         window.currentTool = null
-//     }
-//     else {
-//         console.log("Box Selected")
-//         window.currentTool = 'box'
-//     }
-// })
 
 document.getElementById('base-trends').addEventListener('click', function() {
 	console.log("base-trends")
@@ -1152,16 +1096,6 @@ document.addEventListener('click', function(e) {
 		window.hideLineMenu();
 	}
 });
-
-// document.getElementById('trigger').addEventListener('click', function () {
-//     if (window.currentTool === 'trigger') {
-//         console.log("TRIGGER_DESELECTED")
-//         window.currentTool = null;
-//     } else {
-//         window.currentTool = 'trigger';
-//         console.log("TRIGGER_SELECTED")
-//     }
-// });
 
 window.showLineMenu = function(x, y) {
 	const menu = document.getElementById('lineMenu');
