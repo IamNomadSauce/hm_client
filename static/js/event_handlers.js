@@ -320,7 +320,6 @@ window.orderClickHandler = function(e, chartState) {
 };
 
 window.triggerClickHandler = function(e, chartState) {
-	// console.log("Trigger Click Handler")
 	if (e.type !== 'click') return; // Only handle click events
 
 	const rect = canvas.getBoundingClientRect();
@@ -331,8 +330,6 @@ window.triggerClickHandler = function(e, chartState) {
 	let selectedTrigger = null;
 	let triggerY = null;
 
-	console.log("Current Triggers", current_triggers)
-
 	// Find the closest trigger to the click
 	window.current_triggers.forEach(trigger => {
 		const y = chartState.height - chartState.margin -
@@ -340,6 +337,7 @@ window.triggerClickHandler = function(e, chartState) {
 			(chartState.height - 2 * chartState.margin);
 
 		if (isMouseNearLine(mouseY, y)) {
+			console.log("Trigger Click Handler")
 			selectedTrigger = trigger;
 			triggerY = y;
 		}
@@ -620,15 +618,16 @@ function trendLineHoverHandler(e, chartState) {
 
 	const threshold = 5
 	if (minDistance < threshold) {
-		showTrendlineTooltip(closestTrend, mouseX, mouseY)
-		// console.log("Trendline Hovered", closestTrend)
-		window.current_trend = closestTrend
-		return closestTrend
+		showTrendlineTooltip(closestTrend, mouseX, mouseY);
+		window.current_trend = closestTrend;
+		window.hoveredTrendline = closestTrend;  // ← make sure this is set every time
+		console.log("Hovered trend set:", closestTrend.id || closestTrend, "has subtrends:", !!closestTrend.trends?.length);
+		return closestTrend;
 	} else {
-		hideTrendlineTooltip()
-		window.current_trend = null
-		// return false
-		return null
+		hideTrendlineTooltip();
+		window.current_trend = null;
+		window.hoveredTrendline = null;  // ← explicit clear
+		return null;
 	}
 }
 
@@ -858,20 +857,26 @@ canvas.addEventListener('mouseleave', function() {
 });
 
 canvas.addEventListener('click', function(event) {
-	// Always use fresh chart state for accurate coordinates
+	// Capture current hover state BEFORE any redraw
+	const hoveredAtClick = window.hoveredTrendline;
+
+	// Get fresh chart state (needed for other handlers like fill/order/line)
 	const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
 
+	// Run other click handlers (they use fresh state)
 	window.triggerClickHandler(event, currentChartState);
 	window.lineClickHandler(event, currentChartState);
 	window.orderClickHandler(event, currentChartState);
 	window.fillClickHandler(event, currentChartState);
 
-	// Your trendline navigation logic...
-	if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
-		window.trendlinePath.push(window.hoveredTrendline);
-		window.currentTrendlines = window.hoveredTrendline.trends;
+	// Now handle trendline navigation using the captured hover (not the possibly cleared one)
+	if (hoveredAtClick && hoveredAtClick.trends && hoveredAtClick.trends.length > 0) {
+		console.log("Entering subtrends — pushing:", hoveredAtClick);
+		window.trendlinePath.push(hoveredAtClick);
+		window.currentTrendlines = hoveredAtClick.trends;
 		window.drawCandlestickChart(window.stockData, window.start, window.end);
-	} else if (!window.hoveredTrendline && window.trendlinePath.length > 0) {
+	} else if (!hoveredAtClick && window.trendlinePath.length > 0) {
+		console.log("Exiting subtrends — popping");
 		window.trendlinePath.pop();
 		window.currentTrendlines = window.trendlinePath.length > 0
 			? window.trendlinePath[window.trendlinePath.length - 1].trends
@@ -879,6 +884,7 @@ canvas.addEventListener('click', function(event) {
 		window.drawCandlestickChart(window.stockData, window.start, window.end);
 	}
 
+	// Point menu (unchanged)
 	if (window.hoveredPoint) {
 		const mouseX = event.pageX;
 		const mouseY = event.pageY;
