@@ -95,7 +95,7 @@ window.drawCandlestickChart = function (data, start, end) {
             const timeRange = visibleData[visibleData.length - 1].Timestamp - firstCandleTime;
             const xPosition = margin + ((fillTime - firstCandleTime) / timeRange) * (width - 2 * margin);
             const fillY = height - margin - ((fill.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-	    console.log("FILL:", fill.time, xPosition)
+	    // console.log("FILL:", fill.time, xPosition)
 
             ctx.beginPath();
             ctx.arc(xPosition, fillY, 4, 0, 2 * Math.PI);
