@@ -42,13 +42,13 @@ try {
 
 // ---------------
 
-console.log("Trigger Check")
+// console.log("Trigger Check")
 
 try {
     const triggers = (window.exchange.Triggers || []);
-    console.log("Triggers", triggers)
+    // console.log("Triggers", triggers)
     triggers.forEach(element => {
-        console.log("Trigger:", element)
+        // console.log("Trigger:", element)
     });
     console.log("Selected Product", window.selectedProduct.product_id)
     window.current_triggers = triggers.filter(p => p.product_id == window.selectedProduct.product_id) || []

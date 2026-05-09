@@ -911,7 +911,7 @@ window.deleteTrigger = function (triggerId) {
 window.handleTriggerAction = function (action, triggerId) {
 
     const trigger = window.current_triggers.find(t => t.id === triggerId);
-    console.log("Trigger:", trigger)
+    // console.log("Trigger:", trigger)
 
     switch (action) {
         case 'connect':

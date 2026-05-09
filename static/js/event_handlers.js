@@ -148,12 +148,16 @@ function getFillTimestamp(fill) {
 			}
 		}
 
+<<<<<<< HEAD
 		// Case B: ISO string (Coinbase style)
 		const dt = new Date(timeVal);
 		if (!isNaN(dt.getTime())) {
 			return Math.floor(dt.getTime() / 1000);
 		}
 	}
+=======
+    console.log("Current Triggers", window.current_triggers)
+>>>>>>> b977d34 (fix trigger showing)
 
 	console.warn("[getFillTimestamp] could not parse time:", fill.time,
 		"typeof:", typeof fill.time);
@@ -575,8 +579,13 @@ const pointHoverHandler = function(e, chartState) {
 };
 
 function trendLineHoverHandler(e, chartState) {
+<<<<<<< HEAD
 	// console.log("Trendline Hover Handler")
 	// console.log("ChartState:", chartState)
+=======
+    // console.log("Trendline Hover Handler")
+    // console.log("ChartState:", chartState)
+>>>>>>> b977d34 (fix trigger showing)
 
 	const rect = canvas.getBoundingClientRect()
 	const mouseX = e.clientX - rect.left
@@ -616,6 +625,7 @@ function trendLineHoverHandler(e, chartState) {
 	});
 
 
+<<<<<<< HEAD
 	const threshold = 5
 	if (minDistance < threshold) {
 		showTrendlineTooltip(closestTrend, mouseX, mouseY);
@@ -629,6 +639,20 @@ function trendLineHoverHandler(e, chartState) {
 		window.hoveredTrendline = null;  // ← explicit clear
 		return null;
 	}
+=======
+    const threshold = 5
+    if (minDistance < threshold) {
+        showTrendlineTooltip(closestTrend, mouseX, mouseY)
+        // console.log("Trendline Hovered", closestTrend)
+        window.current_trend = closestTrend
+        return closestTrend
+    } else {
+        hideTrendlineTooltip()
+        window.current_trend = null
+        // return false
+        return null
+    }
+>>>>>>> b977d34 (fix trigger showing)
 }
 
 const fillHoverHandler = function(e, chartState) {

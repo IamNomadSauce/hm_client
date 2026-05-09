@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -297,7 +298,7 @@ func updateTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Trigger:\n%+v", payload)
+	// log.Printf("Trigger:\n%+v", payload)
 
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -331,7 +332,7 @@ func updateTriggerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Delete Trigger")
+	// log.Println("Delete Trigger")
 
 	// Get trigger ID from URL path
 	parts := strings.Split(r.URL.Path, "/")
@@ -361,7 +362,7 @@ func deleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = api.DeleteTrigger(url, triggerId)
 	if err != nil {
-		log.Printf("Error deleting trigger: %v", err)
+		// log.Printf("Error deleting trigger: %v", err)
 		http.Error(w, "Failed to delete trigger", http.StatusInternalServerError)
 		return
 	}
@@ -384,7 +385,7 @@ func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Creating New Trigger: %+v", trigger)
+	// log.Printf("Creating New Trigger: %+v", trigger)
 
 	err := godotenv.Load()
 	if err != nil {
@@ -618,53 +619,76 @@ func largeArcFlag(angleDiff float64) string {
 }
 
 func financeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Finance Page Request")
+	log.Println("Finance Page Request - START")
+	start := time.Now()
 
+	// Helper to log phase duration
+	phaseStart := start
+	logPhase := func(phase string) {
+		now := time.Now()
+		log.Printf("%s took %v (total: %v)", phase, now.Sub(phaseStart), now.Sub(start))
+		phaseStart = now
+	}
+
+	// 1. Load .env
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Error loading .env file:", err)
-		// Decide whether to return or continue based on your requirements
+		// Continue anyway, as env might be set otherwise
 	}
+	logPhase("godotenv.Load")
 
-	// -----------------------------------------------
-	// -----------------------------------------------
-
+	// 2. Get URL from env
 	url := os.Getenv("URL")
+	if url == "" {
+		log.Println("WARNING: URL env var is empty")
+	}
+	logPhase("os.Getenv(URL)")
 
+	// 3. Fetch exchanges
 	exchanges, err := api.GetExchanges(url)
 	if err != nil {
 		http.Error(w, "Error fetching exchange data: "+err.Error(), http.StatusInternalServerError)
+		log.Printf("GetExchanges FAILED after %v: %v", time.Since(start), err)
 		return
 	}
+	logPhase(fmt.Sprintf("GetExchanges (%d exchanges)", len(exchanges)))
 
-	selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
-	if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
-		selectedIndex = 0
+	// 4. Parse query parameters
+	selectedIndex := 0
+	if idxStr := r.URL.Query().Get("selected_index"); idxStr != "" {
+		if i, err := strconv.Atoi(idxStr); err == nil && i >= 0 && i < len(exchanges) {
+			selectedIndex = i
+		}
 	}
-
 	selectedExchange := exchanges[selectedIndex]
 	log.Printf("Selected Exchange: Orders: %+v", selectedExchange.Orders)
 
-	productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
-	if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {
-		productIndex = 0
+	log.Println("Exchange Triggers", selectedExchange.Triggers)
+
+	productIndex := 0
+	if idxStr := r.URL.Query().Get("product_index"); idxStr != "" {
+		if i, err := strconv.Atoi(idxStr); err == nil && i >= 0 && i < len(selectedExchange.Watchlist) {
+			productIndex = i
+		}
 	}
-
 	selectedProduct := model.Product{}
-
 	if len(selectedExchange.Watchlist) > 0 {
 		selectedProduct = selectedExchange.Watchlist[productIndex]
 	}
 
-	timeframeIndex, err := strconv.Atoi(r.URL.Query().Get("timeframe_index"))
-	if err != nil || timeframeIndex < 0 || timeframeIndex >= len(selectedExchange.Timeframes) {
-		timeframeIndex = 0
+	timeframeIndex := 0
+	if idxStr := r.URL.Query().Get("timeframe_index"); idxStr != "" {
+		if i, err := strconv.Atoi(idxStr); err == nil && i >= 0 && i < len(selectedExchange.Timeframes) {
+			timeframeIndex = i
+		}
 	}
-	var selectedTimeframe model.Timeframe
+	selectedTimeframe := model.Timeframe{}
 	if len(selectedExchange.Timeframes) > 0 {
 		selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
 	}
 
+<<<<<<< HEAD
 	candleOffset, _ := strconv.Atoi(r.URL.Query().Get("candle_offset"))
 	if candleOffset < 0 {
 		candleOffset = 0
@@ -678,47 +702,68 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		allCandles, err = api.GetCandles(strings.Replace(selectedProduct.ProductID, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
 		if err != nil {
 			log.Printf("Error fetching candles: %v", err)
+=======
+	candleOffset := 0
+	if offsetStr := r.URL.Query().Get("candle_offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			candleOffset = o
+>>>>>>> b977d34 (fix trigger showing)
 		}
 	}
+	logPhase("Parse query params & select data")
 
-	if candleOffset >= len(allCandles) && len(allCandles) > 0 {
-		candleOffset = len(allCandles) - 1
+	// 5. Fetch candles (usually the slowest part)
+	var allCandles []model.Candle
+	if selectedProduct.ProductID != "" && selectedTimeframe.TF != "" {
+		productKey := strings.Replace(selectedProduct.ProductID, "-", "_", -1)
+		log.Printf("Fetching candles for %s - %s (exchange: %s)", productKey, selectedTimeframe.TF, selectedExchange.Name)
+
+		allCandles, err = api.GetCandles(productKey, selectedTimeframe.TF, selectedExchange.Name)
+		if err != nil {
+			log.Printf("GetCandles FAILED after %v: %v", time.Since(phaseStart), err)
+		} else {
+			logPhase(fmt.Sprintf("GetCandles (%d candles)", len(allCandles)))
+		}
+	} else {
+		log.Println("Skipping candle fetch: missing product ID or timeframe")
+		logPhase("GetCandles (skipped)")
 	}
 
+	// 6. Prepare display candles
 	var displayCandles []model.Candle
 	if len(allCandles) > 0 {
 		endIndex := len(allCandles) - candleOffset
 		if endIndex > 0 {
 			displayCandles = allCandles[:endIndex]
+		} else {
+			displayCandles = allCandles
+		}
+		if candleOffset >= len(allCandles) && len(allCandles) > 0 {
+			candleOffset = len(allCandles) - 1
 		}
 	}
+	logPhase("Prepare displayCandles")
 
-	var trendlines []model.Trendline
-	var trendZilla []model.Trendline
+	// 7. Generate trendlines
+	var trendlines, trendZilla []model.Trendline
 	if len(displayCandles) > 0 {
 		trendlines, err = makeAPITrendlines(displayCandles)
 		if err != nil {
-			log.Printf("Error making API trendlines: %v", err)
-		}
-		if len(trendlines) > 0 {
+			log.Printf("makeAPITrendlines error: %v", err)
+		} else if len(trendlines) > 0 {
 			trendZilla = buildTrendlines(trendlines, 0)
 		}
 	}
+	logPhase(fmt.Sprintf("Trendline generation (base: %d, final: %d)", len(trendlines), len(trendZilla)))
 
-	// fmt.Println("\n------------------\nSelected Product:\n", selectedExchange.Name, selectedProduct, selectedTimeframe)
-	// fmt.Println("Candles:", len(candles), "\n------------------------------\n")
-
-	colors := []string{
-		"#3e3e3e", " #82e0aa", "#aeb6bf", "#52be80",
-		"#bfc9ca", "#Fe74c3c", " #5499c7", "#34495e",
-	}
-
+	// 8. Portfolio total
 	var totalValue float64
-
 	for _, asset := range selectedExchange.Portfolio {
 		totalValue += asset.Value
 	}
+	logPhase("Calculate portfolio total")
 
+<<<<<<< HEAD
 	FilteredTrendlines := make(map[string][]model.Trendline)
 
 	// log.Println("Exchange", selectedExchange.Name)
@@ -728,6 +773,9 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	// 	log.Printf("ORDER: %+v", order)
 	// }
 
+=======
+	// 9. Prepare template data
+>>>>>>> b977d34 (fix trigger showing)
 	data := struct {
 		Exchanges          []model.Exchange
 		SelectedExchange   model.Exchange
@@ -736,7 +784,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		SelectedProduct    model.Product
 		TimeframeIndex     int
 		SelectedTimeframe  model.Timeframe
-		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
+		FilteredTrendlines map[string][]model.Trendline
 		BaseTrends         []model.Trendline
 		Trendlines         []model.Trendline
 		Candles            []model.Candle
@@ -753,26 +801,196 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		SelectedProduct:    selectedProduct,
 		TimeframeIndex:     timeframeIndex,
 		SelectedTimeframe:  selectedTimeframe,
-		FilteredTrendlines: FilteredTrendlines,
+		FilteredTrendlines: make(map[string][]model.Trendline),
 		BaseTrends:         trendlines,
 		Trendlines:         trendZilla,
 		Candles:            displayCandles,
-		Colors:             colors,
-		TotalValue:         totalValue,
-		PortfolioData:      preparePortfolioData(selectedExchange.Portfolio),
-		CandleOffset:       candleOffset,
-		TotalCandleCount:   len(allCandles),
+		Colors: []string{
+			"#3e3e3e", "#82e0aa", "#aeb6bf", "#52be80",
+			"#bfc9ca", "#Fe74c3c", "#5499c7", "#34495e",
+		},
+		TotalValue:       totalValue,
+		PortfolioData:    preparePortfolioData(selectedExchange.Portfolio),
+		CandleOffset:     candleOffset,
+		TotalCandleCount: len(allCandles),
 	}
+	logPhase("Prepare template data")
 
+<<<<<<< HEAD
 	log.Println("Pre-Render Template")
 
+=======
+	// 10. Render template (can also be slow if large)
+>>>>>>> b977d34 (fix trigger showing)
 	renderTemplate(w, "base.html", data,
 		"templates/base.html",
 		"templates/finance.html",
 		"templates/components/navbar.html",
 		"templates/components/chart.html",
 	)
+	logPhase("renderTemplate")
+
+	// Final total time
+	log.Printf("Finance Page Request - COMPLETE (total time: %v)", time.Since(start))
 }
+
+// func financeHandler(w http.ResponseWriter, r *http.Request) {
+// 	fmt.Println("Finance Page Request")
+// 	start_t := time.Now()
+//
+// 	err := godotenv.Load()
+// 	if err != nil {
+// 		log.Println("Error loading .env file:", err)
+// 		// Decide whether to return or continue based on your requirements
+// 	}
+//
+// 	// -----------------------------------------------
+// 	// -----------------------------------------------
+//
+// 	url := os.Getenv("URL")
+//
+// 	end_t := time.Now()
+// 	log.Println("Pre-Exchanges delta", end_t.Sub(start_t))
+// 	exchanges, err := api.GetExchanges(url)
+// 	if err != nil {
+// 		http.Error(w, "Error fetching exchange data: "+err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	end_t = time.Now()
+// 	log.Println("Post-Exchanges delta", end_t.Sub(start_t))
+//
+// 	selectedIndex, err := strconv.Atoi(r.URL.Query().Get("selected_index"))
+// 	if err != nil || selectedIndex < 0 || selectedIndex >= len(exchanges) {
+// 		selectedIndex = 0
+// 	}
+//
+// 	selectedExchange := exchanges[selectedIndex]
+//
+// 	productIndex, err := strconv.Atoi(r.URL.Query().Get("product_index"))
+// 	if err != nil || productIndex < 0 || productIndex >= len(selectedExchange.Watchlist) {
+// 		productIndex = 0
+// 	}
+//
+// 	selectedProduct := model.Product{}
+//
+// 	if len(selectedExchange.Watchlist) > 0 {
+// 		selectedProduct = selectedExchange.Watchlist[productIndex]
+// 	}
+//
+// 	timeframeIndex, err := strconv.Atoi(r.URL.Query().Get("timeframe_index"))
+// 	if err != nil || timeframeIndex < 0 || timeframeIndex >= len(selectedExchange.Timeframes) {
+// 		timeframeIndex = 0
+// 	}
+// 	var selectedTimeframe model.Timeframe
+// 	if len(selectedExchange.Timeframes) > 0 {
+// 		selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
+// 	}
+//
+// 	candleOffset, _ := strconv.Atoi(r.URL.Query().Get("candle_offset"))
+// 	if candleOffset < 0 {
+// 		candleOffset = 0
+// 	}
+//
+// 	var allCandles []model.Candle
+//
+// 	end_t = time.Now()
+// 	log.Println("Pre-Candle-fetch delta", end_t.Sub(start_t))
+//
+// 	if selectedProduct.ProductID != "" && selectedTimeframe.TF != "" {
+// 		allCandles, err = api.GetCandles(strings.Replace(selectedProduct.ProductID, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
+// 		if err != nil {
+// 			log.Printf("Error fetching candles: %v", err)
+// 		}
+// 	}
+// 	end_t = time.Now()
+// 	log.Println("Post-Candle-fetch delta", end_t.Sub(start_t))
+//
+// 	if candleOffset >= len(allCandles) && len(allCandles) > 0 {
+// 		candleOffset = len(allCandles) - 1
+// 	}
+//
+// 	var displayCandles []model.Candle
+// 	if len(allCandles) > 0 {
+// 		endIndex := len(allCandles) - candleOffset
+// 		if endIndex > 0 {
+// 			displayCandles = allCandles[:endIndex]
+// 		}
+// 	}
+//
+// 	var trendlines []model.Trendline
+// 	var trendZilla []model.Trendline
+// 	if len(displayCandles) > 0 {
+// 		trendlines, err = makeAPITrendlines(displayCandles)
+// 		if err != nil {
+// 			log.Printf("Error making API trendlines: %v", err)
+// 		}
+// 		if len(trendlines) > 0 {
+// 			trendZilla = buildTrendlines(trendlines, 0)
+// 		}
+// 	}
+//
+// 	// fmt.Println("\n------------------\nSelected Product:\n", selectedExchange.Name, selectedProduct, selectedTimeframe)
+// 	// fmt.Println("Candles:", len(candles), "\n------------------------------\n")
+//
+// 	colors := []string{
+// 		"#3e3e3e", " #82e0aa", "#aeb6bf", "#52be80",
+// 		"#bfc9ca", "#Fe74c3c", " #5499c7", "#34495e",
+// 	}
+//
+// 	var totalValue float64
+//
+// 	for _, asset := range selectedExchange.Portfolio {
+// 		totalValue += asset.Value
+// 	}
+//
+// 	FilteredTrendlines := make(map[string][]model.Trendline)
+//
+// 	log.Println("Exchange", selectedExchange.Name)
+// 	log.Printf("Asset: %s", selectedProduct.ProductID)
+//
+// 	data := struct {
+// 		Exchanges          []model.Exchange
+// 		SelectedExchange   model.Exchange
+// 		SelectedIndex      int
+// 		ProductIndex       int
+// 		SelectedProduct    model.Product
+// 		TimeframeIndex     int
+// 		SelectedTimeframe  model.Timeframe
+// 		FilteredTrendlines map[string][]model.Trendline // Trendlines for the selected product/asset
+// 		BaseTrends         []model.Trendline
+// 		Trendlines         []model.Trendline
+// 		Candles            []model.Candle
+// 		Colors             []string
+// 		TotalValue         float64
+// 		PortfolioData      []PortfolioItem
+// 		CandleOffset       int
+// 		TotalCandleCount   int
+// 	}{
+// 		Exchanges:          exchanges,
+// 		SelectedExchange:   selectedExchange,
+// 		SelectedIndex:      selectedIndex,
+// 		ProductIndex:       productIndex,
+// 		SelectedProduct:    selectedProduct,
+// 		TimeframeIndex:     timeframeIndex,
+// 		SelectedTimeframe:  selectedTimeframe,
+// 		FilteredTrendlines: FilteredTrendlines,
+// 		BaseTrends:         trendlines,
+// 		Trendlines:         trendZilla,
+// 		Candles:            displayCandles,
+// 		Colors:             colors,
+// 		TotalValue:         totalValue,
+// 		PortfolioData:      preparePortfolioData(selectedExchange.Portfolio),
+// 		CandleOffset:       candleOffset,
+// 		TotalCandleCount:   len(allCandles),
+// 	}
+//
+// 	renderTemplate(w, "base.html", data,
+// 		"templates/base.html",
+// 		"templates/finance.html",
+// 		"templates/components/navbar.html",
+// 		"templates/components/chart.html",
+// 	)
+// }
 
 // MakeTrendlines generates trendlines based on the given candles.
 func makeTrendlines(candles []model.Candle) ([]model.Trendline, error) {
@@ -874,7 +1092,8 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	if len(candles) == 0 {
 		return []model.Trendline{}, nil
 	}
-	log.Println("--- makeAPITrendlines Start ---")
+	// start_t := time.Now()
+	// log.Println("--- makeAPITrendlines Start ---")
 	trendlines := []model.Trendline{}
 	var current model.Trendline
 	sliced_candles := candles
@@ -900,8 +1119,8 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 		Direction: "up",
 		Status:    "current",
 	}
-	log.Printf("  [Init] First candle Low: %.2f, High: %.2f", candles[0].Low, candles[0].High)
-	log.Printf("  [Init] Current trend start: %.2f, end: %.2f", current.Start.Point, current.End.Point)
+	// log.Printf("  [Init] First candle Low: %.2f, High: %.2f", candles[0].Low, candles[0].High)
+	// log.Printf("  [Init] Current trend start: %.2f, end: %.2f", current.Start.Point, current.End.Point)
 
 	for index, candle := range sliced_candles {
 		if current.Direction == "up" {
@@ -1039,7 +1258,9 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 	}
 	// Add the final "current" trendline to the results.
 	trendlines = append(trendlines, current)
-	log.Printf("--- makeAPITrendlines End --- Returning %d trends.", len(trendlines))
+	// log.Printf("--- makeAPITrendlines End --- Returning %d trends.", len(trendlines))
+	// end_t := time.Now()
+	// log.Println("Total time computing trendlines:", end_t.Sub(start_t))
 	return trendlines, nil
 }
 
@@ -1160,7 +1381,7 @@ func buildTrendlines(trendlines []model.Trendline, depth int) []model.Trendline 
 		return nil
 	}
 
-	log.Println("Trend Depth", depth, "trends_0", len(trendlines), "dx_trends", len(dx_trends))
+	// log.Println("Trend Depth", depth, "trends_0", len(trendlines), "dx_trends", len(dx_trends))
 	// Process each trendline
 	for i := range dx_trends {
 		// log.Printf("Trend: %d of %d @ depth %d", i, len(dx_trends), depth)
