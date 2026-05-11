@@ -78,7 +78,8 @@ function hideTrendlineTooltip() {
 
 window.showPointTooltip = function (point, mouseX, mouseY) {
     // console.log("showPointTooltip: POINT", point)
-    const trend = point.trendline // Use point.trend instead of point.trendline
+    const trend = point.trend // Use point.trend instead of point.trendline
+    // console.log("TREND:", trend)
     const time = point.type === 'start' ? trend.start.time : trend.end.time;
     const price = trend.end.point; // Use the stored price directly
 
