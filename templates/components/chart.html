@@ -54,7 +54,6 @@
     window.base_trends_toggle = false
     window.meta_trends_toggle = true
 
-<<<<<<< HEAD
     // console.log("ALL Orders:", window.exchange.Orders.ProductID)
     // console.log("ALL Fills:", window.exchange.Fills)
 
@@ -62,28 +61,19 @@
     //  console.log("ASSET FILL", t.product_id, window.selectedProduct.product_id)
     // })
 
-    window.current_fills = window.exchange.Fills.filter(p => p.product_id === window.selectedProduct.product_id);
-    window.product_orders = window.exchange.Orders.filter(p => p.ProductID === window.selectedProduct.product_id);
-    window.current_orders = product_orders.filter(p => p.Status != "filled")
-    window.current_trades = window.exchange.Trades.filter(t => t.ProductID === window.selectedProduct.product_id);
-=======
     console.log("chart.html current triggers", window.current_triggers)
     window.current_fills = window.exchange.Fills.filter(p => p.product_id === window.selectedProduct.product_id);
     window.current_orders = window.exchange.Orders.filter(p => p.product_id === window.selectedProduct.product_id);
     console.log("CUrrent Trades", window.exchange)
     window.current_trades = (window.exchange.Trades !== null) ? window.exchange.Trades.filter(t => t.product_id === window.selectedProduct.product_id) : [];
->>>>>>> b977d34 (fix trigger showing)
     window.current_trend = null
 
 
     // window.current_triggers = window.exchange.Triggers.filter(t => t.product_id === window.selectedProduct.product_id) || [];
-<<<<<<< HEAD
     // console.log("Testing Exchange Triggers")
     // console.log("Exchange Triggers", window.exchanges.Triggers)
-=======
     console.log("Testing Exchange Triggers")
     console.log("Exchange Triggers", window.exchange.Triggers)
->>>>>>> b977d34 (fix trigger showing)
     window.current_triggers = (window.exchange && window.exchange.Triggers ? window.exchange.Triggers : []).filter(t => t.product_id === window.selectedProduct.product_id) || [];
     window.drawCandlestickChart(window.stockData, window.start, window.end);
 

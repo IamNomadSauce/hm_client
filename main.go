@@ -59,6 +59,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading response body: %v", err)
 	}
+	fmt.Println("Test")
 
 	if resp.StatusCode != http.StatusOK {
 		log.Fatalf("Unexpected status code: %d", resp.StatusCode, string(body))
@@ -160,6 +161,8 @@ func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, fi
 		return
 	}
 
+	// 2. Execute the template into a buffer to catch errors before writing to the response.
+	//    This prevents partial HTML pages from being sent if an error occurs during execution.
 	buf := new(bytes.Buffer)
 	err = tmpl.ExecuteTemplate(buf, baseTmpl, data)
 	if err != nil {
@@ -168,13 +171,12 @@ func renderTemplate(w http.ResponseWriter, baseTmpl string, data interface{}, fi
 		return
 	}
 
-
+	// 3. Set the content type and write the buffer to the http.ResponseWriter.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, err = buf.WriteTo(w)
 	if err != nil {
 		log.Printf("Error writing template to response: %v", err)
 	}
-	// log.Println("Render Done")
 }
 
 func cancelOrderHandler(w http.ResponseWriter, r *http.Request) {
@@ -662,9 +664,8 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	selectedExchange := exchanges[selectedIndex]
-	log.Printf("Selected Exchange: Orders: %+v", selectedExchange.Orders)
 
-	log.Println("Exchange Triggers", selectedExchange.Triggers)
+	// log.Println("Exchange Triggers", selectedExchange.Triggers)
 
 	productIndex := 0
 	if idxStr := r.URL.Query().Get("product_index"); idxStr != "" {
@@ -688,26 +689,10 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 		selectedTimeframe = selectedExchange.Timeframes[timeframeIndex]
 	}
 
-<<<<<<< HEAD
-	candleOffset, _ := strconv.Atoi(r.URL.Query().Get("candle_offset"))
-	if candleOffset < 0 {
-		candleOffset = 0
-	}
-
-	log.Println("Pre Candles")
-
-	var allCandles []model.Candle
-
-	if selectedProduct.ProductID != "" && selectedTimeframe.TF != "" {
-		allCandles, err = api.GetCandles(strings.Replace(selectedProduct.ProductID, "-", "_", -1), selectedTimeframe.TF, selectedExchange.Name)
-		if err != nil {
-			log.Printf("Error fetching candles: %v", err)
-=======
 	candleOffset := 0
 	if offsetStr := r.URL.Query().Get("candle_offset"); offsetStr != "" {
 		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
 			candleOffset = o
->>>>>>> b977d34 (fix trigger showing)
 		}
 	}
 	logPhase("Parse query params & select data")
@@ -763,19 +748,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	logPhase("Calculate portfolio total")
 
-<<<<<<< HEAD
-	FilteredTrendlines := make(map[string][]model.Trendline)
-
-	// log.Println("Exchange", selectedExchange.Name)
-	// log.Printf("Asset: %s", selectedProduct.ProductID)
-
-	// for _, order := range selectedExchange.Orders {
-	// 	log.Printf("ORDER: %+v", order)
-	// }
-
-=======
 	// 9. Prepare template data
->>>>>>> b977d34 (fix trigger showing)
 	data := struct {
 		Exchanges          []model.Exchange
 		SelectedExchange   model.Exchange
@@ -816,12 +789,7 @@ func financeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	logPhase("Prepare template data")
 
-<<<<<<< HEAD
-	log.Println("Pre-Render Template")
-
-=======
 	// 10. Render template (can also be slow if large)
->>>>>>> b977d34 (fix trigger showing)
 	renderTemplate(w, "base.html", data,
 		"templates/base.html",
 		"templates/finance.html",
@@ -1575,10 +1543,8 @@ func preparePortfolioData(portfolio []model.Asset) []PortfolioItem {
 		}
 
 		items = append(items, item)
-		log.Println("Test", item.Asset, item.Percentage, item.StartAngle, item.EndAngle)
+		log.Println(item.Asset, item.Percentage, item.StartAngle, item.EndAngle)
 	}
-
-	log.Println("Portfolio Done")
 
 	return items
 }

@@ -42,7 +42,6 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 		return nil, err
 	}
 
-<<<<<<< HEAD
 	for exchange := range exchanges {
 		fmt.Println("\n----------------------------\n")
 		fmt.Println(exchanges[exchange].Name)
@@ -59,7 +58,6 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 		// }
 		fmt.Println("\n----------------------------\n")
 	}
-=======
 	// end_t := time.Now()
 	// log.Println("Pre-loop time delta", end_t.Sub(start_t))
 
@@ -76,7 +74,6 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	// 	}
 	// 	fmt.Println("\n----------------------------\n")
 	// }
->>>>>>> b977d34 (fix trigger showing)
 	// fmt.Println("Exchanges", exchanges)
 	end_t := time.Now()
 	log.Println("Post-loop time delta", end_t.Sub(start_t))
