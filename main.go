@@ -273,6 +273,8 @@ func updateTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("REQUEST: %+v", request)
+
 	if request.TriggerID <= 0 {
 		log.Println("Invalid Trigger ID")
 		http.Error(w, "Invalid trigger ID", http.StatusBadRequest)

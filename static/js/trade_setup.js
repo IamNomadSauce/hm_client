@@ -182,7 +182,7 @@ function createTradeSetupSidebar() {
                               <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
                           </div>
                           <div class="trigger-settings">
-                              <select onchange="updateTriggerType(${trigger.id}, this.value)">
+                              <select onchange="updateTriggerField(${trigger.id}, 'type', this.value)">
                                   <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
                                   <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
                                   <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
@@ -754,6 +754,7 @@ window.closeTriggerEditor = function () {
 }
 
 window.updateTriggerField = function (triggerId, field, value) {
+    console.log("Update Trigger Field", triggerId, field, value)
     const updates = {};
     updates[field] = value;
 
@@ -796,6 +797,7 @@ window.moveTrigger = function (index, direction) {
 
 window.updateTriggerType = function (triggerId, newType) {
     const trigger = window.currentTradeSetup.chainedTriggers.find(t => t.id === triggerId);
+    console.log("Update Trigger Type", trigger, triggerId, newType)
     if (trigger) {
         fetch('/update-trigger', {
             method: 'PUT',
