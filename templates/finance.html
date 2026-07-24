@@ -54,17 +54,24 @@
           <div class="col">
             <h5>Watchlist:</h5>
             <div class="d-flex flex-wrap gap-2">
-              {{range $index, $product := .SelectedExchange.Watchlist}}
-              <form action="/finance" method="GET">
-                <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
-                <input type="hidden" name="product_index" value="{{$index}}">
-                <input type="hidden" name="timeframe_index" value="{{$.TimeframeIndex}}">
-                <button type="submit"
-                  class="btn btn-sm {{if eq $index $.ProductIndex}}btn-primary{{else}}btn-secondary{{end}}">
-                  {{$product.ProductID}}
-                </button>
-              </form>
-              {{end}}
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-primary dropdown-toggle" type="button"
+                          data-bs-toggle="dropdown" aria-expanded="false">
+                    {{range $index, $product := .SelectedExchange.Watchlist}}
+                      {{if eq $index $.ProductIndex}}{{$product.ProductID}}{{end}}
+                    {{end}}
+                  </button>
+                  <ul class="dropdown-menu">
+                    {{range $index, $product := .SelectedExchange.Watchlist}}
+                      <li>
+                        <a class="dropdown-item {{if eq $index $.ProductIndex}}active{{end}}"
+                           href="/finance?selected_index={{$.SelectedIndex}}&product_index={{$index}}&timeframe_index={{$.TimeframeIndex}}">
+                          {{$product.ProductID}}
+                        </a>
+                      </li>
+                    {{end}}
+                  </ul>
+                </div>
 
 				{{/*}}
               <div class="dropdown">
@@ -97,27 +104,31 @@
       </div>
       <div class="col">
         <!-- Timeframes Section -->
-        <div class="row ">
+        <div class="row">
           <div class="col">
             <h5>Timeframes</h5>
             <div class="d-flex flex-wrap gap-2">
-              {{range $index, $timeframe := .SelectedExchange.Timeframes}}
-              <div class="flex-column">
-                <div>
-                  <form action="/finance">
-                    <input type="hidden" name="selected_index" value="{{$.SelectedIndex}}">
-                    <input type="hidden" name="product_index" value="{{$.ProductIndex}}">
-                    <input type="hidden" name="timeframe_index" value="{{$index}}">
-                    <button type="submit"
-                      class="btn btn-sm {{if eq $index $.TimeframeIndex}}btn-primary{{else}}btn-secondary{{end}}">
-                      {{$timeframe.TF}}
-                    </button>
-                  </form>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-primary dropdown-toggle" type="button"
+                          data-bs-toggle="dropdown" aria-expanded="false">
+                    {{range $index, $timeframe := .SelectedExchange.Timeframes}}
+                      {{if eq $index $.TimeframeIndex}}{{$timeframe.TF}}{{end}}
+                    {{end}}
+                  </button>
+                  <ul class="dropdown-menu">
+                    {{range $index, $timeframe := .SelectedExchange.Timeframes}}
+                      <li>
+                        <a class="dropdown-item {{if eq $index $.TimeframeIndex}}active{{end}}"
+                           href="/finance?selected_index={{$.SelectedIndex}}&product_index={{$.ProductIndex}}&timeframe_index={{$index}}">
+                          {{$timeframe.TF}}
+                        </a>
+                      </li>
+                    {{end}}
+                  </ul>
                 </div>
-              </div>
-              {{end}}
             </div>
             <!---->
+                {{/*}}
             <div class="row mt-3">
                 <div class="col">
                     <h5>Candle Debugger</h5>
@@ -192,6 +203,7 @@
                     </div>
                 </div>
             </div>
+                {{*/}}
           <!-- <div class="d-flex">
             <form action="">
               <button class="btn btn-sm btn-danger"><</button>
