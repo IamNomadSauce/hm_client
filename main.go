@@ -336,7 +336,7 @@ func updateTriggerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
-	// log.Println("Delete Trigger")
+	log.Println("Delete Trigger Handler")
 
 	// Get trigger ID from URL path
 	parts := strings.Split(r.URL.Path, "/")

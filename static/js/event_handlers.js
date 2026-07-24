@@ -7,87 +7,237 @@ window.drawingStart = null
 window.draw_boxes = []
 window.draw_lines = []
 window.activeLineIndex = -1;
+
+// Bracket Dragging Support
+window.draggingBracketPoint = null;   // { bracketId, type: 'entry' | 'stop' | 'pt' }
+window.hoveredBracketPoint = null;
+
+// ==================== TOOL SELECTORS ====================
+
+window.setCurrentTool = function(tool) {
+    // Toggle off if clicking the same tool again
+    if (window.currentTool === tool) {
+        window.currentTool = null;
+        window.currentBracketSide = null;
+        console.log("Tool deactivated");
+        return;
+    }
+
+    window.currentTool = tool;
+    window.currentBracketSide = null;
+
+    // Visual feedback (optional)
+    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+        btn.style.boxShadow = 'none';
+        btn.style.transform = 'scale(1)';
+    });
+
+    console.log("Tool activated:", tool);
+};
+
+window.activateBracketTool = function(side) {
+    window.currentBracketSide = side;
+    window.currentTool = 'bracket';
+
+    // Highlight the active button
+    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+        const isActive = (side === 'long' && btn.textContent.includes('LONG')) ||
+                         (side === 'short' && btn.textContent.includes('SHORT'));
+        if (isActive) {
+            btn.style.boxShadow = '0 0 0 3px rgba(255,255,255,0.6)';
+            btn.style.transform = 'scale(1.08)';
+        } else {
+            btn.style.boxShadow = 'none';
+            btn.style.transform = 'scale(1)';
+        }
+    });
+
+    showToast(`Click on the chart to place ${side.toUpperCase()} Entry`, 2200);
+};
+
+window.clearAllDrawings = function() {
+    if (confirm("Clear all drawn lines and brackets?")) {
+        draw_lines = [];
+        window.currentTradeSetup = null;
+        drawCandlestickChart(window.stockData, window.start, window.end);
+        if (typeof updateSidebar === 'function') updateSidebar();
+    }
+};
+
+// Simple toast helper (if not already defined)
+function showToast(msg, duration = 2000) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+        background: #1e1e2e; color: #0f0; padding: 12px 20px; border-radius: 8px;
+        border: 1px solid #0f0; z-index: 9999; font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+    `;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+}
+
 current_triggers = []
 
-
 window.setupEventListeners = function() {
-	// console.log("Setup Event Listeners")
-	canvas.addEventListener('mousemove', function(event) {
-		// console.log("MOUSE MOVE INIT")
-		const rect = canvas.getBoundingClientRect();
-		window.mouseX = event.clientX - rect.left;
-		window.mouseY = event.clientY - rect.top;
+    console.log("Setup Event Listeners");
 
-		if (window.isDragging) {
-			let dx = event.clientX - window.startX;
-			let panFactor = Math.floor(dx / 10);
-			if (panFactor !== 0) {
-				window.start = Math.max(0, window.start - panFactor);
-				window.end = Math.min(window.stockData.length, window.end - panFactor);
-				window.startX = event.clientX;
-				drawCandlestickChart(window.stockData, window.start, window.end);
-			}
-		} else {
-			handleMouseMove(event, window.chartState, window.tradeGroups);
-			drawCandlestickChart(window.stockData, window.start, window.end)
-		}
-	});
+    // ==================== MOUSE MOVE ====================
+    canvas.addEventListener('mousemove', function(event) {
+        const rect = canvas.getBoundingClientRect();
+        window.mouseX = event.clientX - rect.left;
+        window.mouseY = event.clientY - rect.top;
 
+        if (window.isDragging) {
+            let dx = event.clientX - window.startX;
+            let panFactor = Math.floor(dx / 10);
+            if (panFactor !== 0) {
+                window.start = Math.max(0, window.start - panFactor);
+                window.end = Math.min(window.stockData.length, window.end - panFactor);
+                window.startX = event.clientX;
+                drawCandlestickChart(window.stockData, window.start, window.end);
+            }
+            return;
+        }
 
-	canvas.addEventListener('mousedown', function(event) {
-		var rect = canvas.getBoundingClientRect();
-		mouseX = event.clientX - rect.left;
-		mouseY = event.clientY - rect.top;
+        if (window.draggingBracketPoint) {
+            handleBracketPointDrag(event);
+            return;
+        }
 
-		// console.log("Current Tool:", window.currentTool)
-		if (window.currentTool) {
-			if (window.currentTool === 'line' || window.currentTool === 'trigger') {
-				chartState = drawCandlestickChart(window.stockData, window.start, window.end);
-				const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
-				const line = { price: price };
+        handleMouseMove(event, window.chartState, window.tradeGroups);
+        drawCandlestickChart(window.stockData, window.start, window.end);
+    });
 
-				if (window.currentTool === 'trigger') {
-					const lastCandle = window.stockData[window.stockData.length - 1];
-					const currentPrice = lastCandle.Close;
+    // ==================== MOUSE DOWN ====================
+    canvas.addEventListener('mousedown', function(event) {
+        var rect = canvas.getBoundingClientRect();
+        mouseX = event.clientX - rect.left;
+        mouseY = event.clientY - rect.top;
 
-					line.type = 'trigger';
-					line.color = '#ff00ff';
+        const chartState = window.chartState;
+        if (!chartState) return;
 
-					const triggerData = {
-						product_id: selectedProduct.product_id,
-						type: line.price > currentPrice ? 'price_above' : 'price_below',
-						price: parseFloat(line.price),
-						status: 'active',
-						xch_id: exchange.ID
-					};
+        const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
 
-					fetch('create-trigger', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify(triggerData)
-					})
-						.then(response => response.json())
-						.then(data => {
-							console.log('2Trigger Created: ', data);
-							line.triggerId = data.id;
-						})
-						.catch(error => {
-							console.log('Error creating trigger:', error);
-						});
-				}
+        // 1. Create new bracket
+        if (window.currentTool === 'bracket') {
+            handleBracketClick(price);
+            return;
+        }
 
-				draw_lines.push(line);
-				drawCandlestickChart(window.stockData, window.start, window.end);
-			}
-			drawingStart = { x: mouseX, y: mouseY };
-		} else {
-			isDragging = true;
-			startX = event.clientX;
-			canvas.style.cursor = 'grabbing';
-		}
-	});
+        // 2. Start dragging bracket point (HIGHEST PRIORITY)
+        const hoveredPoint = findBracketPointAt(mouseY, chartState);
+        if (hoveredPoint) {
+            window.draggingBracketPoint = hoveredPoint;
+            canvas.style.cursor = 'ns-resize';
+            return;   // ← Important: stop here
+        }
+
+        // 3. Normal tools
+        if (window.currentTool === 'line' || window.currentTool === 'trigger') {
+            const line = { price: price };
+
+            if (window.currentTool === 'trigger') {
+                const lastCandle = window.stockData[window.stockData.length - 1];
+                const currentPrice = lastCandle.Close;
+
+                line.type = 'trigger';
+                line.color = '#ff00ff';
+
+                const triggerData = {
+                    product_id: selectedProduct.product_id,
+                    type: line.price > currentPrice ? 'price_above' : 'price_below',
+                    price: parseFloat(line.price),
+                    status: 'active',
+                    xch_id: exchange.ID
+                };
+
+                fetch('create-trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(triggerData)
+                })
+                .then(r => r.json())
+                .then(data => line.triggerId = data.id);
+            }
+
+            draw_lines.push(line);
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            return;
+        }
+
+        // Default pan
+        isDragging = true;
+        startX = event.clientX;
+        canvas.style.cursor = 'grabbing';
+
+        drawingStart = { x: mouseX, y: mouseY };
+    });
+
+    // ==================== MOUSE UP ====================
+    canvas.addEventListener('mouseup', function() {
+        if (window.draggingBracketPoint) {
+            window.draggingBracketPoint = null;
+            canvas.style.cursor = 'default';
+            if (typeof updateSidebar === 'function') updateSidebar();
+        } else {
+            isDragging = false;
+            canvas.style.cursor = 'default';
+        }
+    });
+
+    canvas.addEventListener('mouseleave', function() {
+        if (window.draggingBracketPoint) {
+            window.draggingBracketPoint = null;
+            canvas.style.cursor = 'default';
+        }
+        isDragging = false;
+    });
+};
+
+// ==================== BRACKET DRAG HELPERS ====================
+
+function findBracketPointAt(mouseY, chartState) {
+    if (!chartState) return null;
+
+    const threshold = 12;
+
+    for (let line of draw_lines) {
+        if (!line.isBracket || !line.bracketId) continue;
+
+        const lineY = calculateLineY(line.price, chartState);
+
+        if (Math.abs(mouseY - lineY) < threshold) {
+            return {
+                bracketId: line.bracketId,
+                type: line.type,
+                line: line
+            };
+        }
+    }
+    return null;
+}
+
+function handleBracketPointDrag(event) {
+    const rect = canvas.getBoundingClientRect();
+    const mouseY = event.clientY - rect.top;
+    const chartState = window.chartState;
+    if (!chartState) return;
+
+    const newPrice = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
+
+    const targetLine = draw_lines.find(l => 
+        l.isBracket && 
+        l.bracketId === window.draggingBracketPoint.bracketId && 
+        l.type === window.draggingBracketPoint.type
+    );
+
+    if (targetLine) {
+        targetLine.price = newPrice;
+        drawCandlestickChart(window.stockData, window.start, window.end);
+    }
 }
 
 
@@ -371,7 +521,8 @@ window.triggerClickHandler = function(e, chartState) {
             <div>Type: ${selectedTrigger.type}</div>
             <div>Price: ${selectedTrigger.price.toFixed(8)}</div>
             <div>Status: ${selectedTrigger.status}</div>
-            <div class="trigger-menu-item" onclick="editTrigger(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Edit</div>
+            <!-- <div class="trigger-menu-item" onclick="editTrigger(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Edit</div> -->
+            <div class="trigger-menu-item" onclick="showTriggerEditMenu(${selectedTrigger.id}, ${e.pageX}, ${e.pageY}); document.querySelector('.trigger-menu').remove();">Edit</div>
             <div class="trigger-menu-item" onclick="deleteTrigger(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Delete</div>
             <div class="trigger-menu-item" onclick="handleTriggerAction('connect', ${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Connect to Trade</div>
             <div class="trigger-menu-item" onclick="showTradeOptions(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Upon Trigger...</div>
@@ -860,66 +1011,108 @@ canvas.addEventListener('mouseleave', function() {
 });
 
 canvas.addEventListener('click', function(event) {
-	const hoveredPointAtClick = window.hoveredPoint;
-	const hoveredTrendAtClick = window.hoveredTrendline;
+    // Skip all click handlers if we just dragged a bracket point
+    if (window.draggingBracketPoint !== null) {
+        return;
+    }
 
-	const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
+    const hoveredPointAtClick = window.hoveredPoint;
+    const hoveredTrendAtClick = window.hoveredTrendline;
 
-	window.triggerClickHandler(event, currentChartState);
-	window.lineClickHandler(event, currentChartState);
-	window.orderClickHandler(event, currentChartState);
-	window.fillClickHandler(event, currentChartState);
+    const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
 
-	// ──────────────────────────────────────────────
-	// Point menu takes priority — no subtrend change
-	// ──────────────────────────────────────────────
-	if (hoveredPointAtClick) {
-		console.log("Point clicked → menu only");
-		showTrendlinePointMenu(hoveredPointAtClick, event.pageX, event.pageY);
-		return;
-	}
+    // Only run these if NOT clicking on a bracket point
+    const isBracketClick = findBracketPointAt(event.clientY - canvas.getBoundingClientRect().top, currentChartState);
+    if (!isBracketClick) {
+        window.triggerClickHandler(event, currentChartState);
+        window.lineClickHandler(event, currentChartState);
+        window.orderClickHandler(event, currentChartState);
+        window.fillClickHandler(event, currentChartState);
+    }
 
-	// ──────────────────────────────────────────────
-	// Trendline navigation: keep parents + show children
-	// ──────────────────────────────────────────────
-	let needsRedraw = false;
+    // Point / Trendline logic
+    if (hoveredPointAtClick) {
+        showTrendlinePointMenu(hoveredPointAtClick, event.pageX, event.pageY);
+        return;
+    }
 
-	if (hoveredTrendAtClick && hoveredTrendAtClick.trends && hoveredTrendAtClick.trends.length > 0) {
-		console.log("Drill into subtrends:", hoveredTrendAtClick);
-		window.trendlinePath.push(hoveredTrendAtClick);
-		needsRedraw = true;
-	} else if (!hoveredTrendAtClick && window.trendlinePath.length > 0) {
-		console.log("Go up one level");
-		window.trendlinePath.pop();
-		needsRedraw = true;
-	}
+    // ... rest of your trendline navigation code ...
+    let needsRedraw = false;
+    if (hoveredTrendAtClick && hoveredTrendAtClick.trends && hoveredTrendAtClick.trends.length > 0) {
+        window.trendlinePath.push(hoveredTrendAtClick);
+        needsRedraw = true;
+    } else if (!hoveredTrendAtClick && window.trendlinePath.length > 0) {
+        window.trendlinePath.pop();
+        needsRedraw = true;
+    }
 
-	if (needsRedraw) {
-		// Build the FULL visible trendlines: all in the path + current level's children
-		let visibleTrends = [];
-
-		// Add all ancestors (parents) from the path
-		for (let i = 0; i < window.trendlinePath.length; i++) {
-			visibleTrends.push(window.trendlinePath[i]);
-		}
-
-		// Add the current level's subtrends (children of the last in path)
-		if (window.trendlinePath.length > 0) {
-			const current = window.trendlinePath[window.trendlinePath.length - 1];
-			if (current.trends && current.trends.length > 0) {
-				visibleTrends = visibleTrends.concat(current.trends);
-			}
-		} else {
-			// Root level: show all top-level trendlines
-			visibleTrends = window.trendlines || [];
-		}
-
-		// Set this as what should be rendered
-		window.currentTrendlines = visibleTrends;
-
-		window.drawCandlestickChart(window.stockData, window.start, window.end);
-	}
+    if (needsRedraw) {
+        // your existing visibleTrends logic...
+        window.drawCandlestickChart(window.stockData, window.start, window.end);
+    }
 });
+
+// canvas.addEventListener('click', function(event) {
+// 	const hoveredPointAtClick = window.hoveredPoint;
+// 	const hoveredTrendAtClick = window.hoveredTrendline;
+//
+// 	const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
+//
+// 	window.triggerClickHandler(event, currentChartState);
+// 	window.lineClickHandler(event, currentChartState);
+// 	window.orderClickHandler(event, currentChartState);
+// 	window.fillClickHandler(event, currentChartState);
+//
+// 	// ──────────────────────────────────────────────
+// 	// Point menu takes priority — no subtrend change
+// 	// ──────────────────────────────────────────────
+// 	if (hoveredPointAtClick) {
+// 		console.log("Point clicked → menu only");
+// 		showTrendlinePointMenu(hoveredPointAtClick, event.pageX, event.pageY);
+// 		return;
+// 	}
+//
+// 	// ──────────────────────────────────────────────
+// 	// Trendline navigation: keep parents + show children
+// 	// ──────────────────────────────────────────────
+// 	let needsRedraw = false;
+//
+// 	if (hoveredTrendAtClick && hoveredTrendAtClick.trends && hoveredTrendAtClick.trends.length > 0) {
+// 		console.log("Drill into subtrends:", hoveredTrendAtClick);
+// 		window.trendlinePath.push(hoveredTrendAtClick);
+// 		needsRedraw = true;
+// 	} else if (!hoveredTrendAtClick && window.trendlinePath.length > 0) {
+// 		console.log("Go up one level");
+// 		window.trendlinePath.pop();
+// 		needsRedraw = true;
+// 	}
+//
+// 	if (needsRedraw) {
+// 		// Build the FULL visible trendlines: all in the path + current level's children
+// 		let visibleTrends = [];
+//
+// 		// Add all ancestors (parents) from the path
+// 		for (let i = 0; i < window.trendlinePath.length; i++) {
+// 			visibleTrends.push(window.trendlinePath[i]);
+// 		}
+//
+// 		// Add the current level's subtrends (children of the last in path)
+// 		if (window.trendlinePath.length > 0) {
+// 			const current = window.trendlinePath[window.trendlinePath.length - 1];
+// 			if (current.trends && current.trends.length > 0) {
+// 				visibleTrends = visibleTrends.concat(current.trends);
+// 			}
+// 		} else {
+// 			// Root level: show all top-level trendlines
+// 			visibleTrends = window.trendlines || [];
+// 		}
+//
+// 		// Set this as what should be rendered
+// 		window.currentTrendlines = visibleTrends;
+//
+// 		window.drawCandlestickChart(window.stockData, window.start, window.end);
+// 	}
+// });
 
 function clickTrendline(event, chartState) {
 	console.log("Trend Click ChartState", chartState)

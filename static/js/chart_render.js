@@ -33,6 +33,7 @@ window.updateChartState = function (ctx, width, height, margin, minPrice, maxPri
 
 window.drawCandlestickChart = function (data, start, end) {
     // console.log("DrawCandlestickChart\n", data, start, end)
+    // console.log("DrawCandlestickChart\n" )
     // console.log(data, start, end)
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
@@ -278,8 +279,11 @@ window.drawCandlestickChart = function (data, start, end) {
     // Draw triggers
     // console.log("Current_Triggers: ", window.current_triggers.length)
     if (window.current_triggers) {
+        // console.log("There are Current Triggers available")
         window.current_triggers.forEach(trigger => {
+            // console.log("Trigger:", trigger)
             // Skip triggered triggers
+            // console.log("WINDOW TRIGGERS", window.exchange.Triggers)
             if (trigger.status === 'triggered') {
                 return;
             }
@@ -630,6 +634,8 @@ function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
         }
     });
 
+    drawBracketBoxes(ctx, width, height, margin, minPrice, maxPrice);
+
     if (currentTool === 'line' && drawingStart) {
         ctx.beginPath();
         ctx.moveTo(margin, drawingStart.y);
@@ -643,3 +649,202 @@ function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
         ctx.stroke();
     }
 }
+
+// =============================================
+//  BRACKET TOOL (Long / Short)
+// =============================================
+//
+// window.currentBracketSide = null;
+//
+// window.activateBracketTool = function(side) {
+//     window.currentBracketSide = side;
+//     window.currentTool = 'bracket';
+//
+//     // Highlight the active button in toolbar
+//     document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+//         const isActive = (side === 'long' && btn.textContent.includes('LONG')) ||
+//                         (side === 'short' && btn.textContent.includes('SHORT'));
+//         if (isActive) {
+//             btn.style.boxShadow = '0 0 0 3px rgba(255,255,255,0.6)';
+//             btn.style.transform = 'scale(1.08)';
+//         } else {
+//             btn.style.boxShadow = 'none';
+//             btn.style.transform = 'scale(1)';
+//         }
+//     });
+//
+//     showToast(`Click on the chart to place ${side.toUpperCase()} Entry`, 2200);
+// };
+//
+// window.handleBracketClick = function(entryPrice) {
+//     if (!window.currentBracketSide) return;
+//
+//     const side = window.currentBracketSide;
+//     const riskPercent = 1.0;   // ← Change default risk % here
+//     const rrRatio = 2.0;       // ← Change default R:R here
+//
+//     let stopPrice, targetPrice;
+//
+//     if (side === 'long') {
+//         stopPrice  = entryPrice * (1 - riskPercent / 100);
+//         targetPrice = entryPrice * (1 + (riskPercent / 100) * rrRatio);
+//     } else { // short
+//         stopPrice  = entryPrice * (1 + riskPercent / 100);
+//         targetPrice = entryPrice * (1 - (riskPercent / 100) * rrRatio);
+//     }
+//
+//     // Remove any previous bracket
+//     draw_lines = draw_lines.filter(l => !l.isBracket);
+//
+//     // Add new bracket lines
+//     draw_lines.push({ price: entryPrice,  type: 'entry', color: '#00ff00', side: side, isBracket: true });
+//     draw_lines.push({ price: stopPrice,   type: 'stop',  color: '#ff0000', side: side, isBracket: true });
+//     draw_lines.push({ price: targetPrice, type: 'pt',    color: '#ffff00', side: side, isBracket: true });
+//
+//     // Prepare for sidebar
+//     window.currentTradeSetup = {
+//         side: side,
+//         entry: { price: entryPrice },
+//         stopLoss: { price: stopPrice },
+//         profitTargets: [{ price: targetPrice, rr: rrRatio }]
+//     };
+//
+//     console.log(`✅ ${side.toUpperCase()} Bracket created @ ${entryPrice.toFixed(8)}`);
+//
+//     // Redraw everything
+//     drawCandlestickChart(window.stockData, window.start, window.end);
+//     if (typeof updateSidebar === 'function') updateSidebar();
+//
+//     // Reset tool after placing
+//     setTimeout(() => {
+//         window.currentTool = null;
+//         window.currentBracketSide = null;
+//         document.querySelectorAll('#chart-toolbar button').forEach(b => {
+//             b.style.boxShadow = 'none';
+//             b.style.transform = 'scale(1)';
+//         });
+//     }, 400);
+// };
+//
+// // Toast notification helper
+// function showToast(msg, duration = 2000) {
+//     const toast = document.createElement('div');
+//     toast.style.cssText = `
+//         position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+//         background: #1e1e2e; color: #0f0; padding: 14px 24px; border-radius: 8px;
+//         border: 1px solid #0f0; z-index: 9999; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+//     `;
+//     toast.textContent = msg;
+//     document.body.appendChild(toast);
+//     setTimeout(() => toast.remove(), duration);
+// }
+
+// Draw filled boxes + draggable handles
+window.drawBracketBoxes = function(ctx, width, height, margin, minPrice, maxPrice) {
+    const brackets = {};
+
+    draw_lines.forEach(line => {
+        if (!line.isBracket || !line.bracketId) return;
+        if (!brackets[line.bracketId]) brackets[line.bracketId] = {};
+        brackets[line.bracketId][line.type] = line;
+    });
+
+    Object.values(brackets).forEach(b => {
+        const entryLine = b.entry;
+        const stopLine = b.stop;
+        const tpLine = b.pt;
+
+        if (!entryLine || !stopLine || !tpLine) return;
+
+        const getY = (price) => height - margin - ((price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+
+        const entryY = getY(entryLine.price);
+        const stopY = getY(stopLine.price);
+        const tpY = getY(tpLine.price);
+
+        // Green box: Entry → TP
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.12)';
+        ctx.fillRect(margin, Math.min(entryY, tpY), width - 2 * margin, Math.abs(entryY - tpY));
+
+        // Red box: Entry → Stop
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.12)';
+        ctx.fillRect(margin, Math.min(entryY, stopY), width - 2 * margin, Math.abs(entryY - stopY));
+
+        // Horizontal lines
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(margin, entryY); ctx.lineTo(width - margin, entryY); ctx.strokeStyle = '#00ff88'; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(margin, stopY);  ctx.lineTo(width - margin, stopY);  ctx.strokeStyle = '#ff4444'; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(margin, tpY);    ctx.lineTo(width - margin, tpY);    ctx.strokeStyle = '#ffff00'; ctx.stroke();
+
+        // Draggable handles (circles)
+        const drawHandle = (y, color, isHovered = false) => {
+            ctx.beginPath();
+            ctx.arc(width - margin - 20, y, isHovered ? 7 : 5, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        };
+
+        drawHandle(entryY, '#00ff88', window.hoveredBracketPoint?.type === 'entry');
+        drawHandle(stopY,  '#ff4444', window.hoveredBracketPoint?.type === 'stop');
+        drawHandle(tpY,    '#ffff00', window.hoveredBracketPoint?.type === 'pt');
+    });
+};
+
+
+
+// Draw filled boxes like TradingView
+// window.drawBracketBoxes = function(ctx, width, height, margin, minPrice, maxPrice) {
+//     console.log("Draw Bracket Boxes")
+//     const brackets = {};
+//
+//     draw_lines.forEach(line => {
+//         if (!line.isBracket || !line.bracketId) return;
+//         if (!brackets[line.bracketId]) brackets[line.bracketId] = {};
+//         brackets[line.bracketId][line.type] = line.price;
+//     });
+//
+//     Object.values(brackets).forEach(b => {
+//         const entry = b.entry;
+//         const stop = b.stop;
+//         const tp = b.pt;
+//
+//         if (!entry || !stop || !tp) return;
+//
+//         const getY = (price) => height - margin - ((price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+//
+//         const entryY = getY(entry);
+//         const stopY = getY(stop);
+//         const tpY = getY(tp);
+//
+//         // Green box: Entry to TP
+//         ctx.fillStyle = 'rgba(0, 255, 0, 0.12)';
+//         ctx.fillRect(margin, Math.min(entryY, tpY), width - 2 * margin, Math.abs(entryY - tpY));
+//
+//         // Red box: Entry to Stop
+//         ctx.fillStyle = 'rgba(255, 0, 0, 0.12)';
+//         ctx.fillRect(margin, Math.min(entryY, stopY), width - 2 * margin, Math.abs(entryY - stopY));
+//
+//         // Border lines
+//         ctx.strokeStyle = '#00ff00';
+//         ctx.lineWidth = 2;
+//         ctx.beginPath();
+//         ctx.moveTo(margin, entryY);
+//         ctx.lineTo(width - margin, entryY);
+//         ctx.stroke();
+//
+//         ctx.strokeStyle = '#ff0000';
+//         ctx.beginPath();
+//         ctx.moveTo(margin, stopY);
+//         ctx.lineTo(width - margin, stopY);
+//         ctx.stroke();
+//
+//         ctx.strokeStyle = '#ffff00';
+//         ctx.beginPath();
+//         ctx.moveTo(margin, tpY);
+//         ctx.lineTo(width - margin, tpY);
+//         ctx.stroke();
+//     });
+// };

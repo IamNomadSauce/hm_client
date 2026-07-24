@@ -355,6 +355,43 @@
     </div>
   </div>
     <div>
+
+        <div id="chart-toolbar" 
+             style="position: absolute; 
+                    left: 25px;           /* Increased from 15px */
+                    top: 20px; 
+                    z-index: 1000; 
+                    background: #1e1e2e; 
+                    border: 1px solid #555; 
+                    border-radius: 10px; 
+                    padding: 12px; 
+                    display: flex; 
+                    flex-direction: column; 
+                    gap: 8px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.7); 
+                    min-width: 68px;
+                    pointer-events: auto;">
+            
+            <!-- Long / Short -->
+            <button onclick="activateBracketTool('long')" 
+                    class="btn btn-success btn-sm fw-bold py-2">📈 LONG</button>
+            <button onclick="activateBracketTool('short')" 
+                    class="btn btn-danger btn-sm fw-bold py-2">📉 SHORT</button>
+
+            <div class="dropdown-divider border-secondary my-1"></div>
+
+            <button onclick="setCurrentTool('line')" 
+                    class="btn btn-outline-light btn-sm py-2">➖ Line Tool</button>
+            <button onclick="setCurrentTool('trigger')" 
+                    class="btn btn-outline-light btn-sm py-2">⚡ Trigger</button>
+            <button onclick="setCurrentTool('box')" 
+                    class="btn btn-outline-light btn-sm py-2">⬛ Box</button>
+
+            <hr class="border-secondary my-1">
+
+            <button onclick="clearAllDrawings()" 
+                    class="btn btn-outline-danger btn-sm py-2">🗑 Clear All</button>
+        </div>
       <!-- Chart Section -->
       {{if .SelectedProduct.ProductID}}
       <div class="row">
@@ -365,6 +402,118 @@
       {{end}}
     </div>
   </div>
+
+<!-- Toast Container -->
+<div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 2000;"></div>
+
+<style>
+  #chart-toolbar button {
+    width: 100%;
+    text-align: left;
+  }
+  #chart-toolbar .btn {
+    transition: all 0.2s;
+  }
+  #chart-toolbar .btn:hover {
+    transform: translateX(4px);
+  }
+</style>
+
+<script>
+// =============================================
+//  BRACKET TOOL
+// =============================================
+
+window.currentBracketSide = null;
+
+window.activateBracketTool = function(side) {
+    window.currentBracketSide = side;
+    window.currentTool = 'bracket';
+
+    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+        const isActive = (side === 'long' && btn.textContent.includes('LONG')) ||
+                        (side === 'short' && btn.textContent.includes('SHORT'));
+        if (isActive) {
+            btn.style.boxShadow = '0 0 0 3px white';
+            btn.style.transform = 'scale(1.1)';
+        } else {
+            btn.style.boxShadow = 'none';
+            btn.style.transform = 'scale(1)';
+        }
+    });
+
+    showToast(`Click on chart to place ${side.toUpperCase()} Entry`, 2500);
+};
+
+window.handleBracketClick = function(entryPrice) {
+    if (!window.currentBracketSide) return;
+
+    const side = window.currentBracketSide;
+    const riskPercent = 5.0;
+    const rrRatio = 2.0;
+
+    let stopPrice, targetPrice;
+
+    if (side === 'long') {
+        stopPrice  = entryPrice * (1 - riskPercent / 100);
+        targetPrice = entryPrice * (1 + (riskPercent / 100) * rrRatio);
+    } else {
+        stopPrice  = entryPrice * (1 + riskPercent / 100);
+        targetPrice = entryPrice * (1 - (riskPercent / 100) * rrRatio);
+    }
+
+    // Remove old bracket
+    draw_lines = draw_lines.filter(l => !l.isBracket);
+
+    const bracketId = 'bracket_' + Date.now();
+
+    draw_lines.push(
+        { price: entryPrice,  type: 'entry',   color: '#00ff00', side: side, isBracket: true, bracketId },
+        { price: stopPrice,   type: 'stop',    color: '#ff0000', side: side, isBracket: true, bracketId },
+        { price: targetPrice, type: 'pt',      color: '#ffff00', side: side, isBracket: true, bracketId }
+    );
+
+    window.currentTradeSetup = {
+        side: side,
+        entry: { price: entryPrice },
+        stopLoss: { price: stopPrice },
+        profitTargets: [{ price: targetPrice, rr: rrRatio }]
+    };
+
+    drawCandlestickdhart(window.stockData, window.start, window.end);
+    if (typeof updateSidebar === "function") updateSidebar();
+
+    console.log(`✅ ${side.toUpperCase()} Bracket created`);
+};
+
+
+function showToast(msg, duration = 2000) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1e1e2e;color:#0f0;padding:14px 24px;border-radius:8px;border:1px solid #0f0;z-index:9999;font-weight:bold;`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+}
+
+
+
+</script>
+
+<style>
+  #chartContainer {
+    position: relative;
+    overflow: visible !important;
+  }
+
+  #chart-toolbar {
+    transition: left 0.2s ease;
+  }
+
+  /* Optional: Make toolbar draggable */
+  #chart-toolbar:hover {
+    cursor: grab;
+  }
+</style>
 
   <style>
     .dropdown-menu {
