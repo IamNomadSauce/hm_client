@@ -1,58 +1,45 @@
 {{define "content"}}
 <div class="container-fluid">
   <div>
-    <div class="row ">
-      <div class="col">
+    <div class="d-flex flex-row">
+      <div class="">
         <div class="d-flex">
-          {{if gt (len .Exchanges) 0}}
-          {{range $index, $exchange := .Exchanges}}
-          <div class="">
-            <form action="/finance" method="GET">
-              <input type="hidden" name="selected_index" value="{{$index}}">
-              <button type="submit"
-                class="btn {{if eq $index $.SelectedIndex}}btn-warning{{else}}btn-secondary{{end}} mb-2">
-                {{$exchange.Name}}
-              </button>
-            </form>
-          </div>
-          {{end}}
-          {{else}}
-          <p>No Exchanges</p>
-          <button class="btn btn-sm btn-warning" type="">+</button>
-          {{end}}
-        </div>
+  {{if gt (len .Exchanges) 0}}
+  <div class="dropdown">
+    <button class="btn btn-warning dropdown-toggle" 
+            type="button" 
+            data-bs-toggle="dropdown" 
+            aria-expanded="false">
+      {{range $index, $exchange := .Exchanges}}
+        {{if eq $index $.SelectedIndex}}{{$exchange.Name}}{{end}}
+      {{end}}
+    </button>
+    <ul class="dropdown-menu">
+      {{range $index, $exchange := .Exchanges}}
+      <li>
+        <form action="/finance" method="GET">
+          <input type="hidden" name="selected_index" value="{{$index}}">
+          <button type="submit" 
+                  class="dropdown-item {{if eq $index $.SelectedIndex}}active{{end}}">
+            {{$exchange.Name}}
+          </button>
+        </form>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{else}}
+  <p>No Exchanges</p>
+  <button class="btn btn-sm btn-warning" type="">+</button>
+  {{end}}
+</div>
+
         <!-- Navigation Tabs -->
-       <ul class="nav nav-pills " id="finance-tabs" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="portfolio-tab" data-bs-toggle="pill" data-bs-target="#trade"
-              type="button" role="tab">
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#orders" type="button"
-              role="tab">
-              Orders
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="fills-tab" data-bs-toggle="pill" data-bs-target="#fills" type="button"
-              role="tab">
-              Fills
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="fills-tab" data-bs-toggle="pill" data-bs-target="#portfolio" type="button"
-              role="tab">
-              Portfolio
-            </button>
-          </li>
-        </ul>
       </div>
-      <div class="col">
+      <div class="">
         <!-- Watchlist Section -->
         <div class="row ">
           <div class="col">
-            <h5>Watchlist:</h5>
             <div class="d-flex flex-wrap gap-2">
                 <div class="dropdown">
                   <button class="btn btn-sm btn-primary dropdown-toggle" type="button"
@@ -96,17 +83,16 @@
                   </div>
                 </div>
               </div>
-
 				{{*/}}
+
             </div>
           </div>
         </div>
       </div>
-      <div class="col">
+      <div class="">
         <!-- Timeframes Section -->
         <div class="row">
           <div class="col">
-            <h5>Timeframes</h5>
             <div class="d-flex flex-wrap gap-2">
                 <div class="dropdown">
                   <button class="btn btn-sm btn-primary dropdown-toggle" type="button"
@@ -204,14 +190,6 @@
                 </div>
             </div>
                 {{*/}}
-          <!-- <div class="d-flex">
-            <form action="">
-              <button class="btn btn-sm btn-danger"><</button>
-            </form>
-            <form action="">
-              <button class="btn btn-sm btn-success">></button>
-            </form>
-          </div> -->
         </div>
         <!-- Trendlines Section -->
         <div class="row mt-2">
@@ -227,6 +205,33 @@
         </div>
       </div>
     </div>
+        <div>
+            <ul class="nav nav-pills " id="finance-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="portfolio-tab" data-bs-toggle="pill" data-bs-target="#trade" type="button" role="tab">
+                    .
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#orders" type="button"
+                  role="tab">
+                  Orders
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="fills-tab" data-bs-toggle="pill" data-bs-target="#fills" type="button"
+                  role="tab">
+                  Fills
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="fills-tab" data-bs-toggle="pill" data-bs-target="#portfolio" type="button"
+                  role="tab">
+                  Portfolio
+                </button>
+              </li>
+            </ul>
+        </div>
   </div>
 
 
@@ -371,7 +376,7 @@
         <div id="chart-toolbar" 
              style="position: absolute; 
                     left: 25px;           /* Increased from 15px */
-                    top: 20px; 
+                    top: 500px; 
                     z-index: 1000; 
                     background: #1e1e2e; 
                     border: 1px solid #555; 
