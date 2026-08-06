@@ -35,25 +35,25 @@ window.setCurrentTool = function(tool) {
     console.log("Tool activated:", tool);
 };
 
-window.activateBracketTool = function(side) {
-    window.currentBracketSide = side;
-    window.currentTool = 'bracket';
-
-    // Highlight the active button
-    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
-        const isActive = (side === 'long' && btn.textContent.includes('LONG')) ||
-                         (side === 'short' && btn.textContent.includes('SHORT'));
-        if (isActive) {
-            btn.style.boxShadow = '0 0 0 3px rgba(255,255,255,0.6)';
-            btn.style.transform = 'scale(1.08)';
-        } else {
-            btn.style.boxShadow = 'none';
-            btn.style.transform = 'scale(1)';
-        }
-    });
-
-    showToast(`Click on the chart to place ${side.toUpperCase()} Entry`, 2200);
-};
+// window.activateBracketTool = function(side) {
+//     window.currentBracketSide = side;
+//     window.currentTool = 'bracket';
+//
+//     // Highlight the active button
+//     document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+//         const isActive = (side === 'long' && btn.textContent.includes('LONG')) ||
+//                          (side === 'short' && btn.textContent.includes('SHORT'));
+//         if (isActive) {
+//             btn.style.boxShadow = '0 0 0 3px rgba(255,255,255,0.6)';
+//             btn.style.transform = 'scale(1.08)';
+//         } else {
+//             btn.style.boxShadow = 'none';
+//             btn.style.transform = 'scale(1)';
+//         }
+//     });
+//
+//     showToast(`Click on the chart to place ${side.toUpperCase()} Entry`, 2200);
+// };
 
 window.clearAllDrawings = function() {
     if (confirm("Clear all drawn lines and brackets?")) {
@@ -121,19 +121,20 @@ window.setupEventListeners = function() {
 
         const price = calculatePrice(mouseY, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice);
 
-        // 1. Create new bracket
+        const hoveredPoint = findBracketPointAt(mouseY, chartState);
+
+        if (hoveredPoint) {
+            console.log("BRACKET DRAGGING")
+            window.draggingBracketPoint = hoveredPoint;
+            canvas.style.cursor = 'ns-resize';
+            return; 
+        }
+
         if (window.currentTool === 'bracket') {
             handleBracketClick(price);
             return;
         }
 
-        // 2. Start dragging bracket point (HIGHEST PRIORITY)
-        const hoveredPoint = findBracketPointAt(mouseY, chartState);
-        if (hoveredPoint) {
-            window.draggingBracketPoint = hoveredPoint;
-            canvas.style.cursor = 'ns-resize';
-            return;   // ← Important: stop here
-        }
 
         // 3. Normal tools
         if (window.currentTool === 'line' || window.currentTool === 'trigger') {
@@ -200,12 +201,15 @@ window.setupEventListeners = function() {
 // ==================== BRACKET DRAG HELPERS ====================
 
 function findBracketPointAt(mouseY, chartState) {
+    console.log("Find BracketPoint", mouseY)
     if (!chartState) return null;
 
     const threshold = 12;
 
     for (let line of draw_lines) {
         if (!line.isBracket || !line.bracketId) continue;
+
+        console.log("IS BRACKET")
 
         const lineY = calculateLineY(line.price, chartState);
 
@@ -991,24 +995,24 @@ window.deleteTradeBlock = function(groupId) {
 		.catch(error => console.error('Error deleting trade group:', error))
 }
 
-canvas.addEventListener('mouseup', function() {
-	// console.log("MouseUp")
-	if (window.currentTool) {
-		drawingStart = null
-		if (window.currentTool === 'box') {
-			console.log(" - _Box end", mouseX, mouseY)
-		}
-	} else {
-		isDragging = false;
-		canvas.style.cursor = 'crosshair';
-	}
-});
+// canvas.addEventListener('mouseup', function() {
+// 	// console.log("MouseUp")
+// 	if (window.currentTool) {
+// 		drawingStart = null
+// 		if (window.currentTool === 'box') {
+// 			console.log(" - _Box end", mouseX, mouseY)
+// 		}
+// 	} else {
+// 		isDragging = false;
+// 		canvas.style.cursor = 'crosshair';
+// 	}
+// });
 
-canvas.addEventListener('mouseleave', function() {
-	// console.log("Canvas Leave2")
-	isDragging = false;
-	canvas.style.cursor = 'crosshair';
-});
+// canvas.addEventListener('mouseleave', function() {
+// 	// console.log("Canvas Leave2")
+// 	isDragging = false;
+// 	canvas.style.cursor = 'crosshair';
+// });
 
 canvas.addEventListener('click', function(event) {
     // Skip all click handlers if we just dragged a bracket point
@@ -1118,39 +1122,39 @@ function clickTrendline(event, chartState) {
 	console.log("Trend Click ChartState", chartState)
 }
 
-canvas.addEventListener('mouseleave', function(event) {
-	// console.log("Canvas Leave");
-
-	// hideTrendlinePointTooltip()
-	hidePointTooltip()
-	// Get mouse position
-	const mouseX = event.clientX;
-	const mouseY = event.clientY;
-
-	// Get canvas and menu boundaries
-	const canvasRect = canvas.getBoundingClientRect();
-	const menu = document.querySelector('.order-menu');
-	const menuRect = menu ? menu.getBoundingClientRect() : null;
-
-	// Check if mouse is still inside canvas or menu
-	const isMouseInCanvas =
-		mouseX >= canvasRect.left &&
-		mouseX <= canvasRect.right &&
-		mouseY >= canvasRect.top &&
-		mouseY <= canvasRect.bottom;
-
-	const isMouseInMenu =
-		menuRect &&
-		mouseX >= menuRect.left &&
-		mouseX <= menuRect.right &&
-		mouseY >= menuRect.top &&
-		mouseY <= menuRect.bottom;
-
-	if (!isMouseInCanvas && !isMouseInMenu) {
-		// console.log("Mouse has left both canvas and menu");
-		document.querySelectorAll('.order-menu').forEach(el => el.remove());
-	}
-});
+// canvas.addEventListener('mouseleave', function(event) {
+// 	// console.log("Canvas Leave");
+//
+// 	// hideTrendlinePointTooltip()
+// 	hidePointTooltip()
+// 	// Get mouse position
+// 	const mouseX = event.clientX;
+// 	const mouseY = event.clientY;
+//
+// 	// Get canvas and menu boundaries
+// 	const canvasRect = canvas.getBoundingClientRect();
+// 	const menu = document.querySelector('.order-menu');
+// 	const menuRect = menu ? menu.getBoundingClientRect() : null;
+//
+// 	// Check if mouse is still inside canvas or menu
+// 	const isMouseInCanvas =
+// 		mouseX >= canvasRect.left &&
+// 		mouseX <= canvasRect.right &&
+// 		mouseY >= canvasRect.top &&
+// 		mouseY <= canvasRect.bottom;
+//
+// 	const isMouseInMenu =
+// 		menuRect &&
+// 		mouseX >= menuRect.left &&
+// 		mouseX <= menuRect.right &&
+// 		mouseY >= menuRect.top &&
+// 		mouseY <= menuRect.bottom;
+//
+// 	if (!isMouseInCanvas && !isMouseInMenu) {
+// 		// console.log("Mouse has left both canvas and menu");
+// 		document.querySelectorAll('.order-menu').forEach(el => el.remove());
+// 	}
+// });
 
 
 document.getElementById('chartContainer').addEventListener('wheel', function(event) {

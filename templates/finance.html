@@ -497,7 +497,15 @@ window.handleBracketClick = function(entryPrice) {
         profitTargets: [{ price: targetPrice, rr: rrRatio }]
     };
 
-    drawCandlestickdhart(window.stockData, window.start, window.end);
+    window.currentTool = null
+    window.currentBracketSide = null
+
+    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+        btn.style.boxShadow = 'none'
+        btn.style.transform = 'scale(1)'
+    })
+
+    drawCandlestickChart(window.stockData, window.start, window.end);
     if (typeof updateSidebar === "function") updateSidebar();
 
     console.log(`✅ ${side.toUpperCase()} Bracket created`);
