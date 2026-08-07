@@ -35,25 +35,6 @@ window.setCurrentTool = function(tool) {
     console.log("Tool activated:", tool);
 };
 
-// window.activateBracketTool = function(side) {
-//     window.currentBracketSide = side;
-//     window.currentTool = 'bracket';
-//
-//     // Highlight the active button
-//     document.querySelectorAll('#chart-toolbar button').forEach(btn => {
-//         const isActive = (side === 'long' && btn.textContent.includes('LONG')) ||
-//                          (side === 'short' && btn.textContent.includes('SHORT'));
-//         if (isActive) {
-//             btn.style.boxShadow = '0 0 0 3px rgba(255,255,255,0.6)';
-//             btn.style.transform = 'scale(1.08)';
-//         } else {
-//             btn.style.boxShadow = 'none';
-//             btn.style.transform = 'scale(1)';
-//         }
-//     });
-//
-//     showToast(`Click on the chart to place ${side.toUpperCase()} Entry`, 2200);
-// };
 
 window.clearAllDrawings = function() {
     if (confirm("Clear all drawn lines and brackets?")) {
@@ -141,28 +122,24 @@ window.setupEventListeners = function() {
             const line = { price: price };
 
             if (window.currentTool === 'trigger') {
-                const lastCandle = window.stockData[window.stockData.length - 1];
-                const currentPrice = lastCandle.Close;
-
                 line.type = 'trigger';
                 line.color = '#ff00ff';
+                line.pending = true
 
-                const triggerData = {
-                    product_id: selectedProduct.product_id,
-                    type: line.price > currentPrice ? 'price_above' : 'price_below',
-                    price: parseFloat(line.price),
-                    status: 'active',
-                    xch_id: exchange.ID
-                };
+                draw_lines.push(line)
+                drawCandlestickChart(window.stockData, window.start, window.end)
 
-                fetch('create-trigger', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(triggerData)
-                })
-                .then(r => r.json())
-                .then(data => line.triggerId = data.id);
+                showTriggerTypeMenu(line, event.pageX, event.pageY)
+
+                window.suppressNextLineMenu = true
+
+                window.currentTool = null
+
+                return;
+
             }
+
+            window.currentTool = null;
 
             draw_lines.push(line);
             drawCandlestickChart(window.stockData, window.start, window.end);
@@ -197,6 +174,140 @@ window.setupEventListeners = function() {
         isDragging = false;
     });
 };
+
+function showTriggerTypeMenu(line, pageX, pageY) {
+    document.querySelectorAll('.trigger-type-menu, .line-menu, .trigger-menu').forEach(el => el.remove());
+
+    const menu = document.createElement('div');
+    menu.className = 'trigger-type-menu';
+    menu.style.cssText = `
+        position: absolute;
+        left: ${pageX - 100}px;
+        top: ${pageY - 10}px;
+        background: #1e1e2e;
+        color: #e0e0ff;
+        padding: 10px 14px;
+        border: 1px solid #4a4a6a;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+        z-index: 2000;
+        min-width: 200px;
+        font-size: 13px;
+        user-select: none;
+    `;
+
+    menu.innerHTML = `
+        <div style="font-weight:bold; margin-bottom:10px; color:#ff00ff;">
+            Trigger @ ${line.price.toFixed(line.price < 1 ? 8 : 2)}
+        </div>
+        <div class="menu-item" data-type="price_above">Price Above</div>
+        <div class="menu-item" data-type="price_below">Price Below</div>
+        <div class="menu-item" data-type="close_above">Close Above</div>
+        <div class="menu-item" data-type="close_below">Close Below</div>
+        <div class="menu-item" data-type="cancel" style="color:#ff6b6b; margin-top:8px;">Cancel</div>
+    `;
+
+    document.body.appendChild(menu);
+
+    // Hover styles
+    menu.querySelectorAll('.menu-item').forEach(item => {
+        item.style.cssText = 'padding:6px 4px; cursor:pointer; border-radius:4px;';
+        item.addEventListener('mouseenter', () => item.style.background = '#2a2a3e');
+        item.addEventListener('mouseleave', () => item.style.background = 'transparent');
+    });
+
+    // ---- FIXED CLOSE LOGIC ----
+    // Ignore the click that opened the menu
+    let ignoreNextClick = true;
+
+    const closeListener = (ev) => {
+        if (ignoreNextClick) {
+            ignoreNextClick = false;
+            return;
+        }
+
+        if (!menu.contains(ev.target)) {
+            if (line.pending) {
+                const idx = draw_lines.indexOf(line);
+                if (idx !== -1) {
+                    draw_lines.splice(idx, 1);
+                    drawCandlestickChart(window.stockData, window.start, window.end);
+                }
+            }
+            menu.remove();
+            document.removeEventListener('click', closeListener);
+        }
+    };
+
+    // Add the listener on the next tick (still needed)
+    setTimeout(() => {
+        document.addEventListener('click', closeListener);
+    }, 0);
+
+    // Handle menu item clicks
+    menu.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const type = item.dataset.type;
+
+            if (type === 'cancel') {
+                const idx = draw_lines.indexOf(line);
+                if (idx !== -1) {
+                    draw_lines.splice(idx, 1);
+                    drawCandlestickChart(window.stockData, window.start, window.end);
+                }
+                menu.remove();
+                document.removeEventListener('click', closeListener);
+                return;
+            }
+
+            // Create trigger on backend
+            const triggerData = {
+                product_id: selectedProduct.product_id,
+                type: type,
+                price: parseFloat(line.price),
+                status: 'active',
+                xch_id: exchange.ID
+            };
+
+            fetch('create-trigger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(triggerData)
+            })
+            .then(r => r.json())
+            .then(data => {
+                line.triggerId = data.id;
+                line.pending = false;
+                line.triggerType = type;
+
+                if (!window.current_triggers) window.current_triggers = [];
+                window.current_triggers.push({
+                    id: data.id,
+                    product_id: selectedProduct.product_id,
+                    type: type,
+                    price: line.price,
+                    status: 'active'
+                });
+
+                showToast(`Trigger created: ${type.replace('_', ' ')}`, 2200);
+                drawCandlestickChart(window.stockData, window.start, window.end);
+            })
+            .catch(err => {
+                console.error('Error creating trigger:', err);
+                showToast('Failed to create trigger', 2500);
+                const idx = draw_lines.indexOf(line);
+                if (idx !== -1) {
+                    draw_lines.splice(idx, 1);
+                    drawCandlestickChart(window.stockData, window.start, window.end);
+                }
+            });
+
+            menu.remove();
+            document.removeEventListener('click', closeListener);
+        });
+    });
+}
 
 // ==================== BRACKET DRAG HELPERS ====================
 
@@ -318,6 +429,11 @@ function getFillTimestamp(fill) {
 window.lineClickHandler = function(e, chartState) {
 	if (e.type !== 'click') return;
 
+    if (window.suppressNextLineMenu) {
+        window.suppressNextLineMenu = false
+        return
+    }
+
 	const rect = canvas.getBoundingClientRect();
 	const mouseY = e.clientY - rect.top;
 	const mouseX = e.clientX - rect.left;
@@ -336,7 +452,12 @@ window.lineClickHandler = function(e, chartState) {
 		}
 	});
 
+
 	if (!selectedLine) return;
+    if (selectedLine.type === 'trigger') {
+        // TODO show trigger menu
+        return
+    }
 
 	// We found one → show menu
 	window.activeLineIndex = selectedIndex;
@@ -995,24 +1116,6 @@ window.deleteTradeBlock = function(groupId) {
 		.catch(error => console.error('Error deleting trade group:', error))
 }
 
-// canvas.addEventListener('mouseup', function() {
-// 	// console.log("MouseUp")
-// 	if (window.currentTool) {
-// 		drawingStart = null
-// 		if (window.currentTool === 'box') {
-// 			console.log(" - _Box end", mouseX, mouseY)
-// 		}
-// 	} else {
-// 		isDragging = false;
-// 		canvas.style.cursor = 'crosshair';
-// 	}
-// });
-
-// canvas.addEventListener('mouseleave', function() {
-// 	// console.log("Canvas Leave2")
-// 	isDragging = false;
-// 	canvas.style.cursor = 'crosshair';
-// });
 
 canvas.addEventListener('click', function(event) {
     // Skip all click handlers if we just dragged a bracket point
@@ -1056,106 +1159,9 @@ canvas.addEventListener('click', function(event) {
     }
 });
 
-// canvas.addEventListener('click', function(event) {
-// 	const hoveredPointAtClick = window.hoveredPoint;
-// 	const hoveredTrendAtClick = window.hoveredTrendline;
-//
-// 	const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
-//
-// 	window.triggerClickHandler(event, currentChartState);
-// 	window.lineClickHandler(event, currentChartState);
-// 	window.orderClickHandler(event, currentChartState);
-// 	window.fillClickHandler(event, currentChartState);
-//
-// 	// ──────────────────────────────────────────────
-// 	// Point menu takes priority — no subtrend change
-// 	// ──────────────────────────────────────────────
-// 	if (hoveredPointAtClick) {
-// 		console.log("Point clicked → menu only");
-// 		showTrendlinePointMenu(hoveredPointAtClick, event.pageX, event.pageY);
-// 		return;
-// 	}
-//
-// 	// ──────────────────────────────────────────────
-// 	// Trendline navigation: keep parents + show children
-// 	// ──────────────────────────────────────────────
-// 	let needsRedraw = false;
-//
-// 	if (hoveredTrendAtClick && hoveredTrendAtClick.trends && hoveredTrendAtClick.trends.length > 0) {
-// 		console.log("Drill into subtrends:", hoveredTrendAtClick);
-// 		window.trendlinePath.push(hoveredTrendAtClick);
-// 		needsRedraw = true;
-// 	} else if (!hoveredTrendAtClick && window.trendlinePath.length > 0) {
-// 		console.log("Go up one level");
-// 		window.trendlinePath.pop();
-// 		needsRedraw = true;
-// 	}
-//
-// 	if (needsRedraw) {
-// 		// Build the FULL visible trendlines: all in the path + current level's children
-// 		let visibleTrends = [];
-//
-// 		// Add all ancestors (parents) from the path
-// 		for (let i = 0; i < window.trendlinePath.length; i++) {
-// 			visibleTrends.push(window.trendlinePath[i]);
-// 		}
-//
-// 		// Add the current level's subtrends (children of the last in path)
-// 		if (window.trendlinePath.length > 0) {
-// 			const current = window.trendlinePath[window.trendlinePath.length - 1];
-// 			if (current.trends && current.trends.length > 0) {
-// 				visibleTrends = visibleTrends.concat(current.trends);
-// 			}
-// 		} else {
-// 			// Root level: show all top-level trendlines
-// 			visibleTrends = window.trendlines || [];
-// 		}
-//
-// 		// Set this as what should be rendered
-// 		window.currentTrendlines = visibleTrends;
-//
-// 		window.drawCandlestickChart(window.stockData, window.start, window.end);
-// 	}
-// });
-
 function clickTrendline(event, chartState) {
 	console.log("Trend Click ChartState", chartState)
 }
-
-// canvas.addEventListener('mouseleave', function(event) {
-// 	// console.log("Canvas Leave");
-//
-// 	// hideTrendlinePointTooltip()
-// 	hidePointTooltip()
-// 	// Get mouse position
-// 	const mouseX = event.clientX;
-// 	const mouseY = event.clientY;
-//
-// 	// Get canvas and menu boundaries
-// 	const canvasRect = canvas.getBoundingClientRect();
-// 	const menu = document.querySelector('.order-menu');
-// 	const menuRect = menu ? menu.getBoundingClientRect() : null;
-//
-// 	// Check if mouse is still inside canvas or menu
-// 	const isMouseInCanvas =
-// 		mouseX >= canvasRect.left &&
-// 		mouseX <= canvasRect.right &&
-// 		mouseY >= canvasRect.top &&
-// 		mouseY <= canvasRect.bottom;
-//
-// 	const isMouseInMenu =
-// 		menuRect &&
-// 		mouseX >= menuRect.left &&
-// 		mouseX <= menuRect.right &&
-// 		mouseY >= menuRect.top &&
-// 		mouseY <= menuRect.bottom;
-//
-// 	if (!isMouseInCanvas && !isMouseInMenu) {
-// 		// console.log("Mouse has left both canvas and menu");
-// 		document.querySelectorAll('.order-menu').forEach(el => el.remove());
-// 	}
-// });
-
 
 document.getElementById('chartContainer').addEventListener('wheel', function(event) {
 	event.preventDefault();
