@@ -172,11 +172,17 @@ function createTradeSetupBar() {
             </span>`;
 
         const ptChips = ptLines.length
-            ? ptLines.map((pt, i) => `
+            ? ptLines.map((pt, i) => {
+                const rrVal = (entryLine && stopLine && typeof calculateRR === 'function')
+                    ? calculateRR(entryLine.price, stopLine.price, pt.price)
+                    : null;
+                const rrSuffix = (rrVal != null && rrVal !== 0) ? ` · ${rrVal}R` : '';
+                return `
                 <span class="chip pt">
                     <span class="label">PT${i + 1}</span>
-                    <span class="value">${fmt(pt.price)}</span>
-                </span>`).join('')
+                    <span class="value">${fmt(pt.price)}${rrSuffix}</span>
+                </span>`;
+            }).join('')
             : `<span class="chip pt"><span class="label">PT</span><span class="value">—</span></span>`;
 
         const triggerChips = chained.length
@@ -533,7 +539,9 @@ function handleLineAction(action, line) {
                     console.log('Error creating trigger:', error);
                 });
 
-            draw_lines.push(line)
+            if (!draw_lines.includes(line)) {
+                draw_lines.push(line);
+            }
             break;
 
         case 'entry':
@@ -585,7 +593,9 @@ function handleLineAction(action, line) {
             if (window.currentTrade && window.currentTrade.entry) {
                 window.currentTrade.stop = line.price;
             }
-            draw_lines.push(line)
+            if (!draw_lines.includes(line)) {
+                draw_lines.push(line);
+            }
             break;
 
         case 'delete':

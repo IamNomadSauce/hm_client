@@ -41,7 +41,7 @@ window.clearAllDrawings = function() {
         draw_lines = [];
         window.currentTradeSetup = null;
         drawCandlestickChart(window.stockData, window.start, window.end);
-        if (typeof updateSidebar === 'function') updateSidebar();
+        if (typeof window.updateSidebar === 'function') window.updateSidebar();
     }
 };
 
@@ -159,7 +159,7 @@ window.setupEventListeners = function() {
         if (window.draggingBracketPoint) {
             window.draggingBracketPoint = null;
             canvas.style.cursor = 'default';
-            if (typeof updateSidebar === 'function') updateSidebar();
+            if (typeof window.updateSidebar === 'function') window.updateSidebar();
         } else {
             isDragging = false;
             canvas.style.cursor = 'default';
@@ -352,6 +352,7 @@ function handleBracketPointDrag(event) {
     if (targetLine) {
         targetLine.price = newPrice;
         drawCandlestickChart(window.stockData, window.start, window.end);
+        if (typeof window.updateSidebar === 'function') window.updateSidebar();
     }
 }
 

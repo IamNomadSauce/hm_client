@@ -506,7 +506,7 @@ window.handleBracketClick = function(entryPrice) {
     })
 
     drawCandlestickChart(window.stockData, window.start, window.end);
-    if (typeof updateSidebar === "function") updateSidebar();
+    if (typeof window.updateSidebar === "function") window.updateSidebar();
 
     console.log(`✅ ${side.toUpperCase()} Bracket created`);
 };

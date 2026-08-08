@@ -606,6 +606,8 @@ window.showPointMenu = function(x, y) {
 
 function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
     let activeLineIndex = -1;
+    const entryLine = draw_lines.find(l => l.type === 'entry');
+    const stopLine = draw_lines.find(l => l.type === 'stop');
     draw_lines.forEach((line, index) => {
         // Convert price back to Y coordinate
         const y = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
@@ -629,6 +631,9 @@ function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
             const currentPrice = lastCandle.Close
             const triggerType = line.price > currentPrice ? 'Trigger Above' : 'Trigger Below'
             ctx.fillText(`${triggerType}: ${line.price.toFixed(8)}`, width - 200, y - 5)
+        } else if (line.type === 'pt' && entryLine && stopLine && typeof calculateRR === 'function') {
+            const rrRatio = calculateRR(entryLine.price, stopLine.price, line.price);
+            ctx.fillText(`pt - ${line.price.toFixed(2)}  R:R ${rrRatio}`, width - 160, y - 5);
         } else {
             ctx.fillText(`${line.type ? line.type + ' - ' : ''}${line.price.toFixed(2)}`, width - 120, y - 5);
         }
