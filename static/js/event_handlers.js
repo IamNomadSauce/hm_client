@@ -649,7 +649,7 @@ window.triggerClickHandler = function(e, chartState) {
             <!-- <div class="trigger-menu-item" onclick="editTrigger(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Edit</div> -->
             <div class="trigger-menu-item" onclick="showTriggerEditMenu(${selectedTrigger.id}, ${e.pageX}, ${e.pageY}); document.querySelector('.trigger-menu').remove();">Edit</div>
             <div class="trigger-menu-item" onclick="deleteTrigger(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Delete</div>
-            <div class="trigger-menu-item" onclick="handleTriggerAction('connect', ${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Connect to Trade</div>
+            <!-- <div class="trigger-menu-item" onclick="handleTriggerAction('connect', ${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Connect to Trade</div> -->
             <div class="trigger-menu-item" onclick="showTradeOptions(${selectedTrigger.id}); document.querySelector('.trigger-menu').remove();">Upon Trigger...</div>
         `;
 

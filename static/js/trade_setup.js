@@ -1,178 +1,423 @@
+// trade_setup.js
 console.log("trade_setup.js");
 
-const updateSidebar = createTradeSetupSidebar();
+window.portfolioSize = window.portfolioSize || 10000
+const updateSidebar = createTradeSetupBar();
+window.updateSidebar = updateSidebar
 
+let rr = 4
 
-function createTradeSetupSidebar() {
-    console.log("Create Trade Setup Sidebar");
-    const chained = window.currentTradeSetup?.chainedTriggers || [];
-    // Remove existing sidebars
-    const existingSidebar = document.getElementById('trade-setup-sidebar');
-    const existingTab = document.getElementById('trade-setup-tab');
-    if (existingSidebar) existingSidebar.remove();
-    if (existingTab) existingTab.remove();
+function createTradeSetupBar() {
+    // Remove old sidebar UI if present
+    document.getElementById('trade-setup-sidebar')?.remove();
+    document.getElementById('trade-setup-tab')?.remove();
+    document.getElementById('trade-setup-bar')?.remove();
 
-    let currentRiskPercentage = 0.5;
+    // Styles
+    if (!document.getElementById('trade-setup-bar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'trade-setup-bar-styles';
+        style.textContent = `
+            #trade-setup-bar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 2500;
+                display: none;
+                align-items: center;
+                gap: 12px;
+                padding: 8px 14px;
+                background: linear-gradient(180deg, #1a1a24 0%, #14141c 100%);
+                border-bottom: 1px solid #33334a;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+                color: #e8e8ff;
+                font-size: 12px;
+                font-family: system-ui, -apple-system, sans-serif;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            #trade-setup-bar.visible { display: flex; }
 
-    // CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        .risk-slider { -webkit-appearance: none; width: 100%; height: 10px; border-radius: 5px; background: #444; outline: none; margin: 10px 0; }
-        .risk-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #666; cursor: pointer; }
-        .risk-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #666; cursor: pointer; }
-        .setup-section { cursor: pointer; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
-        .setup-section.active { background-color: #555; border: 1px solid #777; }
-        .setup-section:hover { background-color: #444; }
-        .trigger-details { background: #222; padding: 10px; border-radius: 4px; margin: 8px 0; }
-    `;
-    document.head.appendChild(style);
+            #trade-setup-bar .chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                border-radius: 999px;
+                background: #222233;
+                border: 1px solid #3a3a55;
+                line-height: 1.2;
+            }
+            #trade-setup-bar .chip.entry { border-color: #00c853; color: #7dffb3; }
+            #trade-setup-bar .chip.stop  { border-color: #ff5252; color: #ff8a80; }
+            #trade-setup-bar .chip.pt    { border-color: #ffd600; color: #ffe57f; }
+            #trade-setup-bar .chip.trigger { border-color: #e040fb; color: #ea80fc; }
+            #trade-setup-bar .chip.side-long  { background: #0d3b22; border-color: #00c853; color: #7dffb3; }
+            #trade-setup-bar .chip.side-short { background: #3b0d0d; border-color: #ff5252; color: #ff8a80; }
 
-    const tab = document.createElement('div');
-    tab.id = 'trade-setup-tab';
-    tab.style.cssText = `position: fixed; right: 0; bottom: 0; background-color: #333; color: white; padding: 10px; border-radius: 4px 0 0 0; cursor: pointer; z-index: 1001;`;
-    tab.innerHTML = '▶ Trade Setup';
+            #trade-setup-bar .label { opacity: 0.65; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+            #trade-setup-bar .value { font-weight: 600; font-variant-numeric: tabular-nums; }
 
-    const sidebar = document.createElement('div');
-    sidebar.id = 'trade-setup-sidebar';
-    sidebar.style.cssText = `
-        position: fixed; right: -350px; top: 0; bottom: 0; width: 350px; background-color: #333; color: white;
-        padding: 15px; border-left: 1px solid #444; overflow-y: auto; z-index: 1000; transition: right 0.3s ease;
-    `;
+            #trade-setup-bar .chain {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+            }
+            #trade-setup-bar .chain-arrow { opacity: 0.4; margin: 0 2px; }
 
-    window.toggleSidebar = function () {
-        const isExpanded = sidebar.style.right === '0px';
-        sidebar.style.right = isExpanded ? '-350px' : '0px';
-        tab.innerHTML = isExpanded ? '▶ Trade Setup' : '◀ Trade Setup';
+            #trade-setup-bar .spacer { flex: 1; min-width: 8px; }
 
-        const chartContainer = document.getElementById('chartContainer');
-        if (chartContainer) {
-            chartContainer.style.marginRight = isExpanded ? '0' : '350px';
-            chartContainer.style.width = isExpanded ? '100%' : 'calc(100% - 350px)';
-            setTimeout(() => drawCandlestickChart(stockData, start, end), 300);
-        }
-    };
+            #trade-setup-bar input[type="range"] {
+                width: 90px; vertical-align: middle;
+            }
 
-    window.updateRisk = function (value) {
-        currentRiskPercentage = parseFloat(value);
-        updateSidebarContent();
-        drawCandlestickChart(stockData, start, end);
-    };
+            #trade-setup-bar .btn {
+                border: none; border-radius: 6px; padding: 5px 12px;
+                cursor: pointer; font-size: 12px; font-weight: 600;
+            }
+            #trade-setup-bar .btn-exec {
+                background: #00c853; color: #04140a;
+            }
+            #trade-setup-bar .btn-exec:disabled {
+                background: #2a2a33; color: #666; cursor: not-allowed;
+            }
+            #trade-setup-bar .btn-clear {
+                background: transparent; color: #aaa; border: 1px solid #444;
+            }
+            #trade-setup-bar .btn-close {
+                background: transparent; color: #888; font-size: 16px; padding: 0 6px;
+            }
+            #trade-setup-bar .btn-close:hover { color: #fff; }
 
-    tab.addEventListener('click', window.toggleSidebar);
+            body.has-trade-bar { padding-top: 44px; }
+        `;
+        document.head.appendChild(style);
+    }
 
-    function updateSidebarContent() {
-        console.log("Update Sidebar Content");
+    const bar = document.createElement('div');
+    bar.id = 'trade-setup-bar';
+    document.body.appendChild(bar);
 
-        const chained = window.currentTradeSetup?.chainedTriggers || [];
+    function fmt(price) {
+        if (price == null || isNaN(price)) return '—';
+        return Number(price).toFixed(price < 1 ? 8 : 2);
+    }
+
+    function hasSetup() {
+        const entry = draw_lines.find(l => l.type === 'entry');
+        const stop = draw_lines.find(l => l.type === 'stop');
+        const pts = draw_lines.filter(l => l.type === 'pt');
+        const triggers = window.currentTradeSetup?.chainedTriggers || [];
+        return !!(entry || stop || pts.length || triggers.length);
+    }
+
+    function buildTradeSetupData() {
         const entryLine = draw_lines.find(l => l.type === 'entry');
         const stopLine = draw_lines.find(l => l.type === 'stop');
         const ptLines = draw_lines.filter(l => l.type === 'pt');
+        if (!entryLine || !stopLine || !ptLines.length) return null;
 
-        let riskAmount = window.portfolioSize * (currentRiskPercentage / 100);
-        let positionSize = 0;
+        const riskAmount = (window.portfolioSize || 0) * (currentRiskPercentage / 100);
+        const priceDiff = Math.abs(entryLine.price - stopLine.price) || 1;
+        const positionSize = (riskAmount / priceDiff).toFixed(4);
 
-        if (entryLine && stopLine) {
-            const priceDiff = Math.abs(entryLine.price - stopLine.price);
-            positionSize = (riskAmount / priceDiff).toFixed(2);
+        return {
+            entry: { price: entryLine.price, size: positionSize },
+            stopLoss: { price: stopLine.price, riskPercent: currentRiskPercentage, riskAmount },
+            profitTargets: ptLines.map(pt => ({
+                price: pt.price,
+                rr: typeof calculateRR === 'function'
+                    ? calculateRR(entryLine.price, stopLine.price, pt.price)
+                    : ((Math.abs(pt.price - entryLine.price) / priceDiff) || 0).toFixed(2)
+            })),
+            triggers: window.currentTradeSetup?.chainedTriggers || [],
+            product: selectedProduct?.product_id,
+            exchange_id: exchange?.ID
+        };
+    }
+
+    function render() {
+        const entryLine = draw_lines.find(l => l.type === 'entry');
+        const stopLine = draw_lines.find(l => l.type === 'stop');
+        const ptLines = draw_lines.filter(l => l.type === 'pt');
+        const chained = window.currentTradeSetup?.chainedTriggers || [];
+
+        const show = hasSetup();
+        bar.classList.toggle('visible', show);
+        document.body.classList.toggle('has-trade-bar', show);
+
+        if (!show) {
+            bar.innerHTML = '';
+            return;
         }
 
-        sidebar.innerHTML = `
-            <div style="text-align: right;">
-                <span onclick="toggleSidebar()" style="cursor: pointer; padding: 5px;">✕</span>
-            </div>
-            <h3>Trade Setup</h3>
+        // Infer side from entry vs stop if both exist
+        let sideChip = '';
+        if (entryLine && stopLine) {
+            const isLong = stopLine.price < entryLine.price;
+            sideChip = `<span class="chip ${isLong ? 'side-long' : 'side-short'}">${isLong ? 'LONG' : 'SHORT'}</span>`;
+        }
 
-            <!-- Triggers -->
-            <div class="setup-section ${window.currentTool === 'trigger' ? 'active' : ''}" onclick="setTradeTool('trigger')">
-                <h4>Trigger Conditions</h4>
-                ${chained.length > 0 ? chained.map((trigger, index) => `
-                    <div class="trigger-details">
-                        <div class="trigger-header" style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-                                <span>Trigger ${index + 1}</span>
-                                <button onclick="moveTrigger(${index}, 1)" ${index === chained.length - 1 ? 'disabled' : ''}>↓</button>
-                            </div>
-                            <button onclick="removeTrigger(${index})" style="background:none; border:none; color:red; cursor:pointer;">✕</button>
-                        </div>
+        const entryChip = `
+            <span class="chip entry">
+                <span class="label">Entry</span>
+                <span class="value">${fmt(entryLine?.price)}</span>
+            </span>`;
 
-                        <select onchange="updateChainedTriggerField(${index}, 'type', this.value)" style="width:100%; margin:5px 0;">
-                            <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
-                            <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-                            <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
-                            <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
-                            <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
-                            <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
-                        </select>
+        const stopChip = `
+            <span class="chip stop">
+                <span class="label">Stop</span>
+                <span class="value">${fmt(stopLine?.price)}</span>
+            </span>`;
 
-                        <div>Price: ${Number(trigger.price || 0).toFixed(8)}</div>
-                        <div>Timeframe: ${trigger.timeframe || '1m'}</div>
-                        <div>Candles: ${trigger.candles || trigger.candle_count || 1}</div>
+        const ptChips = ptLines.length
+            ? ptLines.map((pt, i) => `
+                <span class="chip pt">
+                    <span class="label">PT${i + 1}</span>
+                    <span class="value">${fmt(pt.price)}</span>
+                </span>`).join('')
+            : `<span class="chip pt"><span class="label">PT</span><span class="value">—</span></span>`;
 
-                        <div style="display:flex; gap:5px; margin-top:5px;">
-                            <select onchange="updateChainedTriggerField(${index}, 'timeframe', this.value)" style="flex:1;">
-                                <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
-                                <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
-                                <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
-                                <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
-                            </select>
-                            <input type="number" value="${trigger.candles || trigger.candle_count || 1}" 
-                                   min="1" style="width:80px;"
-                                   onchange="updateChainedTriggerField(${index}, 'candles', this.value)">
-                        </div>
-                    </div>
-                `).join('') : '<div>No triggers set</div>'}
+        const triggerChips = chained.length
+            ? `<span class="chain">${chained.map((t, i) => `
+                    <span class="chip trigger" title="Trigger ${i + 1}">
+                        <span class="label">T${i + 1}</span>
+                        <span class="value">${(t.type || '').replace(/_/g, ' ')} @ ${fmt(t.price)}</span>
+                    </span>
+                    ${i < chained.length - 1 ? '<span class="chain-arrow">→</span>' : ''}
+               `).join('')}</span>`
+            : `<span class="chip trigger"><span class="label">Triggers</span><span class="value">none</span></span>`;
 
-                <small style="display:block; margin-top:8px;">Click chart to add new trigger</small>
-            </div>
+        const canExecute = !!(entryLine && stopLine && ptLines.length);
+        window.tradeSetupData = buildTradeSetupData();
 
-            <!-- Entry, Stop, PT, Risk Calculator sections (unchanged) -->
-            <div class="setup-section ${window.currentTool === 'entry' ? 'active' : ''}" onclick="setTradeTool('entry')">
-                <h4>Entry</h4>
-                ${entryLine ? `
-                    <div>Price: ${entryLine.price.toFixed(8)}</div>
-                    <div>Position Size: ${positionSize} units</div>
-                ` : '<div>Not Set</div>'}
-            </div>
+        bar.innerHTML = `
+            ${sideChip}
+            ${entryChip}
+            ${stopChip}
+            ${ptChips}
+            ${triggerChips}
 
-            <div class="setup-section ${window.currentTool === 'stop' ? 'active' : ''}" onclick="setTradeTool('stop')">
-                <h4>Stop Loss</h4>
-                ${stopLine ? `<div>Price: ${stopLine.price.toFixed(8)}</div>` : '<div>Not Set</div>'}
-            </div>
+            <span class="chip">
+                <span class="label">Risk</span>
+                <input type="range" min="0.1" max="2" step="0.1" value="${currentRiskPercentage}"
+                       oninput="window.updateRisk(this.value)">
+                <span class="value">${currentRiskPercentage}%</span>
+            </span>
 
-            <div class="setup-section ${window.currentTool === 'pt' ? 'active' : ''}" onclick="setTradeTool('pt')">
-                <h4>Profit Targets</h4>
-                ${ptLines.length ? ptLines.map((pt, i) => `
-                    <div>Target ${i+1}: ${pt.price.toFixed(8)}</div>
-                `).join('') : '<div>Not Set</div>'}
-            </div>
+            <span class="spacer"></span>
 
-            <div class="setup-section">
-                <h4>Risk Calculator</h4>
-                <div>Portfolio: $${window.portfolioSize.toLocaleString()}</div>
-                <input type="range" class="risk-slider" min="0.1" max="2" step="0.1" 
-                       value="${currentRiskPercentage}" oninput="updateRisk(this.value)">
-                <div>Risk: ${currentRiskPercentage}%</div>
-            </div>
-
-            ${entryLine && stopLine && ptLines.length ? `
-                <button onclick="executeTradeSetup(tradeSetupData)" style="width:100%; padding:10px; background:#0a0; color:white; border:none; border-radius:4px;">
-                    Execute Trade Setup
-                </button>
-            ` : ''}
+            <button class="btn btn-exec" ${canExecute ? '' : 'disabled'}
+                    onclick="window.tradeSetupData && executeTradeSetup(window.tradeSetupData)">
+                Execute
+            </button>
+            <button class="btn btn-clear" onclick="window.clearTradeSetup()">Clear</button>
+            <button class="btn btn-close" title="Hide" onclick="window.hideTradeBar()">×</button>
         `;
     }
 
-    document.body.appendChild(tab);
-    document.body.appendChild(sidebar);
-    updateSidebarContent();
+    window.updateRisk = function (value) {
+        currentRiskPercentage = parseFloat(value);
+        render();
+        if (window.stockData) {
+            drawCandlestickChart(window.stockData, window.start, window.end);
+        }
+    };
 
-    return () => {
-        console.log("Refreshing Sidebar");
-        updateSidebarContent();
-        sidebar.style.right = '0px';
+    window.clearTradeSetup = function () {
+        // Remove trade-related lines only (keep plain lines if you want)
+        draw_lines = draw_lines.filter(l => !['entry', 'stop', 'pt', 'trigger'].includes(l.type) && !l.isBracket);
+        window.currentTradeSetup = null;
+        window.currentTrade = null;
+        window.tradeSetupData = null;
+        render();
+        if (window.stockData) {
+            drawCandlestickChart(window.stockData, window.start, window.end);
+        }
+    };
+
+    window.hideTradeBar = function () {
+        bar.classList.remove('visible');
+        document.body.classList.remove('has-trade-bar');
+    };
+
+    // Public updater (same signature as old updateSidebar)
+    return function updateTradeBar() {
+        render();
     };
 }
+
+// function createTradeSetupSidebar() {
+//     console.log("Create Trade Setup Sidebar");
+//     const chained = window.currentTradeSetup?.chainedTriggers || [];
+//     // Remove existing sidebars
+//     const existingSidebar = document.getElementById('trade-setup-sidebar');
+//     const existingTab = document.getElementById('trade-setup-tab');
+//     if (existingSidebar) existingSidebar.remove();
+//     if (existingTab) existingTab.remove();
+//
+//     let currentRiskPercentage = 0.5;
+//
+//     // CSS
+//     const style = document.createElement('style');
+//     style.textContent = `
+//         .risk-slider { -webkit-appearance: none; width: 100%; height: 10px; border-radius: 5px; background: #444; outline: none; margin: 10px 0; }
+//         .risk-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #666; cursor: pointer; }
+//         .risk-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #666; cursor: pointer; }
+//         .setup-section { cursor: pointer; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+//         .setup-section.active { background-color: #555; border: 1px solid #777; }
+//         .setup-section:hover { background-color: #444; }
+//         .trigger-details { background: #222; padding: 10px; border-radius: 4px; margin: 8px 0; }
+//     `;
+//     document.head.appendChild(style);
+//
+//     const tab = document.createElement('div');
+//     tab.id = 'trade-setup-tab';
+//     tab.style.cssText = `position: fixed; right: 0; bottom: 0; background-color: #333; color: white; padding: 10px; border-radius: 4px 0 0 0; cursor: pointer; z-index: 1001;`;
+//     tab.innerHTML = '▶ Trade Setup';
+//
+//     const sidebar = document.createElement('div');
+//     sidebar.id = 'trade-setup-sidebar';
+//     sidebar.style.cssText = `
+//         position: fixed; right: -350px; top: 0; bottom: 0; width: 350px; background-color: #333; color: white;
+//         padding: 15px; border-left: 1px solid #444; overflow-y: auto; z-index: 1000; transition: right 0.3s ease;
+//     `;
+//
+//     window.toggleSidebar = function () {
+//         const isExpanded = sidebar.style.right === '0px';
+//         sidebar.style.right = isExpanded ? '-350px' : '0px';
+//         tab.innerHTML = isExpanded ? '▶ Trade Setup' : '◀ Trade Setup';
+//
+//         const chartContainer = document.getElementById('chartContainer');
+//         if (chartContainer) {
+//             chartContainer.style.marginRight = isExpanded ? '0' : '350px';
+//             chartContainer.style.width = isExpanded ? '100%' : 'calc(100% - 350px)';
+//             setTimeout(() => drawCandlestickChart(stockData, start, end), 300);
+//         }
+//     };
+//
+//     window.updateRisk = function (value) {
+//         currentRiskPercentage = parseFloat(value);
+//         updateSidebarContent();
+//         drawCandlestickChart(stockData, start, end);
+//     };
+//
+//     tab.addEventListener('click', window.toggleSidebar);
+//
+//     function updateSidebarContent() {
+//         console.log("Update Sidebar Content");
+//
+//         const chained = window.currentTradeSetup?.chainedTriggers || [];
+//         const entryLine = draw_lines.find(l => l.type === 'entry');
+//         const stopLine = draw_lines.find(l => l.type === 'stop');
+//         const ptLines = draw_lines.filter(l => l.type === 'pt');
+//
+//         let riskAmount = window.portfolioSize * (currentRiskPercentage / 100);
+//         let positionSize = 0;
+//
+//         if (entryLine && stopLine) {
+//             const priceDiff = Math.abs(entryLine.price - stopLine.price);
+//             positionSize = (riskAmount / priceDiff).toFixed(2);
+//         }
+//
+//         sidebar.innerHTML = `
+//             <div style="text-align: right;">
+//                 <span onclick="toggleSidebar()" style="cursor: pointer; padding: 5px;">✕</span>
+//             </div>
+//             <h3>Trade Setup</h3>
+//
+//             <!-- Triggers -->
+//             <div class="setup-section ${window.currentTool === 'trigger' ? 'active' : ''}" onclick="setTradeTool('trigger')">
+//                 <h4>Trigger Conditions</h4>
+//                 ${chained.length > 0 ? chained.map((trigger, index) => `
+//                     <div class="trigger-details">
+//                         <div class="trigger-header" style="display:flex; justify-content:space-between; align-items:center;">
+//                             <div>
+//                                 <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+//                                 <span>Trigger ${index + 1}</span>
+//                                 <button onclick="moveTrigger(${index}, 1)" ${index === chained.length - 1 ? 'disabled' : ''}>↓</button>
+//                             </div>
+//                             <button onclick="removeTrigger(${index})" style="background:none; border:none; color:red; cursor:pointer;">✕</button>
+//                         </div>
+//
+//                         <select onchange="updateChainedTriggerField(${index}, 'type', this.value)" style="width:100%; margin:5px 0;">
+//                             <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
+//                             <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
+//                             <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
+//                             <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
+//                             <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
+//                             <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
+//                         </select>
+//
+//                         <div>Price: ${Number(trigger.price || 0).toFixed(8)}</div>
+//                         <div>Timeframe: ${trigger.timeframe || '1m'}</div>
+//                         <div>Candles: ${trigger.candles || trigger.candle_count || 1}</div>
+//
+//                         <div style="display:flex; gap:5px; margin-top:5px;">
+//                             <select onchange="updateChainedTriggerField(${index}, 'timeframe', this.value)" style="flex:1;">
+//                                 <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
+//                                 <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
+//                                 <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
+//                                 <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
+//                             </select>
+//                             <input type="number" value="${trigger.candles || trigger.candle_count || 1}" 
+//                                    min="1" style="width:80px;"
+//                                    onchange="updateChainedTriggerField(${index}, 'candles', this.value)">
+//                         </div>
+//                     </div>
+//                 `).join('') : '<div>No triggers set</div>'}
+//
+//                 <small style="display:block; margin-top:8px;">Click chart to add new trigger</small>
+//             </div>
+//
+//             <!-- Entry, Stop, PT, Risk Calculator sections (unchanged) -->
+//             <div class="setup-section ${window.currentTool === 'entry' ? 'active' : ''}" onclick="setTradeTool('entry')">
+//                 <h4>Entry</h4>
+//                 ${entryLine ? `
+//                     <div>Price: ${entryLine.price.toFixed(8)}</div>
+//                     <div>Position Size: ${positionSize} units</div>
+//                 ` : '<div>Not Set</div>'}
+//             </div>
+//
+//             <div class="setup-section ${window.currentTool === 'stop' ? 'active' : ''}" onclick="setTradeTool('stop')">
+//                 <h4>Stop Loss</h4>
+//                 ${stopLine ? `<div>Price: ${stopLine.price.toFixed(8)}</div>` : '<div>Not Set</div>'}
+//             </div>
+//
+//             <div class="setup-section ${window.currentTool === 'pt' ? 'active' : ''}" onclick="setTradeTool('pt')">
+//                 <h4>Profit Targets</h4>
+//                 ${ptLines.length ? ptLines.map((pt, i) => `
+//                     <div>Target ${i+1}: ${pt.price.toFixed(8)}</div>
+//                 `).join('') : '<div>Not Set</div>'}
+//             </div>
+//
+//             <div class="setup-section">
+//                 <h4>Risk Calculator</h4>
+//                 <div>Portfolio: $${window.portfolioSize.toLocaleString()}</div>
+//                 <input type="range" class="risk-slider" min="0.1" max="2" step="0.1" 
+//                        value="${currentRiskPercentage}" oninput="updateRisk(this.value)">
+//                 <div>Risk: ${currentRiskPercentage}%</div>
+//             </div>
+//
+//             ${entryLine && stopLine && ptLines.length ? `
+//                 <button onclick="executeTradeSetup(tradeSetupData)" style="width:100%; padding:10px; background:#0a0; color:white; border:none; border-radius:4px;">
+//                     Execute Trade Setup
+//                 </button>
+//             ` : ''}
+//         `;
+//     }
+//
+//     document.body.appendChild(tab);
+//     document.body.appendChild(sidebar);
+//     updateSidebarContent();
+//
+//     return () => {
+//         console.log("Refreshing Sidebar");
+//         updateSidebarContent();
+//         sidebar.style.right = '0px';
+//     };
+// }
 
 window.updateChainedTriggerField = function (index, field, value) {
     const trigger = window.currentTradeSetup?.chainedTriggers?.[index];
@@ -212,300 +457,6 @@ window.updateChainedTriggerField = function (index, field, value) {
         console.error("Failed to update trigger:", err);
     });
 };
-
-// function createTradeSetupSidebar() {
-//     console.log("Create Trade Setup Sidebar");
-//     // Remove any existing sidebars first
-//     const existingSidebar = document.getElementById('trade-setup-sidebar');
-//     const existingTab = document.getElementById('trade-setup-tab');
-//     if (existingSidebar) existingSidebar.remove();
-//     if (existingTab) existingTab.remove();
-//
-//     let currentRiskPercentage = 0.5;
-//
-//     // Add CSS for slider and active tool highlighting
-//     const style = document.createElement('style');
-//     style.textContent = `
-//         .risk-slider {
-//             -webkit-appearance: none;
-//             width: 100%;
-//             height: 10px;
-//             border-radius: 5px;
-//             background: #444;
-//             outline: none;
-//             margin: 10px 0;
-//         }
-//         .risk-slider::-webkit-slider-thumb {
-//             -webkit-appearance: none;
-//             appearance: none;
-//             width: 20px;
-//             height: 20px;
-//             border-radius: 50%;
-//             background: #666;
-//             cursor: pointer;
-//         }
-//         .risk-slider::-moz-range-thumb {
-//             width: 20px;
-//             height: 20px;
-//             border-radius: 50%;
-//             background: #666;
-//             cursor: pointer;
-//         }
-//         .setup-section {
-//             cursor: pointer;
-//             padding: 10px;
-//             border-radius: 4px;
-//             margin-bottom: 10px;
-//         }
-//         .setup-section.active {
-//             background-color: #555;
-//             border: 1px solid #777;
-//         }
-//         .setup-section:hover {
-//             background-color: #444;
-//         }
-//     `;
-//     document.head.appendChild(style);
-//
-//     // Create collapsed sidebar tab
-//     const tab = document.createElement('div');
-//     tab.id = 'trade-setup-tab';
-//     tab.style.cssText = `
-//         position: fixed;
-//         right: 0;
-//         bottom: 0;
-//         background-color: #333;
-//         color: white;
-//         padding: 10px;
-//         border-radius: 4px 0 0 0;
-//         cursor: pointer;
-//         z-index: 1001;
-//     `;
-//     tab.innerHTML = '▶ Trade Setup';
-//
-//     const sidebar = document.createElement('div');
-//     sidebar.id = 'trade-setup-sidebar';
-//     sidebar.style.cssText = `
-//         position: fixed;
-//         right: -350px;
-//         top: 0;
-//         bottom: 0;
-//         width: 350px;
-//         background-color: #333;
-//         color: white;
-//         padding: 15px;
-//         border-left: 1px solid #444;
-//         overflow-y: auto;
-//         z-index: 1000;
-//         transition: right 0.3s ease;
-//     `;
-//
-//     window.toggleSidebar = function () {
-//         const isExpanded = sidebar.style.right === '0px';
-//         sidebar.style.right = isExpanded ? '-350px' : '0px';
-//         tab.innerHTML = isExpanded ? '▶ Trade Setup' : '◀ Trade Setup';
-//         const chartContainer = document.getElementById('chartContainer');
-//         if (chartContainer) {
-//             chartContainer.style.marginRight = isExpanded ? '0' : '350px';
-//             chartContainer.style.width = isExpanded ? '100%' : 'calc(100% - 350px)';
-//             chartContainer.style.transition = 'all 0.3s ease';
-//             setTimeout(() => {
-//                 drawCandlestickChart(stockData, start, end);
-//             }, 300);
-//         }
-//     };
-//
-//     window.updateRisk = function (value) {
-//         currentRiskPercentage = parseFloat(value);
-//         updateSidebarContent();
-//         drawCandlestickChart(stockData, start, end);
-//     };
-//
-//     tab.addEventListener('click', window.toggleSidebar);
-//
-//     window.tradeSetupData = null;
-//
-//     function updateSidebarContent() {
-//         console.log("Update Sidebar Content");
-//         const trigger = window.currentTradeSetup?.trigger;
-//         // const trigger = window.exchange.Triggers.find(t => t.id === triggerId);
-//         console.log("TRIGGER", trigger)
-//         const entryLine = draw_lines.find(l => l.type === 'entry');
-//         const stopLine = draw_lines.find(l => l.type === 'stop');
-//         const ptLines = draw_lines.filter(l => l.type === 'pt');
-//         console.log("Entry line", entryLine);
-//         console.log("Stop line", stopLine);
-//         console.log("PT lines", ptLines);
-//
-//         let riskAmount = 0;
-//         let positionSize = 0;
-//         let stopLossRiskPercent = 0;
-//
-//         riskAmount = window.portfolioSize * (currentRiskPercentage / 100);
-//
-//         if (entryLine && stopLine) {
-//             const entryPrice = entryLine.price;
-//             const stopPrice = stopLine.price;
-//             const priceDiff = Math.abs(entryPrice - stopPrice);
-//             riskAmount = portfolioSize * (currentRiskPercentage / 100);
-//             positionSize = (riskAmount / priceDiff).toFixed(2);
-//             stopLossRiskPercent = ((priceDiff / entryPrice) * 100).toFixed(2);
-//
-//             console.log("Risk Calculations", portfolioSize, currentRiskPercentage, riskAmount);
-//
-//             if (ptLines.length > 0) {
-//                 tradeSetupData = {
-//                     entry: {
-//                         price: entryLine.price,
-//                         size: positionSize
-//                     },
-//                     stopLoss: {
-//                         price: stopLine.price,
-//                         riskPercent: currentRiskPercentage,
-//                         riskAmount: riskAmount
-//                     },
-//                     profitTargets: ptLines.map(pt => ({
-//                         price: pt.price,
-//                         rr: calculateRR(entryLine.price, stopLine.price, pt.price)
-//                     })),
-//                     triggers: window.currentTradeSetup?.chainedTriggers || [],
-//                     product: selectedProduct.product_id,
-//                     exchange_id: exchange.ID
-//                 };
-//             }
-//         }
-//
-//         sidebar.innerHTML = `
-//         <div style="text-align: right;">
-//             <span onclick="toggleSidebar()" style="cursor: pointer; padding: 5px;">✕</span>
-//         </div>
-//         <h3>Trade Setup</h3>
-//
-//         <div class="setup-section ${window.currentTool === 'trigger' ? 'active' : ''}" onclick="setTradeTool('trigger')">
-//             <h4>Trigger Conditions</h4>
-//             ${chained.length > 0 ? chained.map((trigger, index) => `
-//                 <div class="trigger-details">
-//                     <div class="trigger-header">
-//                         <div class="trigger-order">
-//                             <button onclick="moveTrigger(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-//                             <span>Trigger ${index + 1}</span>
-//                             <button onclick="moveTrigger(${index}, 1)" ${index === chained.length - 1 ? 'disabled' : ''}>↓</button>
-//                         </div>
-//                         <button class="btn-remove" onclick="removeTrigger(${index})">✕</button>
-//                     </div>
-//                     <div class="trigger-settings">
-//                         <select onchange="updateChainedTriggerField(${index}, 'type', this.value)">
-//                             <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
-//                             <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-//                             <!-- ... other options ... -->
-//                         </select>
-//                     </div>
-//                     <div>Price: ${Number(trigger.price || 0).toFixed(8)}</div>
-//                     <div>Timeframe: ${trigger.timeframe || '1m'}</div>
-//                     <div>Candles: ${trigger.candles || trigger.candle_count || 1}</div>
-//                     <div>Status: ${trigger.status || 'active'}</div>
-//
-//                     <div class="trigger-settings">
-//                         <select onchange="updateChainedTriggerField(${index}, 'timeframe', this.value)">
-//                             <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
-//                             <!-- ... -->
-//                         </select>
-//                         <input type="number" value="${trigger.candles || trigger.candle_count || 1}" 
-//                                min="1" onchange="updateChainedTriggerField(${index}, 'candles', this.value)">
-//                     </div>
-//                 </div>
-//             `).join('') : '<div>No triggers set</div>'}
-//
-//             <div style="margin-top: 10px;">
-//                 <small>Click to select, then click chart to add trigger</small>
-//             </div>
-//         </div>
-//         // Entry
-//             <div class="setup-section ${window.currentTool === 'entry' ? 'active' : ''}" onclick="setTradeTool('entry')">
-//                 <h4>Entry</h4>
-//                 ${entryLine ? `
-//                     <div>Price: ${entryLine.price.toFixed(8)}</div>
-//                     <div>Position Size: ${positionSize} units</div>
-//                     <div>Total Value: $${(positionSize * entryLine.price).toFixed(2)}</div>
-//                 ` : '<div>Not Set</div>'}
-//                 <div style="margin-top: 10px;">
-//                     <small>Click to select, then click chart to set entry</small>
-//                 </div>
-//             </div>
-//
-//             <div class="setup-section ${window.currentTool === 'stop' ? 'active' : ''}" onclick="setTradeTool('stop')">
-//                 <h4>Stop Loss</h4>
-//                 ${stopLine ? `
-//                     <div>Price: ${stopLine.price.toFixed(8)}</div>
-//                     <div>Risk: ${currentRiskPercentage}%</div>
-//                     <div>Total Value: $${(positionSize * stopLine.price).toFixed(2)}</div>
-//                 ` : '<div>Not Set</div>'}
-//                 <div style="margin-top: 10px;">
-//                     <small>Click to select, then click chart to set stop loss</small>
-//                 </div>
-//             </div>
-//
-//             <div class="setup-section ${window.currentTool === 'pt' ? 'active' : ''}" onclick="setTradeTool('pt')">
-//                 <h4>Profit Targets</h4>
-//                 ${ptLines.length > 0 ? ptLines.map((pt, i) => `
-//                     <div class="pt-item">
-//                         <div>Target ${i + 1}: ${pt.price.toFixed(8)}</div>
-//                         <div>R:R ${calculateRR(entryLine?.price, stopLine?.price, pt.price)}</div>
-//                     </div>
-//                 `).join('') : '<div>Not Set</div>'}
-//                 <div style="margin-top: 10px;">
-//                     <small>Click to select, then click chart to add profit target</small>
-//                 </div>
-//             </div>
-//
-//             <div class="setup-section">
-//                 <h4>Risk Calculator</h4>
-//                 <div class="risk-calculator">
-//                     <div>Portfolio Size: $${window.portfolioSize.toLocaleString()}</div>
-//                     <div style="margin: 10px 0;">
-//                         <div class="d-flex">
-//                             <label class="pe-2">Risk %: <span id="riskValue">${currentRiskPercentage}</span>%</label>
-//                             <div class="pe-2">$${riskAmount.toFixed(2)}</div>
-//                         </div>
-//                         <input type="range" 
-//                                class="risk-slider"
-//                                id="riskSlider" 
-//                                min="0.1" 
-//                                max="2" 
-//                                step="0.1" 
-//                                value="${currentRiskPercentage}"
-//                                oninput="updateRisk(this.value)">
-//                     </div>
-//                     ${entryLine && stopLine ? `
-//                     ` : '<div>Set entry and stop loss to calculate position size</div>'}
-//                 </div>
-//             </div>
-//
-//             ${entryLine && stopLine && ptLines.length > 0 ? `
-//                 <button class="execute-btn" onclick="executeTradeSetup(tradeSetupData)">
-//                     Execute Trade Setup
-//                 </button>
-//             ` : ''}
-//         `;
-//     }
-//
-//     document.body.appendChild(tab);
-//     document.body.appendChild(sidebar);
-//
-//     const chartContainer = document.getElementById('chartContainer');
-//     if (chartContainer) {
-//         chartContainer.style.marginRight = '0';
-//     }
-//
-//     // console.log("Initial Sidebar Render");
-//     updateSidebarContent();
-//
-//     return () => {
-//         console.log("Refreshing Sidebar");
-//         updateSidebarContent();
-//         sidebar.style.right = '0px';
-//     };
-// }
 
 
 window.setTradeTool = function (tool) {
@@ -568,9 +519,9 @@ function handleLineAction(action, line) {
                     // Get chart container and adjust margin
                     const chartContainer = document.getElementById('chartContainer');
                     if (chartContainer) {
-                        chartContainer.style.marginRight = '350px';
-                        chartContainer.style.width = 'calc(100% - 350px)';
-                        chartContainer.style.transition = 'all 0.3s ease';
+                        // chartContainer.style.marginRight = '350px';
+                        // chartContainer.style.width = 'calc(100% - 350px)';
+                        // chartContainer.style.transition = 'all 0.3s ease';
 
                         // Redraw chart after transition
                         setTimeout(() => {
@@ -598,15 +549,17 @@ function handleLineAction(action, line) {
             // Add same margin adjustment for entry
             const chartContainer = document.getElementById('chartContainer');
             if (chartContainer) {
-                chartContainer.style.marginRight = '350px';
-                chartContainer.style.width = 'calc(100% - 350px)';
-                chartContainer.style.transition = 'all 0.3s ease';
+                // chartContainer.style.marginRight = '350px';
+                // chartContainer.style.width = 'calc(100% - 350px)';
+                // chartContainer.style.transition = 'all 0.3s ease';
                 setTimeout(() => {
                     console.log("candlestick_chart_draw")
                     drawCandlestickChart(stockData, start, end);
                 }, 300);
             }
-            draw_lines.push(line)
+            if (!draw_lines.includes(line)) {
+                draw_lines.push(line);
+            }
             break;
 
         case 'pt':
@@ -618,7 +571,9 @@ function handleLineAction(action, line) {
             if (window.currentTrade && window.currentTrade.entry) {
                 window.currentTrade.target = line.price;
             }
-            draw_lines.push(line)
+            if (!draw_lines.includes(line)) {
+                draw_lines.push(line);
+            }
             break;
 
         case 'stop':
@@ -884,146 +839,6 @@ window.editTrigger = function (triggerId) {
     setTimeout(() => { sidebar.style.right = '0px'; }, 10);
 };
 
-
-
-// window.editTrigger = function (triggerId) {
-//     console.log("Edit Trigger", triggerId)
-//     // Get trigger data from all_triggers
-//     console.log("All Triggers", window.exchange.Triggers)
-//     const trigger = window.exchange.Triggers.find(t => t.id === triggerId);
-//     if (!trigger) return;
-//
-//     console.log("Made it past the return")
-//     // Create or get sidebar
-//     let sidebar = document.getElementById('trigger-edit-sidebar');
-//     if (!sidebar) {
-//         sidebar = document.createElement('div');
-//         sidebar.id = 'trigger-edit-sidebar';
-//         sidebar.style.cssText = `
-//             position: fixed;
-//             right: -350px;
-//             top: 0;
-//             bottom: 0;
-//             width: 350px;
-//             background-color: #333;
-//             color: white;
-//             padding: 15px;
-//             border-left: 1px solid #444;
-//             overflow-y: auto;
-//             z-index: 1000;
-//             transition: right 0.3s ease;
-//         `;
-//     }
-//
-//     // Populate sidebar content
-//     sidebar.innerHTML = `
-//         <div style="text-align: right;">
-//             <span onclick="closeTriggerEditor()" style="cursor: pointer; padding: 5px;">✕</span>
-//         </div>
-//         <h3>Edit Trigger</h3>
-//
-//         <div class="edit-section">
-//             <div>Product: ${trigger.product_id}</div>
-//
-//             <div class="input-group">
-//                 <label>Type:</label>
-//                 <select id="trigger-type" onchange="updatedriggerField(${triggerId}, 'type', this.value)">
-//                     <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
-//                     <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-//                     <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
-//                     <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
-//                     <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
-//                     <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
-//                 </select>
-//             </div>
-//
-//             <div class="input-group">
-//                 <label>Price:</label>
-//                 <input type="number" 
-//                        id="trigger-price" 
-//                        value="${trigger.price}" 
-//                        step="0.00000001"
-//                        onchange="updateTriggerField(${triggerId}, 'price', this.value)">
-//             </div>
-//
-//             <div class="input-group">
-//                 <label>Timeframe:</label>
-//                 <select id="trigger-timeframe" 
-//                         onchange="updateTriggerField(${triggerId}, 'timeframe', this.value)">
-//                     <option value="1m" ${trigger.timeframe === '1m' ? 'selected' : ''}>1m</option>
-//                     <option value="5m" ${trigger.timeframe === '5m' ? 'selected' : ''}>5m</option>
-//                     <option value="15m" ${trigger.timeframe === '15m' ? 'selected' : ''}>15m</option>
-//                     <option value="1h" ${trigger.timeframe === '1h' ? 'selected' : ''}>1h</option>
-//                 </select>
-//             </div>
-//
-//             <div class="input-group">
-//                 <label>Candles:</label>
-//                 <input type="number" 
-//                        id="trigger-candles" 
-//                        value="${trigger.candle_count || 1}" 
-//                        min="1"
-//                        onchange="updateTriggerField(${triggerId}, 'candles', this.value)">
-//             </div>
-//
-//             <div class="input-group">
-//                 <label>Status:</label>
-//                 <select id="trigger-status" 
-//                         onchange="updateTriggerField(${triggerId}, 'status', this.value)">
-//                     <option value="active" ${trigger.status === 'active' ? 'selected' : ''}>Active</option>
-//                     <option value="inactive" ${trigger.status === 'inactive' ? 'selected' : ''}>Inactive</option>
-//                 </select>
-//             </div>
-//         </div>
-//     `;
-//
-//     // Add CSS for the editor
-//     const style = document.createElement('style');
-//     style.textContent = `
-//         .edit-section {
-//             margin-top: 20px;
-//         }
-//         .input-group {
-//             margin: 15px 0;
-//         }
-//         .input-group label {
-//             display: block;
-//             margin-bottom: 5px;
-//         }
-//         .input-group input,
-//         .input-group select {
-//             width: 100%;
-//             padding: 5px;
-//             background: #444;
-//             border: 1px solid #666;
-//             color: white;
-//             border-radius: 3px;
-//         }
-//     `;
-//     document.head.appendChild(style);
-//
-//     // Add to document and show
-//     document.body.appendChild(sidebar);
-//     setTimeout(() => {
-//         sidebar.style.right = '0';
-//
-//         // Adjust ALL content, not just chart
-//         document.body.style.marginRight = '350px';
-//         document.body.style.transition = 'margin-right 0.3s ease';
-//
-//         const chartContainer = document.getElementById('chartContainer');
-//         if (chartContainer) {
-//             chartContainer.style.width = 'calc(100% - 350px)';
-//             chartContainer.style.transition = 'width 0.3s ease';
-//         }
-//
-//         // Redraw chart after transition
-//         setTimeout(() => {
-//             drawCandlestickChart(stockData, start, end);
-//         }, 300);
-//     }, 0);
-// }
-
 window.closeTriggerEditor = function () {
     console.log("Close Trigger Editor")
     const sidebar = document.getElementById('trigger-edit-sidebar');
@@ -1045,41 +860,6 @@ window.closeTriggerEditor = function () {
         }, 300);
     }
 }
-
-// window.updateTriggerField = function (triggerId, field, value) {
-//     console.log("Update Trigger Field", triggerId, field, value)
-//     const updates = {};
-//     updates[field] = value;
-//
-//     fetch('/update-trigger', {
-//         method: 'PUT',
-//         headers: {
-//             'Content-Type': 'application/json'
-//         },
-//         body: JSON.stringify({
-//             trigger_id: triggerId,
-//             updates: updates
-//         })
-//     })
-//         .then(response => response.json())
-//         .then(data => {
-//             console.log("Update Trigger Response")
-//             // Update local trigger data
-//             const trigger = window.all_triggers.find(t => t.id === triggerId);
-//             if (trigger) {
-//                 trigger[field] = value;
-//             }
-//             // Update line on chart if necessary
-//             console.log("Update Trigger trigger", trigger)
-//             const line = draw_lines.find(l => l.triggerId === triggerId);
-//             if (line) {
-//                 console.log("Update Trigger LINE?")
-//                 line[field] = value;
-//                 drawCandlestickChart(stockData, start, end);
-//             }
-//         })
-//         .catch(error => console.error('Error updating trigger:', error));
-// }
 
 window.updateTriggerField = function (triggerId, field, value) {
     console.log("Update Trigger Field", triggerId, field, value);
@@ -1400,9 +1180,9 @@ window.handleTriggerAction = function (action, triggerId) {
                 window.updateSidebar();
 
                 // Open sidebar if closed
-                if (document.getElementById('trade-setup-sidebar').style.right === '-350px') {
-                    toggleSidebar();
-                }
+                // if (document.getElementById('trade-setup-sidebar').style.right === '-350px') {
+                //     toggleSidebar();
+                // }
             }
             break;
 

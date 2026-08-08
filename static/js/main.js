@@ -94,7 +94,7 @@ function init() {
     drawCandlestickChart(window.stockData, window.start, window.end)
     setupEventListeners()
     connectToBackend()
-    window.updateSidebar = createTradeSetupSidebar()
+    window.updateSidebar = createTradeSetupBar()
 }
 
 document.addEventListener('DOMContentLoaded', init)

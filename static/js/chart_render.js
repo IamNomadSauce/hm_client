@@ -636,12 +636,6 @@ function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
 
     drawBracketBoxes(ctx, width, height, margin, minPrice, maxPrice);
 
-    if (currentTool === 'box' && drawingStart) {
-        ctx.beginPath();
-        ctx.rect(drawingStart.x, drawingStart.y, mouseX - drawingStart.x, mouseY - drawingStart.y);
-        ctx.strokeStyle = 'yellow';
-        ctx.stroke();
-    }
 }
 
 // Draw filled boxes + draggable handles
