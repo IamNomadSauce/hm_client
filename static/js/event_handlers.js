@@ -287,6 +287,20 @@ function showTriggerTypeMenu(line, pageX, pageY) {
                     price: line.price,
                     status: 'active'
                 });
+                if (!window.currentTradeSetup) {
+                    window.currentTradeSetup = { chainedTriggers: [] };
+                }
+                if (!window.currentTradeSetup.chainedTriggers) {
+                    window.currentTradeSetup.chainedTriggers = [];
+                }
+                window.currentTradeSetup.chainedTriggers.push({
+                    id: data.id, // may be undefined until backend returns one
+                    product_id: selectedProduct.product_id,
+                    type: type,
+                    price: line.price,
+                    status: 'active'
+                });
+                if (typeof window.updateSidebar === 'function') window.updateSidebar();
 
                 showToast(`Trigger created: ${type.replace('_', ' ')}`, 2200);
                 drawCandlestickChart(window.stockData, window.start, window.end);
