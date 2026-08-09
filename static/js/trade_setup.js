@@ -495,12 +495,12 @@ function handleLineAction(action, line) {
 
             // Initialize currentTradeSetup if it doesn't exist
             if (!window.currentTradeSetup) {
-                window.currentTradeSetup = {
-                    chainedTriggers: []
-                };
+                window.currentTradeSetup = { chainedTriggers: [] };
+            }
+            if (!window.currentTradeSetup.chainedTriggers) {
+                window.currentTradeSetup.chainedTriggers = []
             }
 
-            // Add trigger to trade setup
             window.currentTradeSetup.chainedTriggers.push(triggerData);
 
             fetch('create-trigger', {

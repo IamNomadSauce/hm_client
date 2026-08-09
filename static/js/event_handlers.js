@@ -216,8 +216,6 @@ function showTriggerTypeMenu(line, pageX, pageY) {
         item.addEventListener('mouseleave', () => item.style.background = 'transparent');
     });
 
-    // ---- FIXED CLOSE LOGIC ----
-    // Ignore the click that opened the menu
     let ignoreNextClick = true;
 
     const closeListener = (ev) => {
