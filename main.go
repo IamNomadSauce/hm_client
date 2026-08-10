@@ -398,18 +398,14 @@ func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
 
 	url := os.Getenv("URL")
 
-	err = api.CreateTrigger(url, trigger)
+	created, err := api.CreateTrigger(url, trigger)
 	if err != nil {
 		log.Printf("Error creating trigger %v", err)
-		http.Error(w, "Failled to create bracket order", http.StatusInternalServerError)
+		http.Error(w, "Failed to create trigger", http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "success",
-		"message": "New trigger created successfully",
-	})
+	json.NewEncoder(w).Encode(created) // includes "id"
 }
 
 func newTradeBlockHandler(w http.ResponseWriter, r *http.Request) {

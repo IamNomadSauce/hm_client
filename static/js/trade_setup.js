@@ -6,6 +6,12 @@ const updateSidebar = createTradeSetupBar();
 window.updateSidebar = updateSidebar
 
 let rr = 4
+window.rr = rr
+window.autoStopDismissed = false
+window.rrStopPrice = null
+window.rrStopVisible = false
+
+
 
 function createTradeSetupBar() {
     // Remove old sidebar UI if present
@@ -252,6 +258,21 @@ function createTradeSetupBar() {
     return function updateTradeBar() {
         render();
     };
+}
+
+function maybeAutoStopFromEntryAndFirstPt() {
+    const entryLine = draw_lines.find(l => l.type === 'entry');
+    const existingStop = draw_lines.find(l => l.type === 'stop');
+    const firstPt = draw_lines.find(l => l.type === 'pt');
+    if (!entryLine || !firstPt || existingStop) return;
+    const reward = Math.abs(firstPt.price - entryLine.price);
+    if (!reward) return;
+    const risk = reward / rr;
+    const stopPrice = firstPt.price > entryLine.price
+        ? entryLine.price - risk
+        : entryLine.price + risk;
+    draw_lines.push({ price: stopPrice, type: 'stop', color: '#ff0000' });
+    if (window.currentTrade) window.currentTrade.stop = stopPrice;
 }
 
 // function createTradeSetupSidebar() {
@@ -568,6 +589,7 @@ function handleLineAction(action, line) {
             if (!draw_lines.includes(line)) {
                 draw_lines.push(line);
             }
+            maybeAutoStopFromEntryAndFirstPt()
             break;
 
         case 'pt':
@@ -582,6 +604,7 @@ function handleLineAction(action, line) {
             if (!draw_lines.includes(line)) {
                 draw_lines.push(line);
             }
+            maybeAutoStopFromEntryAndFirstPt()
             break;
 
         case 'stop':

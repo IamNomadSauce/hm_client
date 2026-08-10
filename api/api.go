@@ -81,41 +81,84 @@ func GetExchanges(url string) ([]model.Exchange, error) {
 	return exchanges, nil
 }
 
-func CreateTrigger(baseURL string, trigger model.Trigger) error {
+func CreateTrigger(baseURL string, trigger model.Trigger) (model.Trigger, error) {
 	log.Printf("API:CreateTrigger\n%+v", trigger)
 	url := baseURL + "/create-trigger"
-
 	jsonData, err := json.Marshal(trigger)
 	if err != nil {
-		return fmt.Errorf("Error marshaling request payload: %v", err)
+		return model.Trigger{}, fmt.Errorf("Error marshaling request payload: %v", err)
 	}
 	log.Printf("Sending payload: %s", string(jsonData))
-
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("Error creating request: %v", err)
+		return model.Trigger{}, fmt.Errorf("Error creating request: %v", err)
 	}
-
 	req.Header.Set("Content-Type", "application/json")
-
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Error sending request: %v", err)
+		return model.Trigger{}, fmt.Errorf("Error sending request: %v", err)
 	}
 	defer resp.Body.Close()
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Error reading response body: %v", err)
+		return model.Trigger{}, fmt.Errorf("Error reading response body: %v", err)
 	}
-
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("Unexpected status Code: %d, response: %s", resp.StatusCode, string(body))
+		return model.Trigger{}, fmt.Errorf("Unexpected status Code: %d, response: %s", resp.StatusCode, string(body))
 	}
-
-	return nil
+	// Prefer full trigger from upstream; fall back to { "id": N }
+	var created model.Trigger
+	if err := json.Unmarshal(body, &created); err == nil && created.ID != 0 {
+		return created, nil
+	}
+	var idOnly struct {
+		ID int `json:"id"`
+	}
+	if err := json.Unmarshal(body, &idOnly); err == nil && idOnly.ID != 0 {
+		trigger.ID = idOnly.ID
+		return trigger, nil
+	}
+	// Upstream returned no id — still success, but caller gets ID=0
+	log.Printf("CreateTrigger: response had no id: %s", string(body))
+	return trigger, nil
 }
+
+// func CreateTrigger(baseURL string, trigger model.Trigger) error {
+// 	log.Printf("API:CreateTrigger\n%+v", trigger)
+// 	url := baseURL + "/create-trigger"
+//
+// 	jsonData, err := json.Marshal(trigger)
+// 	if err != nil {
+// 		return fmt.Errorf("Error marshaling request payload: %v", err)
+// 	}
+// 	log.Printf("Sending payload: %s", string(jsonData))
+//
+// 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+// 	if err != nil {
+// 		return fmt.Errorf("Error creating request: %v", err)
+// 	}
+//
+// 	req.Header.Set("Content-Type", "application/json")
+//
+// 	client := &http.Client{}
+// 	resp, err := client.Do(req)
+// 	if err != nil {
+// 		return fmt.Errorf("Error sending request: %v", err)
+// 	}
+// 	defer resp.Body.Close()
+//
+// 	body, err := ioutil.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return fmt.Errorf("Error reading response body: %v", err)
+// 	}
+//
+// 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+// 		return fmt.Errorf("Unexpected status Code: %d, response: %s", resp.StatusCode, string(body))
+// 	}
+//
+// 	return nil
+// }
 
 func DeleteTrigger(baseURL string, triggerID int) error {
 	log.Printf("API:DeleteTrigger ID: %d", triggerID)

@@ -275,17 +275,17 @@ function showTriggerTypeMenu(line, pageX, pageY) {
             })
             .then(r => r.json())
             .then(data => {
-                line.triggerId = data.id;
+                const id = data.id;
+                line.triggerId = id;
                 line.pending = false;
                 line.triggerType = type;
-
                 if (!window.current_triggers) window.current_triggers = [];
                 window.current_triggers.push({
-                    id: data.id,
+                    id: id,
                     product_id: selectedProduct.product_id,
                     type: type,
                     price: line.price,
-                    status: 'active'
+                    status: data.status || 'active'
                 });
                 if (!window.currentTradeSetup) {
                     window.currentTradeSetup = { chainedTriggers: [] };
@@ -294,14 +294,16 @@ function showTriggerTypeMenu(line, pageX, pageY) {
                     window.currentTradeSetup.chainedTriggers = [];
                 }
                 window.currentTradeSetup.chainedTriggers.push({
-                    id: data.id, // may be undefined until backend returns one
+                    id: id,
                     product_id: selectedProduct.product_id,
                     type: type,
                     price: line.price,
-                    status: 'active'
+                    status: data.status || 'active'
                 });
+                // optional: remove purple draw_lines copy; gold line comes from current_triggers
+                const idx = draw_lines.indexOf(line);
+                if (idx !== -1) draw_lines.splice(idx, 1);
                 if (typeof window.updateSidebar === 'function') window.updateSidebar();
-
                 showToast(`Trigger created: ${type.replace('_', ' ')}`, 2200);
                 drawCandlestickChart(window.stockData, window.start, window.end);
             })
