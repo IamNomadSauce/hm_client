@@ -5,6 +5,13 @@ console.log("selected product", window.selectedProduct.product_id)
 //Test
 window.end = window.stockData.length
 window.start = Math.max(0, end - 250);
+window.priceScale = {
+    mode: 'auto',   // 'auto' | 'manual'
+    min: null,
+    max: null,
+    padding: 0.08
+};
+window.minVisibleBars = 15;
 window.zoomFactor = 10;
 window.draw_lines = []
 window.currentTool = null

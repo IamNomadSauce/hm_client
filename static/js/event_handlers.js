@@ -12,6 +12,63 @@ window.activeLineIndex = -1;
 window.draggingBracketPoint = null;   // { bracketId, type: 'entry' | 'stop' | 'pt' }
 window.hoveredBracketPoint = null;
 
+function getBarCount() {
+    return Math.max(1, window.end - window.start)
+}
+
+function clampViewport(start, end, dataLen) {
+    let count = end -start
+    const minB = window.minVisibleBars || 15
+    const maxB = dataLen
+    count = Math.max(minB, Math.min(maxB, count))
+
+    let s = start
+    let e = s + count
+    if (s< 0) { s = 0; e = count; }
+    if (e > dataLen) { e = dataLen; s = e - count }
+    if (s < 0) s = 0
+    return { start: s, end: e }
+}
+
+function zoomXAroundPixel(mouseX, zoomIn, intensity) {
+    const data = window.stockData
+    if (!data?.length) return
+
+    const cs = window.chartState
+    const margin = cs?.margin ?? 50
+    const width = cs?.width ?? canvas.width
+    const plotW = width - 2 * margin
+    const fraction = Math.min(1, Math.max(0, (mouseX - margin) / plotW))
+
+    const oldCount = getBarCount()
+    const factor = zoomIn ? (1 - intensity) : (1 + intensity)
+    let newCount = Math.round(oldCount * factor)
+    newCount = Math.max(window.minVisibleBars || 15, Math.min(data.length, newCount))
+
+    const anchor  = window.start + fraction * oldCount
+    let newStart = anchor - fraction * newCount
+    let newEnd  = newStart + newCount
+
+    const v = clampViewport(newStart, newEnd, data.length)
+    window.start = Math.round(v.start)
+    window.end = Math.round(v.end)
+}
+
+function applyYScaleFromDrag(dy, startMin, startMax) {
+    const mid = (startMin + startMax) / 2
+    const half = (startMax - startMin) / 2
+    const scale = Math.exp(dy * 0.01)
+    const newHalf = Math.max(half * scale, (Math.abs(mid) || 1) * 1e-8)
+    window.priceScale.mode = 'manual'
+    window.priceScale.min = mid - newHalf
+    window.priceScale.max = mid + newHalf
+}
+
+function isOnPriceAxis(mouseX, chartState) {
+    if (!chartState) return false
+    return mouseX >= chartState.width - chartState.margin
+}
+
 // ==================== TOOL SELECTORS ====================
 
 window.setCurrentTool = function(tool) {
@@ -146,12 +203,28 @@ window.setupEventListeners = function() {
             return;
         }
 
-        // Default pan
-        isDragging = true;
-        startX = event.clientX;
-        canvas.style.cursor = 'grabbing';
+        if (window.isYScaling) {
+            const dy = event.clientY - window.yScaleStartY;
+            applyYScaleFromDrag(dy, window.yScaleStartMin, window.yScaleStartMax);
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            return;
+        }
+        if (window.isDragging) {
+            const cs = window.chartState;
+            const margin = cs?.margin ?? 50;
+            const plotW = (cs?.width ?? canvas.width) - 2 * margin;
+            const candleW = plotW / Math.max(1, window.panBarCount);
+            const dx = event.clientX - window.panStartX;
+            const barsMoved = dx / candleW;
+            let newStart = window.panStartStart - barsMoved;
+            let newEnd = newStart + window.panBarCount;
+            const v = clampViewport(newStart, newEnd, window.stockData.length);
+            window.start = Math.round(v.start);
+            window.end = Math.round(v.end);
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            return;
+        }
 
-        drawingStart = { x: mouseX, y: mouseY };
     });
 
     // ==================== MOUSE UP ====================
@@ -163,6 +236,8 @@ window.setupEventListeners = function() {
         } else {
             isDragging = false;
             canvas.style.cursor = 'default';
+            window.isDragging = false;
+            window.isYScaling = false;
         }
     });
 
@@ -172,6 +247,8 @@ window.setupEventListeners = function() {
             canvas.style.cursor = 'default';
         }
         isDragging = false;
+        window.isDragging = false;
+        window.isYScaling = false;
     });
 };
 
@@ -1179,18 +1256,37 @@ function clickTrendline(event, chartState) {
 }
 
 document.getElementById('chartContainer').addEventListener('wheel', function(event) {
-	event.preventDefault();
-	if (event.deltaY < 0) { // Zoom in
-		if (window.end - window.start > window.zoomFactor) {
-			window.start += window.zoomFactor;
-			window.end -= window.zoomFactor;
-		}
-	} else { // Zoom out
-		window.start = Math.max(0, window.start - window.zoomFactor);
-		window.end = Math.min(window.stockData.length, window.end + window.zoomFactor);
-	}
-	window.drawCandlestickChart(window.stockData, window.start, window.end);
-});
+    event.preventDefault();
+    if (!window.stockData?.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    const cs = window.chartState;
+    // Shift+wheel or over price axis → Y zoom
+    if (event.shiftKey || isOnPriceAxis(mouseX, cs)) {
+        if (window.priceScale.mode !== 'manual') {
+            window.priceScale.mode = 'manual';
+            window.priceScale.min = cs.minPrice;
+            window.priceScale.max = cs.maxPrice;
+        }
+        const intensity = Math.min(0.25, Math.abs(event.deltaY) * 0.0015);
+        const zoomIn = event.deltaY < 0;
+        const min = window.priceScale.min;
+        const max = window.priceScale.max;
+        const mid = (min + max) / 2;
+        const half = (max - min) / 2;
+        const scale = zoomIn ? (1 - intensity) : (1 + intensity);
+        window.priceScale.min = mid - half * scale;
+        window.priceScale.max = mid + half * scale;
+        drawCandlestickChart(window.stockData, window.start, window.end);
+        return;
+    }
+    // X zoom under cursor
+    const intensity = Math.min(0.35, Math.abs(event.deltaY) * 0.0015);
+    const zoomIn = event.deltaY < 0;
+    zoomXAroundPixel(mouseX, zoomIn, intensity);
+    drawCandlestickChart(window.stockData, window.start, window.end);
+}, { passive: false });
 
 window.addEventListener('resize', function() {
 	chartState = drawCandlestickChart(window.stockData, start, end);

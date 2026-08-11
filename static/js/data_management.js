@@ -140,10 +140,11 @@ function updateChart(candleUpdate) {
         // Add new candle
         stockData.push(newCandle);
 
-        // If we're at the end of the view, shift the window
-        if (end === stockData.length - 1) {
-            start++;
-            end++;
+        // prefer exclusive end === length for "at live edge"
+        if (window.end >= window.stockData.length - 1) {
+            const count = window.end - window.start;
+            window.end = window.stockData.length;
+            window.start = Math.max(0, window.end - count);
         }
     }
 

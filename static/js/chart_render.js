@@ -50,8 +50,25 @@ window.drawCandlestickChart = function (data, start, end) {
     const lastCandleTime = visibleData[visibleData.length - 1].Timestamp;
     const timeRange = lastCandleTime - firstCandleTime;
 
-    const minPrice = Math.min(...visibleData.map(d => d.Low));
-    const maxPrice = Math.max(...visibleData.map(d => d.High));
+    const dataMin = Math.min(...visibleData.map(d => d.Low));
+    const dataMax = Math.max(...visibleData.map(d => d.High));
+
+    let minPrice, maxPrice;
+    const ps = window.priceScale || { mode: 'auto', padding: 0.08 };
+    if (ps.mode === 'manual' && ps.min != null && ps.max != null && ps.max > ps.min) {
+        minPrice = ps.min;
+        maxPrice = ps.max;
+    } else {
+        const pad = (dataMax - dataMin) * (ps.padding ?? 0.08) || dataMin * 0.001;
+        minPrice = dataMin - pad;
+        maxPrice = dataMax + pad;
+        if (ps.mode !== 'manual') {
+            ps.min = minPrice;
+            ps.max = maxPrice;
+        }
+    }
+
+    window.chartState = window.chartState || {}
 
     window.updateChartState(ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime, window.currentTrendlines);
 
