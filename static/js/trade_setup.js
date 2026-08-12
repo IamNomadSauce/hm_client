@@ -217,6 +217,12 @@ function createTradeSetupBar() {
                        oninput="window.updateRisk(this.value)">
                 <span class="value">${currentRiskPercentage}%</span>
             </span>
+            <span class="chip">
+                <span class="label">R:R</span>
+                <input type="range" min="1" max="10" step="0.5" value="${window.rr || 4}"
+                       oninput="window.updateRR(this.value)">
+                <span class="value">${window.rr || 4}R</span>
+            </span>
 
             <span class="spacer"></span>
 
@@ -236,6 +242,16 @@ function createTradeSetupBar() {
             drawCandlestickChart(window.stockData, window.start, window.end);
         }
     };
+
+    window.updateRR = function (v) {
+        rr = parseFloat(v)
+        window.rr = rr
+        maybeAutoStopFromEntryAndFirstPt()
+        render()
+        if (window.stockData) {
+            drawCandlestickChart(window.stockData, window.start, window.end)
+        }
+    }
 
     window.clearTradeSetup = function () {
         // Remove trade-related lines only (keep plain lines if you want)
@@ -260,20 +276,59 @@ function createTradeSetupBar() {
     };
 }
 
+// function maybeAutoStopFromEntryAndFirstPt() {
+//     const entryLine = draw_lines.find(l => l.type === 'entry');
+//     const existingStop = draw_lines.find(l => l.type === 'stop');
+//     const firstPt = draw_lines.find(l => l.type === 'pt');
+//     if (!entryLine || !firstPt || existingStop) return;
+//     const reward = Math.abs(firstPt.price - entryLine.price);
+//     if (!reward) return;
+//     const risk = reward / rr;
+//     const stopPrice = firstPt.price > entryLine.price
+//         ? entryLine.price - risk
+//         : entryLine.price + risk;
+//     draw_lines.push({ price: stopPrice, type: 'stop', color: '#ff0000' });
+//     if (window.currentTrade) window.currentTrade.stop = stopPrice;
+// }
+
+function getIdealStopPrice(entryPrice, ptPrice, ratio) {
+    const reward = Math.abs(ptPrice - entryPrice);
+    if (!reward || !ratio) return null;
+    const risk = reward / ratio;
+    return ptPrice > entryPrice
+        ? entryPrice - risk   // long
+        : entryPrice + risk;  // short
+}
+window.getIdealStopPrice = getIdealStopPrice;
 function maybeAutoStopFromEntryAndFirstPt() {
     const entryLine = draw_lines.find(l => l.type === 'entry');
     const existingStop = draw_lines.find(l => l.type === 'stop');
     const firstPt = draw_lines.find(l => l.type === 'pt');
-    if (!entryLine || !firstPt || existingStop) return;
-    const reward = Math.abs(firstPt.price - entryLine.price);
-    if (!reward) return;
-    const risk = reward / rr;
-    const stopPrice = firstPt.price > entryLine.price
-        ? entryLine.price - risk
-        : entryLine.price + risk;
-    draw_lines.push({ price: stopPrice, type: 'stop', color: '#ff0000' });
-    if (window.currentTrade) window.currentTrade.stop = stopPrice;
+    if (!entryLine || !firstPt) return;
+    const ratio = window.rr || rr || 4;
+    const stopPrice = getIdealStopPrice(entryLine.price, firstPt.price, ratio);
+    if (stopPrice == null) return;
+    // Manual stop: leave it alone
+    if (existingStop && existingStop.fromRR === false) return;
+    if (existingStop && existingStop.fromRR) {
+        existingStop.price = stopPrice;
+        if (window.currentTrade) window.currentTrade.stop = stopPrice;
+        return;
+    }
+    if (!existingStop) {
+        draw_lines.push({
+            price: stopPrice,
+            type: 'stop',
+            color: '#ff0000',
+            fromRR: true
+        });
+        if (window.currentTrade) window.currentTrade.stop = stopPrice;
+    }
 }
+function applyRRToAutoStop() {
+    maybeAutoStopFromEntryAndFirstPt();
+}
+window.applyRRToAutoStop = applyRRToAutoStop;
 
 // function createTradeSetupSidebar() {
 //     console.log("Create Trade Setup Sidebar");
@@ -611,6 +666,7 @@ function handleLineAction(action, line) {
             console.log("STOP")
             line.type = 'stop';
             line.color = '#ff0000';
+            line.fromRR = false
             console.log("CURRENT _ TRADE", window.currentTrade)
             console.log("CURRENT _ TRADE _ SETUP", window.currentTradeSetup)
             if (window.currentTrade && window.currentTrade.entry) {
@@ -1027,19 +1083,7 @@ window.showTriggerEditMenu = function (triggerId, pageX, pageY) {
     `;
 
     document.body.appendChild(menu);
-
-    // Smart positioning near click
-    let left = pageX + 15;
-    let top = pageY + 10;
-
-    const menuWidth = 260;
-    const menuHeight = 240;
-
-    if (left + menuWidth > window.innerWidth) left = pageX - menuWidth - 15;
-    if (top + menuHeight > window.innerHeight) top = pageY - menuHeight - 15;
-
-    menu.style.left = `${Math.max(10, left)}px`;
-    menu.style.top = `${Math.max(10, top)}px`;
+    positionMenuNear(menu, pageX, pageY)
 
     // Close on outside click
     setTimeout(() => {
@@ -1287,14 +1331,12 @@ window.showTradeOptions = function (triggerId) {
     });
 
     document.body.appendChild(submenu);
+    positionMenuNear(menu, pageX, pageY)
 }
 
 window.showTradeSetupDialog = function (trigger) {
     const dialog = document.createElement('div');
     dialog.className = 'edit-trigger-form';
-    dialog.style.position = 'absolute';
-    dialog.style.left = '50%';
-    dialog.style.top = '50%';
     dialog.style.transform = 'translate(-50%, -50%)';
     dialog.style.backgroundColor = '#333';
     dialog.style.padding = '20px';
@@ -1322,4 +1364,5 @@ window.showTradeSetupDialog = function (trigger) {
     `;
 
     document.body.appendChild(dialog);
+    positionMenuNear(menu, pageX, pageY)
 }

@@ -259,8 +259,6 @@ function showTriggerTypeMenu(line, pageX, pageY) {
     menu.className = 'trigger-type-menu';
     menu.style.cssText = `
         position: absolute;
-        left: ${pageX - 100}px;
-        top: ${pageY - 10}px;
         background: #1e1e2e;
         color: #e0e0ff;
         padding: 10px 14px;
@@ -442,6 +440,9 @@ function handleBracketPointDrag(event) {
 
     if (targetLine) {
         targetLine.price = newPrice;
+        if (targetLine.type === 'stop') {
+            targetLine.fromRR = false
+        }
         drawCandlestickChart(window.stockData, window.start, window.end);
         if (typeof window.updateSidebar === 'function') window.updateSidebar();
     }
@@ -556,9 +557,6 @@ window.lineClickHandler = function(e, chartState) {
 
 	const menu = document.createElement('div');
 	menu.className = 'line-menu';
-	menu.style.position = 'absolute';
-	menu.style.left = `${e.pageX - 120}px`;
-	menu.style.top = `${e.pageY - 8}px`;
 	menu.style.background = '#1e1e2e';
 	menu.style.color = '#e0e0ff';
 	menu.style.padding = '8px 12px';
@@ -585,6 +583,7 @@ window.lineClickHandler = function(e, chartState) {
     `;
 
 	document.body.appendChild(menu);
+    positionMenuNear(menu, e.pageX, e.pageY)
 
 	// Close on outside click
 	const closeListener = (ev) => {
@@ -635,9 +634,6 @@ window.orderClickHandler = function(e, chartState) {
 	// Show menu
 	const menu = document.createElement('div');
 	menu.className = 'order-menu';
-	menu.style.position = 'absolute';
-	menu.style.left = `${e.pageX - 140}px`;
-	menu.style.top = `${e.pageY - 10}px`;
 	menu.style.background = '#1e1e2e';
 	menu.style.color = '#e0e0ff';
 	menu.style.padding = '10px 14px';
@@ -668,6 +664,7 @@ window.orderClickHandler = function(e, chartState) {
     `;
 
 	document.body.appendChild(menu);
+    positionMenuNear(menu, e.pageX, e.pageY)
 
 	// Close when clicking outside
 	const closeListener = (ev) => {
@@ -720,9 +717,6 @@ window.triggerClickHandler = function(e, chartState) {
 	if (selectedTrigger) {
 		const menu = document.createElement('div');
 		menu.className = 'trigger-menu';
-		menu.style.position = 'absolute';
-		menu.style.left = `${e.pageX - 150}px`;
-		menu.style.top = `${e.pageY - 10}px`;
 		menu.style.backgroundColor = '#333';
 		menu.style.color = 'white';
 		menu.style.padding = '10px';
@@ -746,6 +740,7 @@ window.triggerClickHandler = function(e, chartState) {
         `;
 
 		document.body.appendChild(menu);
+        positionMenuNear(menu, e.pageX, e.pageY)
 
 
 		const closeMenuOnOutsideClick = (event) => {
@@ -814,9 +809,6 @@ window.fillClickHandler = function(e, chartState) {
 	// Create menu
 	const menu = document.createElement('div');
 	menu.className = 'fill-menu';
-	menu.style.position = 'absolute';
-	menu.style.left = `${e.pageX - 130}px`;
-	menu.style.top = `${e.pageY - 10}px`;
 	menu.style.background = '#1e1e2e';
 	menu.style.color = '#e0e0ff';
 	menu.style.padding = '10px 14px';
@@ -851,6 +843,7 @@ window.fillClickHandler = function(e, chartState) {
     `;
 
 	document.body.appendChild(menu);
+    positionMenuNear(menu, e.pageX, e.pageY)
 
 	// Auto-close on outside click
 	const closeListener = (ev) => {
@@ -1451,15 +1444,16 @@ window.showLineMenu = function(x, y) {
 	const line = draw_lines[activeLineIndex];
 
 	// Calculate line's Y position using stored chartState
-	if (chartState) {
-		const lineY = chartState.height - chartState.margin -
-			((line.price - chartState.minPrice) /
-				(chartState.maxPrice - chartState.minPrice)) *
-			(chartState.height - 2 * chartState.margin);
-
-		menu.style.display = 'block';
-		menu.style.left = `${x}px`;
-		menu.style.top = `${lineY}px`;
+	if (chartState && line) {
+        const rect = canvas.getBoundingClientRext()
+        const pageX = rect.left + (x ?? 0) + window.scrollX
+        const pageY = rect.top + (
+            chartState.height - chartState.margin -
+            ((line.price - chartState.minPrice) /
+                (chartState.maxPrice - chartState.minPrice)) *
+            (chartState.height - 2 * chartState.margin)
+        ) + window.scrollY;
+        positionMenuNear(menu, pageX, pageY);
 	}
 }
 

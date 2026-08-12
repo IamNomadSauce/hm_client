@@ -37,6 +37,7 @@ window.drawCandlestickChart = function (data, start, end) {
     // console.log(data, start, end)
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const width = canvas.width;
@@ -52,7 +53,6 @@ window.drawCandlestickChart = function (data, start, end) {
 
     const dataMin = Math.min(...visibleData.map(d => d.Low));
     const dataMax = Math.max(...visibleData.map(d => d.High));
-
     let minPrice, maxPrice;
     const ps = window.priceScale || { mode: 'auto', padding: 0.08 };
     if (ps.mode === 'manual' && ps.min != null && ps.max != null && ps.max > ps.min) {
@@ -625,6 +625,29 @@ function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {
     let activeLineIndex = -1;
     const entryLine = draw_lines.find(l => l.type === 'entry');
     const stopLine = draw_lines.find(l => l.type === 'stop');
+    const firstPt = draw_lines.find(l => l.type === 'pt')
+    
+    if (entryLine && firstPt && typeof window.getIdealStopPrice === 'function') {
+        const ratio = window.rr || 4;
+        const ideal = window.getIdealStopPrice(entryLine.price, firstPt.price, ratio);
+        if (ideal != null && isFinite(ideal)) {
+            const y = height - margin - ((ideal - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+            ctx.save();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#ff9800';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(margin, y);
+            ctx.lineTo(width - margin, y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#ff9800';
+            ctx.font = '12px Arial';
+            ctx.fillText(`R:R stop ${ratio}R @ ${ideal.toFixed(ideal < 1 ? 8 : 2)}`, width - 200, y - 5);
+            ctx.restore();
+        }
+    }
+
     draw_lines.forEach((line, index) => {
         // Convert price back to Y coordinate
         const y = height - margin - ((line.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);

@@ -122,8 +122,6 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
     const menu = document.createElement('div');
     menu.className = 'trendline-point-menu';
     menu.style.position = 'absolute';
-    menu.style.left = `${mouseX - 100}px`;
-    menu.style.top = `${mouseY - 10}px`;
     menu.style.backgroundColor = '#333';
     menu.style.color = 'white';
     menu.style.padding = '10px';
@@ -150,6 +148,7 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
     `;
 
     document.body.appendChild(menu);
+    positionMenuNear(menu, mouseX, mouseY)
 
     // Add event listeners to menu items
     menu.querySelectorAll('.line-menu-item').forEach(item => {
