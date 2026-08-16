@@ -127,15 +127,25 @@ window.setupEventListeners = function() {
         window.mouseX = event.clientX - rect.left;
         window.mouseY = event.clientY - rect.top;
 
+        if (window.isYScaling) {
+            const dy = event.clientY - window.yScaleStartY;
+            applyYScaleFromDrag(dy, window.yScaleStartMin, window.yScaleStartMax);
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            return;
+        }
         if (window.isDragging) {
-            let dx = event.clientX - window.startX;
-            let panFactor = Math.floor(dx / 10);
-            if (panFactor !== 0) {
-                window.start = Math.max(0, window.start - panFactor);
-                window.end = Math.min(window.stockData.length, window.end - panFactor);
-                window.startX = event.clientX;
-                drawCandlestickChart(window.stockData, window.start, window.end);
-            }
+            const dx = event.clientX - window.panStartX;
+            const candleW = ((window.chartState?.width ?? canvas.width) - 2 * (window.chartState?.margin ?? 50))
+                / Math.max(1, window.panBarCount);
+            const barsMoved = dx / candleW;
+            const v = clampViewport(
+                window.panStartStart - barsMoved,
+                window.panStartStart - barsMoved + window.panBarCount,
+                window.stockData.length
+            );
+            window.start = Math.round(v.start);
+            window.end = Math.round(v.end);
+            drawCandlestickChart(window.stockData, window.start, window.end);
             return;
         }
 
@@ -202,28 +212,19 @@ window.setupEventListeners = function() {
             drawCandlestickChart(window.stockData, window.start, window.end);
             return;
         }
-
-        if (window.isYScaling) {
-            const dy = event.clientY - window.yScaleStartY;
-            applyYScaleFromDrag(dy, window.yScaleStartMin, window.yScaleStartMax);
-            drawCandlestickChart(window.stockData, window.start, window.end);
+        if (isOnPriceAxis(mouseX, chartState)) {
+            window.isYScaling = true;
+            window.yScaleStartY = event.clientY;
+            window.yScaleStartMin = window.priceScale.min ?? chartState.minPrice;
+            window.yScaleStartMax = window.priceScale.max ?? chartState.maxPrice;
+            canvas.style.cursor = 'ns-resize';
             return;
         }
-        if (window.isDragging) {
-            const cs = window.chartState;
-            const margin = cs?.margin ?? 50;
-            const plotW = (cs?.width ?? canvas.width) - 2 * margin;
-            const candleW = plotW / Math.max(1, window.panBarCount);
-            const dx = event.clientX - window.panStartX;
-            const barsMoved = dx / candleW;
-            let newStart = window.panStartStart - barsMoved;
-            let newEnd = newStart + window.panBarCount;
-            const v = clampViewport(newStart, newEnd, window.stockData.length);
-            window.start = Math.round(v.start);
-            window.end = Math.round(v.end);
-            drawCandlestickChart(window.stockData, window.start, window.end);
-            return;
-        }
+        window.isDragging = true;
+        window.panStartX = event.clientX;
+        window.panStartStart = window.start;
+        window.panBarCount = window.end - window.start;
+        canvas.style.cursor = 'grabbing';
 
     });
 
@@ -1248,14 +1249,26 @@ function clickTrendline(event, chartState) {
 	console.log("Trend Click ChartState", chartState)
 }
 
+function panByPixels(dx) {
+    const data = window.stockData
+    if (!data?.length) return
+    const cs = window.chartState
+    const margin = cs?.margin ?? 50
+    const plotW = (cs?.width ?? canvas.width) - 2 * margin
+    const count = getBarCount()
+    const candleW = plotW / Math.max(1, count)
+    const barsMoved = dx / candleW
+    const v = clampViewport(window.start - barsMoved, window.end - barsMoved, data.length)
+    window.start = Math.round(v.start)
+    window.end = Math.round(v.end)
+}
+
 document.getElementById('chartContainer').addEventListener('wheel', function(event) {
     event.preventDefault();
     if (!window.stockData?.length) return;
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
     const cs = window.chartState;
-    // Shift+wheel or over price axis → Y zoom
     if (event.shiftKey || isOnPriceAxis(mouseX, cs)) {
         if (window.priceScale.mode !== 'manual') {
             window.priceScale.mode = 'manual';
@@ -1274,7 +1287,13 @@ document.getElementById('chartContainer').addEventListener('wheel', function(eve
         drawCandlestickChart(window.stockData, window.start, window.end);
         return;
     }
-    // X zoom under cursor
+    const absX = Math.abs(event.deltaX);
+    const absY = Math.abs(event.deltaY);
+    if (!event.ctrlKey && absX > absY) {
+        panByPixels(event.deltaX);
+        drawCandlestickChart(window.stockData, window.start, window.end);
+        return;
+    }
     const intensity = Math.min(0.35, Math.abs(event.deltaY) * 0.0015);
     const zoomIn = event.deltaY < 0;
     zoomXAroundPixel(mouseX, zoomIn, intensity);
