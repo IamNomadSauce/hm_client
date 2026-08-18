@@ -418,12 +418,13 @@ function showTriggerTypeMenu(line, pageX, pageY) {
         </div>
         <div class="menu-item" data-type="price_above">Price Above</div>
         <div class="menu-item" data-type="price_below">Price Below</div>
-        <div class="menu-item" data-type="close_above">Close Above</div>
-        <div class="menu-item" data-type="close_below">Close Below</div>
+        <div class="menu-item" data-type="closes_above">Close Above</div>
+        <div class="menu-item" data-type="closes_below">Close Below</div>
         <div class="menu-item" data-type="cancel" style="color:#ff6b6b; margin-top:8px;">Cancel</div>
     `;
 
     document.body.appendChild(menu);
+    positionMenuNear(menu, pageX, pageY);
 
     // Hover styles
     menu.querySelectorAll('.menu-item').forEach(item => {
@@ -689,7 +690,9 @@ window.lineClickHandler = function(e, chartState) {
 
 	if (!selectedLine) return;
     if (selectedLine.type === 'trigger') {
-        // TODO show trigger menu
+        if (selectedLine.pending) {
+            showTriggerTypeMenu(selectedLine, e.pageX, e.pageY);
+        }
         return
     }
 
@@ -737,8 +740,10 @@ window.lineClickHandler = function(e, chartState) {
 
 	// Handle menu clicks
 	menu.querySelectorAll('.menu-item').forEach(item => {
-		item.addEventListener('click', () => {
+		item.addEventListener('click', (ev) => {
 			const action = item.dataset.action;
+			window.lastMenuPageX = ev.pageX;
+			window.lastMenuPageY = ev.pageY;
 			handleLineAction(action, selectedLine, selectedIndex);
 			menu.remove();
 			drawCandlestickChart(window.stockData, window.start, window.end);
@@ -1474,7 +1479,11 @@ document.getElementById('chartContainer').addEventListener('wheel', function(eve
 }, { passive: false });
 
 window.addEventListener('resize', function() {
-	chartState = drawCandlestickChart(window.stockData, start, end);
+    if (window._chartResizeRaf) cancelAnimationFrame(window._chartResizeRaf);
+    window._chartResizeRaf = requestAnimationFrame(function() {
+        window._chartResizeRaf = null;
+        drawCandlestickChart(window.stockData, window.start, window.end);
+    });
 });
 
 document.getElementById('base-trends').addEventListener('click', function() {

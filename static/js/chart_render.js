@@ -32,9 +32,8 @@ window.updateChartState = function (ctx, width, height, margin, minPrice, maxPri
 }
 
 window.drawCandlestickChart = function (data, start, end) {
-    // console.log("DrawCandlestickChart\n", data, start, end)
-    // console.log("DrawCandlestickChart\n" )
-    // console.log(data, start, end)
+    if (!Array.isArray(data) || !data.length) return;
+    if (!canvas || canvas.offsetWidth <= 0 || canvas.offsetHeight <= 0) return;
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     
@@ -601,8 +600,10 @@ window.showPointMenu = function(x, y) {
     });
 
     menu.querySelectorAll('.line-menu-item').forEach(item => {
-        item.addEventListener('click', function () {
+        item.addEventListener('click', function (ev) {
             const action = this.dataset.action;
+            window.lastMenuPageX = ev.pageX;
+            window.lastMenuPageY = ev.pageY;
             const line = { price: price };
             handleLineAction(action, line);
             menu.remove();

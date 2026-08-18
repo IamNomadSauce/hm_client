@@ -152,8 +152,10 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
 
     // Add event listeners to menu items
     menu.querySelectorAll('.line-menu-item').forEach(item => {
-        item.addEventListener('click', function () {
+        item.addEventListener('click', function (ev) {
             const action = this.dataset.action;
+            window.lastMenuPageX = ev.pageX;
+            window.lastMenuPageY = ev.pageY;
             const line = { price: price }; // Create a line object with the correct price
             handleLineAction(action, line);
             menu.remove();

@@ -555,69 +555,13 @@ function handleLineAction(action, line) {
     console.log("action:", action, "\nLine:", line);
     switch (action) {
         case 'trigger':
-            const lastCandle = stockData[stockData.length - 1];
-            const currentPrice = lastCandle.Close;
-
             line.type = 'trigger';
             line.color = '#ff00ff';
-
-            const triggerData = {
-                product_id: selectedProduct.product_id,
-                type: line.price > currentPrice ? 'price_above' : 'price_below',
-                price: parseFloat(line.price),
-                status: 'active',
-                xch_id: exchange.ID
-            };
-
-            // Initialize currentTradeSetup if it doesn't exist
-            if (!window.currentTradeSetup) {
-                window.currentTradeSetup = { chainedTriggers: [] };
-            }
-            if (!window.currentTradeSetup.chainedTriggers) {
-                window.currentTradeSetup.chainedTriggers = []
-            }
-
-            window.currentTradeSetup.chainedTriggers.push(triggerData);
-
-            fetch('create-trigger', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(triggerData)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('1Trigger Created: ', data);
-                    line.triggerId = data.id;
-
-                    const newTrigger = window.currentTradeSetup.chainedTriggers[window.currentTradeSetup.chainedTriggers.length -1]
-                    if (newTrigger) {
-                        Object.assign(newTrigger, data)
-                    }
-                    // Update sidebar and push content
-                    window.updateSidebar();
-
-                    // Get chart container and adjust margin
-                    const chartContainer = document.getElementById('chartContainer');
-                    if (chartContainer) {
-                        // chartContainer.style.marginRight = '350px';
-                        // chartContainer.style.width = 'calc(100% - 350px)';
-                        // chartContainer.style.transition = 'all 0.3s ease';
-
-                        // Redraw chart after transition
-                        setTimeout(() => {
-                            drawCandlestickChart(stockData, start, end);
-                        }, 300);
-                    }
-                })
-                .catch(error => {
-                    console.log('Error creating trigger:', error);
-                });
-
+            line.pending = true;
             if (!draw_lines.includes(line)) {
                 draw_lines.push(line);
             }
+            showTriggerTypeMenu(line, window.lastMenuPageX || window.mouseX, window.lastMenuPageY || window.mouseY);
             break;
 
         case 'entry':
