@@ -6,6 +6,10 @@ window.currentTool = null
 window.drawingStart = null
 window.draw_boxes = []
 window.draw_lines = []
+window.measures = window.measures || []
+window.measureDraft = null
+window.measureHitAreas = []
+window.hoveredMeasureId = null
 window.activeLineIndex = -1;
 
 // Bracket Dragging Support
@@ -71,31 +75,50 @@ function isOnPriceAxis(mouseX, chartState) {
 
 // ==================== TOOL SELECTORS ====================
 
+function clearToolbarHighlights() {
+    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+        btn.style.boxShadow = 'none';
+        btn.style.transform = 'scale(1)';
+    });
+}
+
+function highlightActiveTool() {
+    clearToolbarHighlights();
+    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
+        const isMeasure = btn.dataset.tool === 'measure' && window.currentTool === 'measure';
+        const isLong = window.currentTool === 'bracket' && window.currentBracketSide === 'long' && btn.textContent.includes('LONG');
+        const isShort = window.currentTool === 'bracket' && window.currentBracketSide === 'short' && btn.textContent.includes('SHORT');
+        if (isMeasure || isLong || isShort) {
+            btn.style.boxShadow = '0 0 0 3px white';
+            btn.style.transform = 'scale(1.1)';
+        }
+    });
+}
+
 window.setCurrentTool = function(tool) {
-    // Toggle off if clicking the same tool again
     if (window.currentTool === tool) {
         window.currentTool = null;
         window.currentBracketSide = null;
-        console.log("Tool deactivated");
+        window.measureDraft = null;
+        clearToolbarHighlights();
+        if (typeof drawCandlestickChart === 'function' && window.stockData) {
+            drawCandlestickChart(window.stockData, window.start, window.end);
+        }
         return;
     }
 
     window.currentTool = tool;
     window.currentBracketSide = null;
-
-    // Visual feedback (optional)
-    document.querySelectorAll('#chart-toolbar button').forEach(btn => {
-        btn.style.boxShadow = 'none';
-        btn.style.transform = 'scale(1)';
-    });
-
-    console.log("Tool activated:", tool);
+    if (tool !== 'measure') window.measureDraft = null;
+    highlightActiveTool();
 };
 
 
 window.clearAllDrawings = function() {
     if (confirm("Clear all drawn lines and brackets?")) {
         draw_lines = [];
+        window.measures = [];
+        window.measureDraft = null;
         window.currentTradeSetup = null;
         drawCandlestickChart(window.stockData, window.start, window.end);
         if (typeof window.updateSidebar === 'function') window.updateSidebar();
@@ -118,7 +141,88 @@ function showToast(msg, duration = 2000) {
 
 current_triggers = []
 
+function isTypingTarget(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
+function findMeasureCloseAt(x, y) {
+    const hits = window.measureHitAreas || [];
+    for (let i = hits.length - 1; i >= 0; i--) {
+        const hit = hits[i];
+        if (x >= hit.x && x <= hit.x + hit.w && y >= hit.y && y <= hit.y + hit.h) {
+            return hit;
+        }
+    }
+    return null;
+}
+
+function findHoveredMeasure(x, y) {
+    const close = findMeasureCloseAt(x, y);
+    if (close) return close.id;
+    const measures = window.measures || [];
+    const cs = window.chartState;
+    if (!cs || !measures.length) return null;
+    let closestId = null;
+    let closestDist = 8;
+    measures.forEach(m => {
+        const p1 = measureScreenPoint(m.start, cs);
+        const p2 = measureScreenPoint(m.end, cs);
+        if (!p1 || !p2) return;
+        const dist = distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+        if (dist < closestDist) {
+            closestDist = dist;
+            closestId = m.id;
+        }
+    });
+    return closestId;
+}
+
+function measureScreenPoint(pt, chartState) {
+    if (!pt || !chartState) return null;
+    return {
+        x: xFromBarIndex(pt.barIndex, chartState.width, chartState.margin, window.start, window.end),
+        y: priceToY(pt.price, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice)
+    };
+}
+
+function removeMeasureById(id) {
+    window.measures = (window.measures || []).filter(m => m.id !== id);
+    if (window.hoveredMeasureId === id) window.hoveredMeasureId = null;
+}
+
+function cancelMeasureDraft() {
+    window.measureDraft = null;
+    window.currentTool = null;
+    window.currentBracketSide = null;
+    clearToolbarHighlights();
+}
+
+function handleMeasurePointer(x, y, chartState) {
+    const point = pointFromMouse(x, y, chartState);
+    window.suppressNextChartClick = true;
+    if (!window.measureDraft) {
+        window.measureDraft = { start: point };
+        window.currentTool = 'measure';
+        highlightActiveTool();
+        return 'started';
+    }
+    window.measures = window.measures || [];
+    window.measures.push({
+        id: 'measure_' + Date.now(),
+        start: window.measureDraft.start,
+        end: point
+    });
+    window.measureDraft = null;
+    window.currentTool = null;
+    clearToolbarHighlights();
+    return 'committed';
+}
+
 window.setupEventListeners = function() {
+    if (window._chartListenersBound) return;
+    window._chartListenersBound = true;
     console.log("Setup Event Listeners");
 
     // ==================== MOUSE MOVE ====================
@@ -154,6 +258,10 @@ window.setupEventListeners = function() {
             return;
         }
 
+        if (window.measureDraft) {
+            window.measureDraft.end = pointFromMouse(window.mouseX, window.mouseY, window.chartState);
+        }
+
         handleMouseMove(event, window.chartState, window.tradeGroups);
         drawCandlestickChart(window.stockData, window.start, window.end);
     });
@@ -171,11 +279,21 @@ window.setupEventListeners = function() {
 
         const hoveredPoint = findBracketPointAt(mouseY, chartState);
 
-        if (hoveredPoint) {
+        if (hoveredPoint && !window.measureDraft && window.currentTool !== 'measure' && !event.shiftKey) {
             console.log("BRACKET DRAGGING")
             window.draggingBracketPoint = hoveredPoint;
             canvas.style.cursor = 'ns-resize';
             return; 
+        }
+
+        if (findMeasureCloseAt(mouseX, mouseY)) {
+            return;
+        }
+
+        if (event.shiftKey || window.currentTool === 'measure' || window.measureDraft) {
+            handleMeasurePointer(mouseX, mouseY, chartState);
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            return;
         }
 
         if (window.currentTool === 'bracket') {
@@ -250,6 +368,28 @@ window.setupEventListeners = function() {
         isDragging = false;
         window.isDragging = false;
         window.isYScaling = false;
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key !== 'Escape') return;
+        if (isTypingTarget(event.target)) return;
+
+        if (window.measureDraft) {
+            cancelMeasureDraft();
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            return;
+        }
+
+        if (window.hoveredMeasureId) {
+            removeMeasureById(window.hoveredMeasureId);
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            return;
+        }
+
+        if (window.measures && window.measures.length) {
+            window.measures.pop();
+            drawCandlestickChart(window.stockData, window.start, window.end);
+        }
     });
 };
 
@@ -877,15 +1017,29 @@ function distanceToLineSegment(px, py, x1, y1, x2, y2) {
 }
 
 handleMouseMove = function(e, chartState, tradeGroups) {
+	const rect = canvas.getBoundingClientRect();
+	const mx = e.clientX - rect.left;
+	const my = e.clientY - rect.top;
+	window.hoveredMeasureId = findHoveredMeasure(mx, my);
+	const closeHit = findMeasureCloseAt(mx, my);
+
+	if (window.measureDraft || window.currentTool === 'measure') {
+		canvas.style.cursor = 'crosshair';
+		return;
+	}
+
+	if (closeHit || window.hoveredMeasureId) {
+		canvas.style.cursor = 'pointer';
+		return;
+	}
+
 	const isFillHover = fillHoverHandler(e, chartState)
-	// console.log("Is Fill Hovered", isFillHover)
 	const isOrderHover = orderHoverHandler(e, chartState);
 	const isTradeHover = tradeHoverHandler(e, chartState, tradeGroups);
 	const isLineHover = lineHoverHandler(e, chartState);
 	const isTriggerHover = triggerHoverHandler(e, chartState);
 	const isPointHover = pointHoverHandler(e, chartState);
 	const hoveredTrend = trendLineHoverHandler(e, chartState)
-
 
 	if (isFillHover || isOrderHover || isTradeHover || isLineHover ||
 		isTriggerHover || isPointHover || hoveredTrend) {
@@ -1206,6 +1360,25 @@ window.deleteTradeBlock = function(groupId) {
 canvas.addEventListener('click', function(event) {
     // Skip all click handlers if we just dragged a bracket point
     if (window.draggingBracketPoint !== null) {
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+    if (window.suppressNextChartClick) {
+        window.suppressNextChartClick = false;
+        return;
+    }
+
+    const closeHit = findMeasureCloseAt(clickX, clickY);
+    if (closeHit) {
+        removeMeasureById(closeHit.id);
+        drawCandlestickChart(window.stockData, window.start, window.end);
+        return;
+    }
+
+    if (window.measureDraft || window.currentTool === 'measure') {
         return;
     }
 

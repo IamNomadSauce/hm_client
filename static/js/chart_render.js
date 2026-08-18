@@ -528,6 +528,7 @@ window.drawCandlestickChart = function (data, start, end) {
     // }
 	
     drawToolbar(ctx, width, height, margin, minPrice, maxPrice);
+    drawMeasures(ctx, width, height, margin, minPrice, maxPrice);
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
 
     return { ctx, width, height, margin, minPrice, maxPrice };
@@ -619,6 +620,113 @@ window.showPointMenu = function(x, y) {
     setTimeout(() => {
         document.addEventListener('click', closeMenuOnOutsideClick);
     }, 0);
+}
+
+function measurePointXY(pt, width, height, margin, minPrice, maxPrice) {
+    return {
+        x: xFromBarIndex(pt.barIndex, width, margin, window.start, window.end),
+        y: priceToY(pt.price, height, margin, minPrice, maxPrice)
+    };
+}
+
+function drawMeasureOverlay(ctx, start, end, width, height, margin, minPrice, maxPrice, opts) {
+    const p1 = measurePointXY(start, width, height, margin, minPrice, maxPrice);
+    const p2 = measurePointXY(end, width, height, margin, minPrice, maxPrice);
+    const stats = measureStats(start, end);
+    const up = stats.delta >= 0;
+    const color = up ? '#26a69a' : '#ef5350';
+    const fill = up ? 'rgba(38, 166, 154, 0.12)' : 'rgba(239, 83, 80, 0.12)';
+    const x = Math.min(p1.x, p2.x);
+    const y = Math.min(p1.y, p2.y);
+    const w = Math.abs(p2.x - p1.x);
+    const h = Math.abs(p2.y - p1.y);
+
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = opts.preview ? 1 : 1.5;
+    ctx.setLineDash(opts.preview ? [5, 4] : []);
+    ctx.strokeRect(x, y, w, h);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const sign = stats.delta >= 0 ? '+' : '';
+    const lines = [
+        `${sign}${stats.pct.toFixed(2)}%`,
+        `${sign}${formatMeasurePrice(stats.delta)}`,
+        `${stats.bars} bar${stats.bars === 1 ? '' : 's'}`
+    ];
+    const padX = 8;
+    const padY = 6;
+    const lineH = 14;
+    const boxW = 92;
+    const boxH = padY * 2 + lineH * lines.length + (opts.showClose ? 2 : 0);
+    let labelX = (p1.x + p2.x) / 2 - boxW / 2;
+    let labelY = (p1.y + p2.y) / 2 - boxH / 2;
+    labelX = Math.max(margin, Math.min(labelX, width - margin - boxW));
+    labelY = Math.max(margin, Math.min(labelY, height - margin - boxH));
+
+    ctx.fillStyle = 'rgba(20, 25, 40, 0.92)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(labelX, labelY, boxW, boxH);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 12px Arial';
+    ctx.fillStyle = color;
+    ctx.fillText(lines[0], labelX + padX, labelY + padY + 11);
+    ctx.font = '11px Arial';
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillText(lines[1], labelX + padX, labelY + padY + 11 + lineH);
+    ctx.fillText(lines[2], labelX + padX, labelY + padY + 11 + lineH * 2);
+
+    if (opts.showClose) {
+        const closeSize = 12;
+        const closeX = labelX + boxW - closeSize - 4;
+        const closeY = labelY + 4;
+        const hovered = window.hoveredMeasureId === opts.id;
+        ctx.fillStyle = hovered ? '#ff6666' : '#888';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText('✕', closeX, closeY + 10);
+        window.measureHitAreas.push({
+            id: opts.id,
+            x: closeX - 2,
+            y: closeY - 2,
+            w: closeSize + 4,
+            h: closeSize + 4
+        });
+    }
+    ctx.restore();
+}
+
+function drawMeasures(ctx, width, height, margin, minPrice, maxPrice) {
+    window.measureHitAreas = [];
+    const committed = window.measures || [];
+    committed.forEach(m => {
+        if (!m?.start || !m?.end) return;
+        drawMeasureOverlay(ctx, m.start, m.end, width, height, margin, minPrice, maxPrice, {
+            id: m.id,
+            showClose: true,
+            preview: false
+        });
+    });
+
+    const draft = window.measureDraft;
+    if (draft?.start) {
+        const end = draft.end || pointFromMouse(window.mouseX, window.mouseY, window.chartState);
+        if (end) {
+            drawMeasureOverlay(ctx, draft.start, end, width, height, margin, minPrice, maxPrice, {
+                preview: true,
+                showClose: false
+            });
+        }
+    }
 }
 
 function drawToolbar(ctx, width, height, margin, minPrice, maxPrice) {

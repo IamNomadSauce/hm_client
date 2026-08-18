@@ -19,6 +19,53 @@ function calculateRisk(entry, stop) {
     return (Math.abs(entry - stop) / entry * 100).toFixed(2)
 }
 
+function priceToY(price, height, margin, minPrice, maxPrice) {
+    return height - margin - ((price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+}
+
+function barIndexFromX(x, chartState) {
+    const margin = chartState.margin;
+    const plotW = chartState.width - 2 * margin;
+    const start = window.start || 0;
+    const end = window.end || start + 1;
+    const count = Math.max(1, end - start);
+    const dataLen = window.stockData?.length ?? 0;
+    if (dataLen <= 0) return 0;
+    const idx = start + (x - margin) / (plotW / count);
+    return Math.max(0, Math.min(dataLen - 1, Math.round(idx)));
+}
+
+function xFromBarIndex(barIndex, width, margin, viewStart, viewEnd) {
+    const count = Math.max(1, viewEnd - viewStart);
+    const candleWidth = (width - 2 * margin) / count;
+    return margin + (barIndex - viewStart) * candleWidth + candleWidth / 2;
+}
+
+function pointFromMouse(x, y, chartState) {
+    const barIndex = barIndexFromX(x, chartState);
+    const candle = window.stockData?.[barIndex];
+    return {
+        barIndex,
+        timestamp: candle?.Timestamp ?? null,
+        price: calculatePrice(y, chartState.height, chartState.margin, chartState.minPrice, chartState.maxPrice)
+    };
+}
+
+function measureStats(start, end) {
+    const p1 = start.price;
+    const p2 = end.price;
+    const delta = p2 - p1;
+    const pct = p1 !== 0 ? (delta / p1) * 100 : 0;
+    const bars = Math.abs(end.barIndex - start.barIndex);
+    return { delta, pct, bars };
+}
+
+function formatMeasurePrice(value) {
+    const abs = Math.abs(value);
+    const digits = abs < 1 ? 8 : 2;
+    return value.toFixed(digits);
+}
+
 function positionMenuNear(menu, pageX, pageY, opts = {}) {
     const pad = opts.pad ?? 8;
     const offsetX = opts.offsetX ?? 12;

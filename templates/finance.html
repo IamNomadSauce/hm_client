@@ -403,6 +403,9 @@
                     class="btn btn-outline-light btn-sm py-2">⚡ Trigger</button>
             <button onclick="setCurrentTool('box')" 
                     class="btn btn-outline-light btn-sm py-2">⬛ Box</button>
+            <button onclick="setCurrentTool('measure')"
+                    data-tool="measure"
+                    class="btn btn-outline-light btn-sm py-2">% Measure</button>
 
             <hr class="border-secondary my-1">
 
@@ -444,6 +447,7 @@
 window.currentBracketSide = null;
 
 window.activateBracketTool = function(side) {
+    window.measureDraft = null;
     window.currentBracketSide = side;
     window.currentTool = 'bracket';
 
