@@ -678,6 +678,17 @@ function executeTradeSetup(tradeSetupData) {
         .then(response => response.json())
         .then(data => {
             console.log('Trade setup created:', data);
+            if (typeof window.recordAlert === 'function') {
+                window.recordAlert({
+                    kind: 'Trade',
+                    product: tradeSetupData.product || '',
+                    detail: `${formattedData.side} ${formattedData.size} @ ${formattedData.entry_price}`,
+                    status: 'submitted'
+                });
+            }
+            if (typeof showToast === 'function') {
+                showToast(`Trade submitted  ${tradeSetupData.product || ''}  @ ${formattedData.entry_price}`, 4000);
+            }
             draw_lines = [];
             window.currentTradeSetup = null;
             drawCandlestickChart(stockData, start, end);
@@ -721,6 +732,17 @@ function createTradeGroup(trade) {
         .then(response => response.json())
         .then(data => {
             console.log('Trade group created:', data);
+            if (typeof window.recordAlert === 'function') {
+                window.recordAlert({
+                    kind: 'Trade',
+                    product: trade.productId || '',
+                    detail: `${side} ${trade.size || ''} @ ${trade.entry}`,
+                    status: 'submitted'
+                });
+            }
+            if (typeof showToast === 'function') {
+                showToast(`Trade submitted  ${trade.productId || ''}  @ ${trade.entry}`, 4000);
+            }
         })
         .catch(error => {
             console.error('Error creating trade:', error);
@@ -827,8 +849,8 @@ window.editTrigger = function (triggerId) {
                 <select onchange="updateTriggerField(${triggerId}, 'type', this.value)" style="width:100%;padding:6px;background:#444;color:white;border:1px solid #666;">
                     <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
                     <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-                    <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
-                    <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
+                    <option value="close_above" ${trigger.type === 'close_above' || trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
+                    <option value="close_below" ${trigger.type === 'close_below' || trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
                     <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
                     <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
                 </select>
@@ -995,8 +1017,8 @@ window.showTriggerEditMenu = function (triggerId, pageX, pageY) {
                     style="width:100%; padding:6px; background:#333; color:white; border:1px solid #555;">
                 <option value="price_above" ${trigger.type === 'price_above' ? 'selected' : ''}>Price Above</option>
                 <option value="price_below" ${trigger.type === 'price_below' ? 'selected' : ''}>Price Below</option>
-                <option value="closes_above" ${trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
-                <option value="closes_below" ${trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
+                <option value="close_above" ${trigger.type === 'close_above' || trigger.type === 'closes_above' ? 'selected' : ''}>Closes Above</option>
+                <option value="close_below" ${trigger.type === 'close_below' || trigger.type === 'closes_below' ? 'selected' : ''}>Closes Below</option>
                 <option value="wicks_above" ${trigger.type === 'wicks_above' ? 'selected' : ''}>Wicks Above</option>
                 <option value="wicks_below" ${trigger.type === 'wicks_below' ? 'selected' : ''}>Wicks Below</option>
             </select>

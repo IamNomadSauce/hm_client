@@ -225,7 +225,13 @@
                 </button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="fills-tab" data-bs-toggle="pill" data-bs-target="#portfolio" type="button"
+                <button class="nav-link" id="alerts-tab" data-bs-toggle="pill" data-bs-target="#alerts" type="button"
+                  role="tab">
+                  Alerts <span id="alerts-badge" class="badge rounded-pill bg-danger" style="display:none;">0</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="portfolio-tab-btn" data-bs-toggle="pill" data-bs-target="#portfolio" type="button"
                   role="tab">
                   Portfolio
                 </button>
@@ -309,6 +315,26 @@
               <td>{{.Commission}}</td>
             </tr>
             {{end}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="tab-pane fade" id="alerts" role="tabpanel">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Kind</th>
+              <th>Product</th>
+              <th>Detail</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-tbody">
+            <tr><td colspan="5" class="text-secondary">No alerts yet</td></tr>
           </tbody>
         </table>
       </div>
@@ -424,7 +450,7 @@
   </div>
 
 <!-- Toast Container -->
-<div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 2000;"></div>
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 2000;"></div>
 
 <style>
   #chart-toolbar button {
@@ -517,10 +543,14 @@ window.handleBracketClick = function(entryPrice) {
 
 
 function showToast(msg, duration = 2000) {
+    if (typeof window.showToast === 'function' && window.showToast !== showToast) {
+        return window.showToast(msg, duration);
+    }
+    const container = document.getElementById('toast-container') || document.body;
     const toast = document.createElement('div');
-    toast.style.cssText = `position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1e1e2e;color:#0f0;padding:14px 24px;border-radius:8px;border:1px solid #0f0;z-index:9999;font-weight:bold;`;
+    toast.style.cssText = `background:#1e1e2e;color:#0f0;padding:14px 24px;border-radius:8px;border:1px solid #0f0;font-weight:bold;margin-bottom:8px;max-width:360px;`;
     toast.textContent = msg;
-    document.body.appendChild(toast);
+    container.prepend(toast);
     setTimeout(() => toast.remove(), duration);
 }
 

@@ -301,24 +301,21 @@ window.drawCandlestickChart = function (data, start, end) {
             // console.log("Trigger:", trigger)
             // Skip triggered triggers
             // console.log("WINDOW TRIGGERS", window.exchange.Triggers)
-            if (trigger.status === 'triggered') {
-                return;
-            }
-
+            const fired = trigger.status === 'triggered';
             const triggerY = height - margin - ((trigger.price - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
             ctx.beginPath();
             ctx.moveTo(margin, triggerY);
             ctx.lineTo(width - margin, triggerY);
             ctx.setLineDash([5, 5]);
-            ctx.strokeStyle = '#b87100';
+            ctx.strokeStyle = fired ? '#26a69a' : '#b87100';
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // Add label
-            ctx.fillStyle = 'white';
+            ctx.fillStyle = fired ? '#26a69a' : 'white';
             ctx.font = '12px Arial';
             const triggerType = trigger.type
-            ctx.fillText(`${triggerType}: ${trigger.price.toFixed(8)}`, width - 200, triggerY - 5);
+            const label = fired ? `triggered ${triggerType}: ${trigger.price.toFixed(8)}` : `${triggerType}: ${trigger.price.toFixed(8)}`;
+            ctx.fillText(label, width - 220, triggerY - 5);
         });
     }
 

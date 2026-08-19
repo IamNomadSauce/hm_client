@@ -125,17 +125,16 @@ window.clearAllDrawings = function() {
     }
 };
 
-// Simple toast helper (if not already defined)
-function showToast(msg, duration = 2000) {
+window.showToast = function(msg, duration = 2000) {
+    const container = document.getElementById('toast-container') || document.body;
     const toast = document.createElement('div');
     toast.style.cssText = `
-        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
         background: #1e1e2e; color: #0f0; padding: 12px 20px; border-radius: 8px;
-        border: 1px solid #0f0; z-index: 9999; font-weight: bold;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        border: 1px solid #0f0; font-weight: bold; margin-bottom: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.6); max-width: 360px;
     `;
     toast.textContent = msg;
-    document.body.appendChild(toast);
+    container.prepend(toast);
     setTimeout(() => toast.remove(), duration);
 }
 
@@ -422,8 +421,8 @@ function showTriggerTypeMenu(line, pageX, pageY) {
         </div>
         <div class="menu-item" data-type="price_above">Price Above</div>
         <div class="menu-item" data-type="price_below">Price Below</div>
-        <div class="menu-item" data-type="closes_above">Close Above</div>
-        <div class="menu-item" data-type="closes_below">Close Below</div>
+        <div class="menu-item" data-type="close_above">Close Above</div>
+        <div class="menu-item" data-type="close_below">Close Below</div>
         <div class="menu-item" data-type="cancel" style="color:#ff6b6b; margin-top:8px;">Cancel</div>
     `;
 
@@ -480,13 +479,15 @@ function showTriggerTypeMenu(line, pageX, pageY) {
                 return;
             }
 
-            // Create trigger on backend
+            const needsCandle = type.startsWith('close') || type.startsWith('wicks_');
             const triggerData = {
                 product_id: selectedProduct.product_id,
                 type: type,
                 price: parseFloat(line.price),
                 status: 'active',
-                xch_id: exchange.ID
+                xch_id: exchange.ID,
+                timeframe: window.selectedTimeframe?.TF || window.selectedTimeframe?.label || '1m',
+                candle_count: needsCandle ? 1 : 0
             };
 
             fetch('create-trigger', {
@@ -494,7 +495,13 @@ function showTriggerTypeMenu(line, pageX, pageY) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(triggerData)
             })
-            .then(r => r.json())
+            .then(async r => {
+                const text = await r.text();
+                let data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch (_) {}
+                if (!r.ok) throw new Error(data.message || data.error || text || `HTTP ${r.status}`);
+                return data;
+            })
             .then(data => {
                 const id = data.id;
                 line.triggerId = id;
@@ -530,7 +537,7 @@ function showTriggerTypeMenu(line, pageX, pageY) {
             })
             .catch(err => {
                 console.error('Error creating trigger:', err);
-                showToast('Failed to create trigger', 2500);
+                showToast('Failed to create trigger: ' + (err.message || err), 3500);
                 const idx = draw_lines.indexOf(line);
                 if (idx !== -1) {
                     draw_lines.splice(idx, 1);
@@ -547,7 +554,7 @@ function showTriggerTypeMenu(line, pageX, pageY) {
 // ==================== BRACKET DRAG HELPERS ====================
 
 function findBracketPointAt(mouseY, chartState) {
-    console.log("Find BracketPoint", mouseY)
+    // console.log("Find BracketPoint", mouseY)
     if (!chartState) return null;
 
     const threshold = 12;
@@ -597,16 +604,10 @@ function handleBracketPointDrag(event) {
 
 
 const showTriggerNotification = function(trigger) {
-	const notification = document.createElement('div')
-	notification.className = 'trigger-notification'
-	notification.innerHTML = `
-      <div class="notification-content">
-        <strong>${trigger.product_id}</strong>
-      </div>
-    `
-	document.body.appendChild(notification)
-
-	setTimeout(() => notification.remove(), 5000)
+    const type = (trigger.type || 'trigger').replace(/_/g, ' ');
+    const price = trigger.price != null ? trigger.price : '';
+    const product = trigger.product_id || '';
+    showToast(`${product}  ${type}  @ ${price}  TRIGGERED`, 5000);
 }
 
 
@@ -1695,10 +1696,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-	connectToBackend();
-
-	// Initialize Bootstrap tabs if they exist
-	const tabElements = document.querySelectorAll('[data-bs-toggle="tab"]');
+	const tabElements = document.querySelectorAll('[data-bs-toggle="tab"], [data-bs-toggle="pill"]');
 	if (tabElements.length > 0) {
 		tabElements.forEach(el => {
 			new bootstrap.Tab(el);

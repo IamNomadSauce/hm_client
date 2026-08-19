@@ -1,47 +1,177 @@
+window.alertLog = window.alertLog || [];
+window.alertUnread = window.alertUnread || 0;
+
+function formatAlertTime(ts) {
+    const d = ts ? new Date(ts) : new Date();
+    if (Number.isNaN(d.getTime())) return new Date().toLocaleTimeString();
+    return d.toLocaleTimeString();
+}
+
+function formatAlertPrice(value) {
+    if (value == null || value === '') return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    return n < 1 ? n.toFixed(8) : n.toFixed(2);
+}
+
+window.recordAlert = function(entry) {
+    const row = {
+        id: entry.id || ('alert_' + Date.now() + '_' + Math.random().toString(16).slice(2)),
+        time: entry.time || Date.now(),
+        kind: entry.kind || 'Event',
+        product: entry.product || '',
+        detail: entry.detail || '',
+        status: entry.status || ''
+    };
+    window.alertLog.unshift(row);
+    if (window.alertLog.length > 200) window.alertLog.length = 200;
+    const alertsPane = document.getElementById('alerts');
+    if (!alertsPane || !alertsPane.classList.contains('active')) {
+        window.alertUnread = (window.alertUnread || 0) + 1;
+    }
+    renderAlertLog();
+    return row;
+};
+
+window.renderAlertLog = function() {
+    const body = document.getElementById('alerts-tbody');
+    if (body) {
+        if (!window.alertLog.length) {
+            body.innerHTML = '<tr><td colspan="5" class="text-secondary">No alerts yet</td></tr>';
+        } else {
+            body.innerHTML = window.alertLog.map(a => `
+                <tr>
+                    <td>${formatAlertTime(a.time)}</td>
+                    <td>${a.kind}</td>
+                    <td>${a.product}</td>
+                    <td>${a.detail}</td>
+                    <td>${a.status}</td>
+                </tr>
+            `).join('');
+        }
+    }
+    const badge = document.getElementById('alerts-badge');
+    if (badge) {
+        if (window.alertUnread > 0) {
+            badge.textContent = window.alertUnread;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+};
+
+function seedTriggeredAlerts() {
+    const sources = [
+        ...(window.exchange?.Triggers || []),
+        ...(window.current_triggers || [])
+    ];
+    const seen = new Set();
+    sources.forEach(t => {
+        if (!t || t.status !== 'triggered' || seen.has(t.id)) return;
+        seen.add(t.id);
+        window.alertLog.push({
+            id: 'seed_' + t.id,
+            time: t.updated_at || t.created_at || Date.now(),
+            kind: 'Trigger',
+            product: t.product_id || '',
+            detail: `${(t.type || 'trigger').replace(/_/g, ' ')} @ ${formatAlertPrice(t.price)}`,
+            status: 'triggered'
+        });
+    });
+    renderAlertLog();
+}
+
+function applyTriggerUpdate(data) {
+    if (!data) return;
+    const lists = [
+        window.current_triggers,
+        window.exchange?.Triggers,
+        window.currentTradeSetup?.chainedTriggers
+    ];
+    lists.forEach(list => {
+        if (!Array.isArray(list)) return;
+        const idx = list.findIndex(t => t && t.id === data.id);
+        if (idx !== -1) {
+            list[idx] = Object.assign({}, list[idx], data);
+        } else if (list === window.current_triggers) {
+            list.push(data);
+        }
+    });
+}
+
+function handleTriggerEvent(data) {
+    if (!data) return;
+    applyTriggerUpdate(data);
+    if (data.status === 'triggered') {
+        const already = (window.alertLog || []).some(a => a.id === data.id || a.id === 'seed_' + data.id);
+        if (!already) {
+            recordAlert({
+                id: data.id,
+                kind: 'Trigger',
+                product: data.product_id || '',
+                detail: `${(data.type || 'trigger').replace(/_/g, ' ')} @ ${formatAlertPrice(data.price)}`,
+                status: 'triggered'
+            });
+            if (typeof showTriggerNotification === 'function') {
+                showTriggerNotification(data);
+            } else if (typeof showToast === 'function') {
+                showToast(`${data.product_id || ''}  ${(data.type || '').replace(/_/g, ' ')}  TRIGGERED`, 5000);
+            }
+        }
+    }
+    if (typeof window.updateSidebar === 'function') window.updateSidebar();
+    if (window.stockData) {
+        drawCandlestickChart(window.stockData, window.start, window.end);
+    }
+}
+
+function handleFillEvent(data) {
+    if (!data) return;
+    recordAlert({
+        id: data.id || data.trade_id || data.OrderID,
+        kind: 'Fill',
+        product: data.product_id || data.ProductID || '',
+        detail: `${data.side || data.Side || ''} ${data.size || data.Size || ''} @ ${formatAlertPrice(data.price || data.Price)}`,
+        status: data.status || 'filled'
+    });
+    if (typeof showToast === 'function') {
+        showToast(`Fill  ${data.product_id || data.ProductID || ''}  @ ${formatAlertPrice(data.price || data.Price)}`, 4000);
+    }
+}
 
 function connectToBackend() {
+    if (window._sseConnecting) return;
+    window._sseConnecting = true;
+    if (window._eventSource) {
+        window._eventSource.close();
+        window._eventSource = null;
+    }
     console.log("Connect To Backend")
     const backendURL = "http://192.168.1.118:31337";
-    // console.log("Connecting to SSE at:", backendURL);
-
     const eventSource = new EventSource(`${backendURL}/trigger/stream`);
+    window._eventSource = eventSource;
 
-    eventSource.onopen = (event) => {
-        // console.log("SSE Connection opened:", event);
+    eventSource.onopen = () => {
+        window._sseConnecting = false;
     };
 
     eventSource.onmessage = (event) => {
         try {
             const message = JSON.parse(event.data);
-            // console.log("SSE EVENT",message.event)
             switch (message.event) {
                 case 'price':
-                    // console.log("Price:", message) // Passes Test
                     updateChartPrice(message.data);
                     break;
                 case 'candle':
-                    // console.log("Candle:", message, "\nSelected_Product:", selectedProduct, "\nExchange:",exchange, selectedTimeframe) // Passes Test, need to filter out to only get the product_timeframe
-                    let parsed_product = `${window.selectedProduct.product_id}_${selectedTimeframe.TF}_${exchange.Name}`.toLowerCase().replace("-", "_")
-                    // console.log(parsed_product, message.data.ProductID)
                     updateChart(message.data);
                     break;
                 case 'trigger':
-                    // console.log("SSE-Trigger:", message);
-                    if (window.current_triggers) {
-                        // Find and update the triggered trigger
-                        const triggerIndex = window.current_triggers.findIndex(t => t.id === message.data.id);
-                        if (triggerIndex !== -1) {
-                            if (message.data.status === 'triggered') {
-                                // Remove triggered trigger from array
-                                window.current_triggers.splice(triggerIndex, 1)
-                            } else {
-                                // Update trigger data
-                                window.current_triggers[triggerIndex] = message.data;
-                            }
-                            // Redraw the chart to reflect the changes
-                            drawCandlestickChart(stockData, start, end);
-                        }
-                    }
+                    handleTriggerEvent(message.data);
+                    break;
+                case 'fill':
+                case 'order':
+                    handleFillEvent(message.data);
                     break;
             }
         } catch (err) {
@@ -51,6 +181,11 @@ function connectToBackend() {
 
     eventSource.onerror = (error) => {
         console.error("SSE connection error:", error);
+        window._sseConnecting = false;
+        if (window._eventSource) {
+            window._eventSource.close();
+            window._eventSource = null;
+        }
         setTimeout(() => {
             console.log("Attempting to reconnect...");
             connectToBackend();
@@ -60,22 +195,31 @@ function connectToBackend() {
     eventSource.addEventListener('candle', (event) => {
         try {
             const candleUpdate = JSON.parse(event.data)
-            console.log("Raw Candle From Stream", event.data)
-            console.log("Candle Update:", {
-                product: candleUpdate.product_id,
-                open: candleUpdate.Open,
-                high: candleUpdate.High,
-                low: candleUpdate.Low,
-                close: candleUpdate.Close,
-                volume: candleUpdate.Volume,
-                time: new Date(candleUpdate.Timestamp * 1000).toLocaleTimeString(),
-            })
             updateChart(candleUpdate)
         } catch (err) {
             console.error("Error processing candle update:", err)
         }
-    })
+    });
+
+    eventSource.addEventListener('trigger', (event) => {
+        try {
+            handleTriggerEvent(JSON.parse(event.data));
+        } catch (err) {
+            console.error("Error processing trigger event:", err);
+        }
+    });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    seedTriggeredAlerts();
+    const alertsTab = document.getElementById('alerts-tab');
+    if (alertsTab) {
+        alertsTab.addEventListener('shown.bs.tab', () => {
+            window.alertUnread = 0;
+            renderAlertLog();
+        });
+    }
+});
 
 
 function updateChartPrice(priceUpdate) {
