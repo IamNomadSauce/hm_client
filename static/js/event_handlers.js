@@ -503,31 +503,31 @@ function showTriggerTypeMenu(line, pageX, pageY) {
                 return data;
             })
             .then(data => {
-                const id = data.id;
+                const id = Number(data.id || data.ID || data.trigger_id || data.triggerId);
+                if (!id) throw new Error('Trigger created but no id was returned');
                 line.triggerId = id;
                 line.pending = false;
                 line.triggerType = type;
-                if (!window.current_triggers) window.current_triggers = [];
-                window.current_triggers.push({
+                const created = {
                     id: id,
-                    product_id: selectedProduct.product_id,
-                    type: type,
-                    price: line.price,
-                    status: data.status || 'active'
-                });
+                    product_id: data.product_id || selectedProduct.product_id,
+                    type: data.type || type,
+                    price: data.price ?? line.price,
+                    status: data.status || 'active',
+                    timeframe: data.timeframe || triggerData.timeframe,
+                    candle_count: data.candle_count ?? triggerData.candle_count
+                };
+                if (!window.current_triggers) window.current_triggers = [];
+                window.current_triggers.push(created);
+                if (!window.exchange.Triggers) window.exchange.Triggers = [];
+                window.exchange.Triggers.push(created);
                 if (!window.currentTradeSetup) {
                     window.currentTradeSetup = { chainedTriggers: [] };
                 }
                 if (!window.currentTradeSetup.chainedTriggers) {
                     window.currentTradeSetup.chainedTriggers = [];
                 }
-                window.currentTradeSetup.chainedTriggers.push({
-                    id: id,
-                    product_id: selectedProduct.product_id,
-                    type: type,
-                    price: line.price,
-                    status: data.status || 'active'
-                });
+                window.currentTradeSetup.chainedTriggers.push({ ...created });
                 // optional: remove purple draw_lines copy; gold line comes from current_triggers
                 const idx = draw_lines.indexOf(line);
                 if (idx !== -1) draw_lines.splice(idx, 1);

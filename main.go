@@ -404,8 +404,21 @@ func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create trigger", http.StatusInternalServerError)
 		return
 	}
+	if created.ID == 0 {
+		exchanges, listErr := api.GetExchanges(url)
+		if listErr != nil {
+			log.Printf("CreateTrigger: refetch after missing id failed: %v", listErr)
+		} else if match, ok := api.FindCreatedTrigger(exchanges, trigger); ok {
+			created = match
+		}
+	}
+	if created.ID == 0 {
+		log.Printf("CreateTrigger: still missing id after refetch")
+		http.Error(w, "Trigger created but id was not returned", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(created) // includes "id"
+	json.NewEncoder(w).Encode(created)
 }
 
 func newTradeBlockHandler(w http.ResponseWriter, r *http.Request) {

@@ -919,7 +919,10 @@ window.closeTriggerEditor = function () {
 window.updateTriggerField = function (triggerId, field, value) {
     console.log("Update Trigger Field", triggerId, field, value);
 
-    if (!triggerId) return;
+    if (!triggerId) {
+        if (typeof showToast === 'function') showToast('Cannot edit trigger: missing id. Refresh and try again.', 3500);
+        return;
+    }
 
     fetch('/update-trigger', {
         method: 'PUT',
@@ -933,42 +936,23 @@ window.updateTriggerField = function (triggerId, field, value) {
         if (!response.ok) throw new Error("Server error");
         return response.json();
     })
-    .then(data => {
-        console.log("✅ Trigger updated on server", data);
-
-        // === Update window.current_triggers (this is what the chart uses) ===
-        if (window.current_triggers) {
-            const trig = window.current_triggers.find(t => t.id === triggerId);
-            if (trig) {
-                console.log("Update Triggers current_triggers", trig, data);
-                Object.assign(trig, data);
-            }
-        }
-
-        // Update other possible sources too
-        const sources = [
+    .then(() => {
+        const lists = [
+            window.current_triggers,
             window.all_triggers,
             window.exchange?.Triggers,
             window.currentTradeSetup?.chainedTriggers
-        ].filter(Boolean);
-
-        sources.forEach(source => {
-            const t = Array.isArray(source) ? source.find(tr => tr.id === triggerId) : null;
-            if (t) Object.assign(t, data);
+        ];
+        lists.forEach(list => {
+            if (!Array.isArray(list)) return;
+            const trig = list.find(t => Number(t.id) === Number(triggerId));
+            if (trig) trig[field] = value;
         });
-
-        // Update any associated draw_line
-        const line = draw_lines.find(l => l.triggerId === triggerId);
-        if (line) {
-            console.log("There is a line", line)
-            Object.assign(line, data);
-        }
-
-        // === This is the critical line that deleteTrigger uses ===
-        drawCandlestickChart(stockData, start, end);
-
-        // Close the menu after successful update
+        const line = draw_lines.find(l => Number(l.triggerId) === Number(triggerId));
+        if (line) line[field] = value;
         document.querySelectorAll('.trigger-edit-menu').forEach(el => el.remove());
+        drawCandlestickChart(window.stockData, window.start, window.end);
+        if (typeof window.updateSidebar === 'function') window.updateSidebar();
     })
     .catch(err => {
         console.error("Update failed", err);
@@ -1168,23 +1152,31 @@ window.updateTriggerCandles = function (triggerId, candles) {
 
 window.deleteTrigger = function (triggerId) {
     console.log("Chart: deleteTrigger", triggerId);
+    if (!triggerId) {
+        if (typeof showToast === 'function') showToast('Cannot delete trigger: missing id. Refresh and try again.', 3500);
+        return;
+    }
     fetch(`/delete-trigger/${triggerId}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ trigger_id: triggerId })  // Properly format the request body
+        body: JSON.stringify({ trigger_id: triggerId })
     })
         .then(response => {
-            if (response.ok) {
-                const index = window.current_triggers.findIndex(t => t.id === triggerId);
-                if (index !== -1) {
-                    window.current_triggers.splice(index, 1);
-                }
-                drawCandlestickChart(stockData, start, end);
-            } else {
+            if (!response.ok) {
                 console.error('Chart: Failed to delete trigger');
+                return;
             }
+            const sameId = t => Number(t.id) === Number(triggerId);
+            if (window.current_triggers) window.current_triggers = window.current_triggers.filter(t => !sameId(t));
+            if (window.exchange?.Triggers) window.exchange.Triggers = window.exchange.Triggers.filter(t => !sameId(t));
+            if (window.currentTradeSetup?.chainedTriggers) {
+                window.currentTradeSetup.chainedTriggers = window.currentTradeSetup.chainedTriggers.filter(t => !sameId(t));
+            }
+            document.querySelectorAll('.trigger-menu, .trigger-edit-menu').forEach(el => el.remove());
+            drawCandlestickChart(window.stockData, window.start, window.end);
+            if (typeof window.updateSidebar === 'function') window.updateSidebar();
         })
         .catch(error => console.error('Error:', error));
 }

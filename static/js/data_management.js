@@ -91,11 +91,9 @@ function applyTriggerUpdate(data) {
     ];
     lists.forEach(list => {
         if (!Array.isArray(list)) return;
-        const idx = list.findIndex(t => t && t.id === data.id);
+        const idx = list.findIndex(t => t && Number(t.id) === Number(data.id));
         if (idx !== -1) {
             list[idx] = Object.assign({}, list[idx], data);
-        } else if (list === window.current_triggers) {
-            list.push(data);
         }
     });
 }

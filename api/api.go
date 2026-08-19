@@ -107,21 +107,116 @@ func CreateTrigger(baseURL string, trigger model.Trigger) (model.Trigger, error)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return model.Trigger{}, fmt.Errorf("Unexpected status Code: %d, response: %s", resp.StatusCode, string(body))
 	}
-	// Prefer full trigger from upstream; fall back to { "id": N }
-	var created model.Trigger
-	if err := json.Unmarshal(body, &created); err == nil && created.ID != 0 {
+	log.Printf("CreateTrigger response: %s", string(body))
+	if created, ok := parseCreatedTrigger(body, trigger); ok {
 		return created, nil
 	}
-	var idOnly struct {
-		ID int `json:"id"`
-	}
-	if err := json.Unmarshal(body, &idOnly); err == nil && idOnly.ID != 0 {
-		trigger.ID = idOnly.ID
-		return trigger, nil
-	}
-	// Upstream returned no id — still success, but caller gets ID=0
 	log.Printf("CreateTrigger: response had no id: %s", string(body))
 	return trigger, nil
+}
+
+func parseCreatedTrigger(body []byte, fallback model.Trigger) (model.Trigger, bool) {
+	var created model.Trigger
+	if err := json.Unmarshal(body, &created); err == nil && created.ID != 0 {
+		return created, true
+	}
+	var wrapper struct {
+		ID      int            `json:"id"`
+		Trigger *model.Trigger `json:"trigger"`
+		Data    *model.Trigger `json:"data"`
+	}
+	if err := json.Unmarshal(body, &wrapper); err == nil {
+		if wrapper.Trigger != nil && wrapper.Trigger.ID != 0 {
+			return *wrapper.Trigger, true
+		}
+		if wrapper.Data != nil && wrapper.Data.ID != 0 {
+			return *wrapper.Data, true
+		}
+		if wrapper.ID != 0 {
+			fallback.ID = wrapper.ID
+			return fallback, true
+		}
+	}
+	var alt map[string]interface{}
+	if err := json.Unmarshal(body, &alt); err == nil {
+		if id := extractTriggerID(alt); id != 0 {
+			fallback.ID = id
+			return fallback, true
+		}
+	}
+	return fallback, false
+}
+
+func extractTriggerID(m map[string]interface{}) int {
+	keys := []string{"id", "ID", "trigger_id", "TriggerID", "triggerId"}
+	for _, key := range keys {
+		if id, ok := asInt(m[key]); ok && id != 0 {
+			return id
+		}
+	}
+	for _, nestedKey := range []string{"trigger", "data", "result"} {
+		nested, ok := m[nestedKey].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if id := extractTriggerID(nested); id != 0 {
+			return id
+		}
+	}
+	return 0
+}
+
+func asInt(v interface{}) (int, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int(n), true
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case json.Number:
+		i, err := n.Int64()
+		if err != nil {
+			return 0, false
+		}
+		return int(i), true
+	case string:
+		var i int
+		if _, err := fmt.Sscanf(n, "%d", &i); err == nil {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func FindCreatedTrigger(exchanges []model.Exchange, want model.Trigger) (model.Trigger, bool) {
+	var best model.Trigger
+	found := false
+	for _, ex := range exchanges {
+		if want.XchID != 0 && ex.ID != want.XchID {
+			continue
+		}
+		for _, t := range ex.Triggers {
+			if t.ProductID != want.ProductID || t.Type != want.Type {
+				continue
+			}
+			if want.Price != 0 && abs(t.Price-want.Price) > 1e-8 {
+				continue
+			}
+			if !found || t.ID > best.ID {
+				best = t
+				found = true
+			}
+		}
+	}
+	return best, found
+}
+
+func abs(v float64) float64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // func CreateTrigger(baseURL string, trigger model.Trigger) error {
