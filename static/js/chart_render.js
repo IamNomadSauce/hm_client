@@ -10,6 +10,7 @@ window.subtrendPoints = []
 window.trendstartlines = []
 window.currentTrendlines = window.trendlines || []
 window.trendlinePath = []
+window.pinnedTrends = window.pinnedTrends || []
 var price = 0.0
 
 window.canvas = document.getElementById('candlestickChart');
@@ -477,25 +478,19 @@ window.drawCandlestickChart = function (data, start, end) {
         // console.log("Last Trendline", last_trend)
     }
 
-    // TODO
-    if (window.hoveredTrendline && window.hoveredTrendline.trends && window.hoveredTrendline.trends.length > 0) {
-        // console.log("Hovering Over Trendline Show Subtrends", window.hoveredTrendline.trends.length)
-        // console.log("Subtrends len", window.hoveredTrendline.trends.length)
-        window.hoveredTrendline.trends.forEach(subtrend => {
-            // console.log("Cycling...", subtrend)
-            const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width -2 * margin)
-            const endx = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin)
-            const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
-            const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin)
-        //
-            ctx.beginPath()
-            ctx.moveTo(startX, startY)
-            ctx.lineTo(endx, endY)
-            ctx.strokeStyle = "rgba(255, 215, 0, 0.5)"
-            ctx.lineWidth = 1
-            ctx.stroke()
-        //
-        })
+    const pinned = window.pinnedTrends || [];
+    pinned.forEach(trend => {
+        drawTrendChildren(ctx, trend, firstCandleTime, timeRange, width, height, margin, minPrice, maxPrice, {
+            stroke: 'rgba(255, 215, 0, 0.9)',
+            width: 2
+        });
+    });
+    const hovered = window.hoveredTrendline;
+    if (hovered?.trends?.length && !pinned.includes(hovered)) {
+        drawTrendChildren(ctx, hovered, firstCandleTime, timeRange, width, height, margin, minPrice, maxPrice, {
+            stroke: 'rgba(255, 215, 0, 0.5)',
+            width: 1
+        });
     }
 
     // if (trendstartlines) {
@@ -531,6 +526,24 @@ window.drawCandlestickChart = function (data, start, end) {
     drawCrosshair(ctx, width, height, margin, minPrice, maxPrice);
 
     return { ctx, width, height, margin, minPrice, maxPrice };
+}
+
+function drawTrendChildren(ctx, trend, firstCandleTime, timeRange, width, height, margin, minPrice, maxPrice, style) {
+    if (!trend?.trends?.length || !timeRange) return;
+    ctx.save();
+    ctx.strokeStyle = style.stroke;
+    ctx.lineWidth = style.width;
+    trend.trends.forEach(subtrend => {
+        const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+        const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+        const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+    });
+    ctx.restore();
 }
 
 function drawCrosshair(ctx, width, height, margin, minPrice, maxPrice) {

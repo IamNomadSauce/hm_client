@@ -239,6 +239,7 @@ window.setupEventListeners = function() {
         }
         if (window.isDragging) {
             const dx = event.clientX - window.panStartX;
+            if (Math.abs(dx) > 3) window.didPan = true;
             const candleW = ((window.chartState?.width ?? canvas.width) - 2 * (window.chartState?.margin ?? 50))
                 / Math.max(1, window.panBarCount);
             const barsMoved = dx / candleW;
@@ -339,6 +340,7 @@ window.setupEventListeners = function() {
             return;
         }
         window.isDragging = true;
+        window.didPan = false;
         window.panStartX = event.clientX;
         window.panStartStart = window.start;
         window.panBarCount = window.end - window.start;
@@ -353,10 +355,12 @@ window.setupEventListeners = function() {
             canvas.style.cursor = 'default';
             if (typeof window.updateSidebar === 'function') window.updateSidebar();
         } else {
+            if (window.didPan || window.isYScaling) window.suppressNextChartClick = true;
             isDragging = false;
             canvas.style.cursor = 'default';
             window.isDragging = false;
             window.isYScaling = false;
+            window.didPan = false;
         }
     });
 
@@ -666,7 +670,7 @@ window.lineClickHandler = function(e, chartState) {
 
     if (window.suppressNextLineMenu) {
         window.suppressNextLineMenu = false
-        return
+        return true
     }
 
 	const rect = canvas.getBoundingClientRect();
@@ -688,12 +692,12 @@ window.lineClickHandler = function(e, chartState) {
 	});
 
 
-	if (!selectedLine) return;
+	if (!selectedLine) return false;
     if (selectedLine.type === 'trigger') {
         if (selectedLine.pending) {
             showTriggerTypeMenu(selectedLine, e.pageX, e.pageY);
         }
-        return
+        return true;
     }
 
 	// We found one → show menu
@@ -749,6 +753,7 @@ window.lineClickHandler = function(e, chartState) {
 			drawCandlestickChart(window.stockData, window.start, window.end);
 		});
 	});
+	return true;
 };
 
 window.orderClickHandler = function(e, chartState) {
@@ -775,7 +780,7 @@ window.orderClickHandler = function(e, chartState) {
 		}
 	});
 
-	if (!selectedOrder) return;
+	if (!selectedOrder) return false;
 
 	// Show menu
 	const menu = document.createElement('div');
@@ -828,6 +833,7 @@ window.orderClickHandler = function(e, chartState) {
 			menu.remove();
 		}
 	});
+	return true;
 };
 
 window.triggerClickHandler = function(e, chartState) {
@@ -899,6 +905,7 @@ window.triggerClickHandler = function(e, chartState) {
 		setTimeout(() => {
 			document.addEventListener('click', closeMenuOnOutsideClick);
 		}, 0);
+		return true;
 	}
 };
 
@@ -950,7 +957,7 @@ window.fillClickHandler = function(e, chartState) {
 		}
 	});
 
-	if (!selectedFill) return;
+	if (!selectedFill) return false;
 
 	// Create menu
 	const menu = document.createElement('div');
@@ -999,7 +1006,88 @@ window.fillClickHandler = function(e, chartState) {
 		}
 	};
 	setTimeout(() => document.addEventListener('click', closeListener), 0);
+	return true;
 };
+
+function trendKey(trend) {
+	if (!trend?.start || !trend?.end) return null;
+	return `${trend.start.time}|${trend.start.point}|${trend.end.time}|${trend.end.point}`;
+}
+
+function sameTrend(a, b) {
+	if (!a || !b) return false;
+	if (a === b) return true;
+	const ka = trendKey(a);
+	const kb = trendKey(b);
+	return !!ka && ka === kb;
+}
+
+function isTrendPinned(trend) {
+	return (window.pinnedTrends || []).some(t => sameTrend(t, trend));
+}
+
+function collectDescendantTrends(trend, acc = []) {
+	(trend?.trends || []).forEach(child => {
+		acc.push(child);
+		collectDescendantTrends(child, acc);
+	});
+	return acc;
+}
+
+function unpinTrendBranch(trend) {
+	const remove = [trend, ...collectDescendantTrends(trend)];
+	window.pinnedTrends = (window.pinnedTrends || []).filter(t => !remove.some(r => sameTrend(t, r)));
+	window.trendlinePath = (window.trendlinePath || []).filter(t => !remove.some(r => sameTrend(t, r)));
+}
+
+function pinTrend(trend) {
+	if (!trend?.trends?.length || isTrendPinned(trend)) return;
+	window.pinnedTrends = window.pinnedTrends || [];
+	window.trendlinePath = window.trendlinePath || [];
+	window.pinnedTrends.push(trend);
+	window.trendlinePath.push(trend);
+}
+
+function popLastPinnedTrend() {
+	const path = window.trendlinePath || [];
+	if (!path.length) return false;
+	const last = path[path.length - 1];
+	unpinTrendBranch(last);
+	return true;
+}
+
+function collectHoverableTrends() {
+	const roots = window.chartState?.trendlines || window.currentTrendlines || [];
+	const seen = new Set();
+	const list = [];
+	const add = (trend) => {
+		if (!trend) return;
+		const key = trendKey(trend) || list.length;
+		if (seen.has(key)) return;
+		seen.add(key);
+		list.push(trend);
+	};
+	roots.forEach(add);
+	(window.pinnedTrends || []).forEach(pinned => {
+		(pinned.trends || []).forEach(add);
+	});
+	const hovered = window.hoveredTrendline;
+	if (hovered?.trends?.length && !isTrendPinned(hovered)) {
+		hovered.trends.forEach(add);
+	}
+	return list;
+}
+
+function trendScreenPoints(trend, chartState) {
+	const timeRange = chartState.lastCandleTime - chartState.firstCandleTime;
+	if (!timeRange) return null;
+	return {
+		startX: chartState.margin + ((trend.start.time - chartState.firstCandleTime) / timeRange) * (chartState.width - 2 * chartState.margin),
+		endX: chartState.margin + ((trend.end.time - chartState.firstCandleTime) / timeRange) * (chartState.width - 2 * chartState.margin),
+		startY: chartState.height - chartState.margin - ((trend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin),
+		endY: chartState.height - chartState.margin - ((trend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin)
+	};
+}
 
 function distanceToLineSegment(px, py, x1, y1, x2, y2) {
 
@@ -1109,33 +1197,13 @@ function trendLineHoverHandler(e, chartState) {
 	let closestTrend = null
 	let minDistance = Infinity
 
-	chartState.trendlines.forEach(trendline => {
-		// Main trendline coordinates
-		const startX = chartState.margin + ((trendline.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-		const endX = chartState.margin + ((trendline.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-		const startY = chartState.height - chartState.margin - ((trendline.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-		const endY = chartState.height - chartState.margin - ((trendline.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-
-		const distance = distanceToLineSegment(mouseX, mouseY, startX, startY, endX, endY);
+	collectHoverableTrends().forEach(trendline => {
+		const pts = trendScreenPoints(trendline, chartState);
+		if (!pts) return;
+		const distance = distanceToLineSegment(mouseX, mouseY, pts.startX, pts.startY, pts.endX, pts.endY);
 		if (distance < minDistance) {
 			minDistance = distance;
 			closestTrend = trendline;
-		}
-
-		// Subtrend coordinates
-		if (trendline.trends && trendline.trends.length > 0) {
-			trendline.trends.forEach(subtrend => {
-				const subStartX = chartState.margin + ((subtrend.start.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-				const subEndX = chartState.margin + ((subtrend.end.time - chartState.firstCandleTime) / (chartState.lastCandleTime - chartState.firstCandleTime)) * (chartState.width - 2 * chartState.margin);
-				const subStartY = chartState.height - chartState.margin - ((subtrend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-				const subEndY = chartState.height - chartState.margin - ((subtrend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin);
-
-				const subDistance = distanceToLineSegment(mouseX, mouseY, subStartX, subStartY, subEndX, subEndY);
-				if (subDistance < minDistance) {
-					minDistance = subDistance;
-					closestTrend = subtrend;
-				}
-			});
 		}
 	});
 
@@ -1383,7 +1451,7 @@ canvas.addEventListener('click', function(event) {
         return;
     }
 
-    if (window.measureDraft || window.currentTool === 'measure') {
+    if (window.measureDraft || window.currentTool) {
         return;
     }
 
@@ -1392,33 +1460,37 @@ canvas.addEventListener('click', function(event) {
 
     const currentChartState = drawCandlestickChart(window.stockData, window.start, window.end);
 
-    // Only run these if NOT clicking on a bracket point
     const isBracketClick = findBracketPointAt(event.clientY - canvas.getBoundingClientRect().top, currentChartState);
+    let consumedByOverlay = !!isBracketClick;
     if (!isBracketClick) {
-        window.triggerClickHandler(event, currentChartState);
-        window.lineClickHandler(event, currentChartState);
-        window.orderClickHandler(event, currentChartState);
-        window.fillClickHandler(event, currentChartState);
+        consumedByOverlay = !!(
+            window.triggerClickHandler(event, currentChartState) ||
+            window.lineClickHandler(event, currentChartState) ||
+            window.orderClickHandler(event, currentChartState) ||
+            window.fillClickHandler(event, currentChartState)
+        );
     }
 
-    // Point / Trendline logic
     if (hoveredPointAtClick) {
         showTrendlinePointMenu(hoveredPointAtClick, event.pageX, event.pageY);
         return;
     }
 
-    // ... rest of your trendline navigation code ...
+    const toolActive = window.currentTool || window.measureDraft;
     let needsRedraw = false;
     if (hoveredTrendAtClick && hoveredTrendAtClick.trends && hoveredTrendAtClick.trends.length > 0) {
-        window.trendlinePath.push(hoveredTrendAtClick);
+        if (isTrendPinned(hoveredTrendAtClick)) {
+            unpinTrendBranch(hoveredTrendAtClick);
+        } else {
+            pinTrend(hoveredTrendAtClick);
+        }
         needsRedraw = true;
-    } else if (!hoveredTrendAtClick && window.trendlinePath.length > 0) {
-        window.trendlinePath.pop();
+    } else if (!hoveredTrendAtClick && !consumedByOverlay && !toolActive && (window.trendlinePath || []).length > 0) {
+        popLastPinnedTrend();
         needsRedraw = true;
     }
 
     if (needsRedraw) {
-        // your existing visibleTrends logic...
         window.drawCandlestickChart(window.stockData, window.start, window.end);
     }
 });
