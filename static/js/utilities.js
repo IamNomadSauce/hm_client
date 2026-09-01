@@ -41,6 +41,36 @@ function xFromBarIndex(barIndex, width, margin, viewStart, viewEnd) {
     return margin + (barIndex - viewStart) * candleWidth + candleWidth / 2;
 }
 
+function indexFromTimestamp(ts) {
+    const data = window.stockData;
+    if (!data?.length || ts == null) return 0;
+    let lo = 0;
+    let hi = data.length - 1;
+    if (ts <= data[lo].Timestamp) return lo;
+    if (ts >= data[hi].Timestamp) return hi;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        const t = data[mid].Timestamp;
+        if (t === ts) return mid;
+        if (t < ts) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    const before = Math.max(0, hi);
+    const after = Math.min(data.length - 1, lo);
+    return (Math.abs(data[after].Timestamp - ts) < Math.abs(data[before].Timestamp - ts)) ? after : before;
+}
+
+function xFromTimestamp(ts, width, margin, viewStart, viewEnd) {
+    return xFromBarIndex(indexFromTimestamp(ts), width, margin, viewStart, viewEnd);
+}
+
+function trendFullyOutside(t0, t1, firstTs, lastTs) {
+    if (firstTs == null || lastTs == null || t0 == null || t1 == null) return true;
+    const lo = Math.min(t0, t1);
+    const hi = Math.max(t0, t1);
+    return hi < firstTs || lo > lastTs;
+}
+
 function pointFromMouse(x, y, chartState) {
     const barIndex = barIndexFromX(x, chartState);
     const candle = window.stockData?.[barIndex];

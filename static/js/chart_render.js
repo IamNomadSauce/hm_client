@@ -376,9 +376,13 @@ window.drawCandlestickChart = function (data, start, end) {
             //     }
             // });
 
+            if (trendFullyOutside(trendline.start?.time, trendline.end?.time, firstCandleTime, lastCandleTime)) {
+                return;
+            }
+
             // Draw main trendline
-            const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-            const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            const startX = xFromTimestamp(trendline.start.time, width, margin, start, end);
+            const endX = xFromTimestamp(trendline.end.time, width, margin, start, end);
             const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
             const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
 
@@ -433,8 +437,11 @@ window.drawCandlestickChart = function (data, start, end) {
 
         trendlinePoints = []; // Reset points array each redraw
         basetrends.forEach((trendline, index) => {
-            const startX = margin + ((trendline.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-            const endX = margin + ((trendline.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+            if (trendFullyOutside(trendline.start?.time, trendline.end?.time, firstCandleTime, lastCandleTime)) {
+                return;
+            }
+            const startX = xFromTimestamp(trendline.start.time, width, margin, start, end);
+            const endX = xFromTimestamp(trendline.end.time, width, margin, start, end);
             const startY = height - margin - ((trendline.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
             const endY = height - margin - ((trendline.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
             // console.log("Trendline", trendline)
@@ -491,17 +498,17 @@ window.drawCandlestickChart = function (data, start, end) {
 
     const pinned = window.pinnedTrends || [];
     pinned.forEach(trend => {
-        drawTrendChildren(ctx, trend, firstCandleTime, timeRange, width, height, margin, minPrice, maxPrice, {
+        drawTrendChildren(ctx, trend, width, height, margin, minPrice, maxPrice, {
             stroke: 'rgba(255, 215, 0, 0.9)',
             width: 2
-        });
+        }, start, end, firstCandleTime, lastCandleTime);
     });
     const hovered = window.hoveredTrendline;
     if (hovered?.trends?.length && !pinned.includes(hovered)) {
-        drawTrendChildren(ctx, hovered, firstCandleTime, timeRange, width, height, margin, minPrice, maxPrice, {
+        drawTrendChildren(ctx, hovered, width, height, margin, minPrice, maxPrice, {
             stroke: 'rgba(255, 215, 0, 0.5)',
             width: 1
-        });
+        }, start, end, firstCandleTime, lastCandleTime);
     }
 
     // if (trendstartlines) {
@@ -539,14 +546,15 @@ window.drawCandlestickChart = function (data, start, end) {
     return { ctx, width, height, margin, minPrice, maxPrice };
 }
 
-function drawTrendChildren(ctx, trend, firstCandleTime, timeRange, width, height, margin, minPrice, maxPrice, style) {
-    if (!trend?.trends?.length || !timeRange) return;
+function drawTrendChildren(ctx, trend, width, height, margin, minPrice, maxPrice, style, viewStart, viewEnd, firstTs, lastTs) {
+    if (!trend?.trends?.length) return;
     ctx.save();
     ctx.strokeStyle = style.stroke;
     ctx.lineWidth = style.width;
     trend.trends.forEach(subtrend => {
-        const startX = margin + ((subtrend.start.time - firstCandleTime) / timeRange) * (width - 2 * margin);
-        const endX = margin + ((subtrend.end.time - firstCandleTime) / timeRange) * (width - 2 * margin);
+        if (trendFullyOutside(subtrend.start?.time, subtrend.end?.time, firstTs, lastTs)) return;
+        const startX = xFromTimestamp(subtrend.start.time, width, margin, viewStart, viewEnd);
+        const endX = xFromTimestamp(subtrend.end.time, width, margin, viewStart, viewEnd);
         const startY = height - margin - ((subtrend.start.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         const endY = height - margin - ((subtrend.end.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         ctx.beginPath();

@@ -1091,11 +1091,12 @@ function collectHoverableTrends() {
 }
 
 function trendScreenPoints(trend, chartState) {
-	const timeRange = chartState.lastCandleTime - chartState.firstCandleTime;
-	if (!timeRange) return null;
+	if (!trend?.start || !trend?.end || !chartState) return null;
+	const viewStart = window.start;
+	const viewEnd = window.end;
 	return {
-		startX: chartState.margin + ((trend.start.time - chartState.firstCandleTime) / timeRange) * (chartState.width - 2 * chartState.margin),
-		endX: chartState.margin + ((trend.end.time - chartState.firstCandleTime) / timeRange) * (chartState.width - 2 * chartState.margin),
+		startX: xFromTimestamp(trend.start.time, chartState.width, chartState.margin, viewStart, viewEnd),
+		endX: xFromTimestamp(trend.end.time, chartState.width, chartState.margin, viewStart, viewEnd),
 		startY: chartState.height - chartState.margin - ((trend.start.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin),
 		endY: chartState.height - chartState.margin - ((trend.end.point - chartState.minPrice) / (chartState.maxPrice - chartState.minPrice)) * (chartState.height - 2 * chartState.margin)
 	};
