@@ -449,14 +449,14 @@ window.drawCandlestickChart = function (data, start, end) {
             ctx.stroke();
 
             // Draw start point
-            const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'start';
+            const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'start';
             ctx.beginPath();
             ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = trendline.end.color;
             ctx.fill();
 
             // Draw end point
-            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trendline === trendline && window.hoveredTrendlinePoint.type === 'end';
+            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'end';
             ctx.beginPath();
             ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
             ctx.fillStyle = trendline.end.color;
@@ -464,10 +464,24 @@ window.drawCandlestickChart = function (data, start, end) {
 
             // Store points if within visible bounds
             if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-                trendlinePoints.push({ x: startX, y: startY, trendline, index, type: 'start' });
+                trendlinePoints.push({
+                    x: startX,
+                    y: startY,
+                    trend: trendline,
+                    index,
+                    type: 'start',
+                    price: trendline.start.point
+                });
             }
             if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-                trendlinePoints.push({ x: endX, y: endY, trendline, index, type: 'end' });
+                trendlinePoints.push({
+                    x: endX,
+                    y: endY,
+                    trend: trendline,
+                    index,
+                    type: 'end',
+                    price: trendline.end.point
+                });
             }
         });
 

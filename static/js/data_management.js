@@ -80,23 +80,6 @@ function applyTriggerUpdate(data) {
 function handleTriggerEvent(data) {
     if (!data) return;
     applyTriggerUpdate(data);
-    if (data.status === 'triggered') {
-        const already = (window.alertLog || []).some(a => a.id === data.id || a.id === 'seed_' + data.id);
-        if (!already) {
-            // recordAlert({
-            //     id: data.id,
-            //     kind: 'Trigger',
-            //     product: data.product_id || '',
-            //     detail: `${(data.type || 'trigger').replace(/_/g, ' ')} @ ${formatAlertPrice(data.price)}`,
-            //     status: 'triggered'
-            // });
-            if (typeof showTriggerNotification === 'function') {
-                showTriggerNotification(data);
-            } else if (typeof showToast === 'function') {
-                showToast(`${data.product_id || ''}  ${(data.type || '').replace(/_/g, ' ')}  TRIGGERED`, 5000);
-            }
-        }
-    }
     if (typeof window.updateSidebar === 'function') window.updateSidebar();
     if (window.stockData) {
         drawCandlestickChart(window.stockData, window.start, window.end);

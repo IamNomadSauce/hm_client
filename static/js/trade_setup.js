@@ -26,7 +26,7 @@ function createTradeSetupBar() {
         style.textContent = `
             #trade-setup-bar {
                 position: fixed;
-                top: 0;
+                bottom: 0;
                 left: 0;
                 right: 0;
                 z-index: 2500;
@@ -34,9 +34,9 @@ function createTradeSetupBar() {
                 align-items: center;
                 gap: 12px;
                 padding: 8px 14px;
-                background: linear-gradient(180deg, #1a1a24 0%, #14141c 100%);
-                border-bottom: 1px solid #33334a;
-                box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+                background: linear-gradient(180deg, #14141c 0%, #1a1a24 100%);
+                border-top: 1px solid #33334a;
+                box-shadow: 0 -4px 18px rgba(0,0,0,0.45);
                 color: #e8e8ff;
                 font-size: 12px;
                 font-family: system-ui, -apple-system, sans-serif;
@@ -96,7 +96,7 @@ function createTradeSetupBar() {
             }
             #trade-setup-bar .btn-close:hover { color: #fff; }
 
-            body.has-trade-bar { padding-top: 44px; }
+            body.has-trade-bar { padding-bottom: 44px; }
         `;
         document.head.appendChild(style);
     }
@@ -152,6 +152,9 @@ function createTradeSetupBar() {
         const show = hasSetup();
         bar.classList.toggle('visible', show);
         document.body.classList.toggle('has-trade-bar', show);
+        if (typeof window.positionToastContainer === 'function') {
+            window.positionToastContainer();
+        }
 
         if (!show) {
             bar.innerHTML = '';
@@ -268,6 +271,9 @@ function createTradeSetupBar() {
     window.hideTradeBar = function () {
         bar.classList.remove('visible');
         document.body.classList.remove('has-trade-bar');
+        if (typeof window.positionToastContainer === 'function') {
+            window.positionToastContainer();
+        }
     };
 
     // Public updater (same signature as old updateSidebar)

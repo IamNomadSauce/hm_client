@@ -77,26 +77,23 @@ function hideTrendlineTooltip() {
 }
 
 window.showPointTooltip = function (point, mouseX, mouseY) {
-    // console.log("showPointTooltip: POINT", point)
-    const trend = point.trend // Use point.trend instead of point.trendline
-    // console.log("TREND:", trend)
-    const time = point.type === 'start' ? trend.start.time : trend.end.time;
-    const price = trend.end.point; // Use the stored price directly
-
-    // Safely determine subtrends count, default to 0 if trend.trends is undefined
+    if (!point) return;
+    const trend = point.trend || point.trendline;
+    if (!trend) return;
+    const node = point.type === 'start' ? trend.start : trend.end;
+    const time = node && node.time;
+    const price = point.price != null ? point.price : (node && node.point);
     const subTrendsCount = trend.trends ? trend.trends.length : 0;
-
-    // console.log("TREND", point.trendline)
-    // console.log("TREND-END", trend.end)
-    console.log("NOTE", trend.note)
+    const priceText = typeof price === 'number' ? price.toFixed(8) : (price || '');
+    const timeText = time ? new Date(time * 1000).toLocaleString() : '';
 
     window.pointTooltip.innerHTML = `
         <div>Trendline Index: ${point.index + 1}</div>
         <div>Point: ${point.type}</div>
-        <div>Color: ${trend.end.color}</div>
-        <div>Label: ${trend.end.label}</div>
-        <div>Time: ${new Date(time * 1000).toLocaleString()}</div>
-        <div>Price: ${price.toFixed(8)}</div>
+        <div>Color: ${(node && node.color) || ''}</div>
+        <div>Label: ${(node && node.label) || ''}</div>
+        <div>Time: ${timeText}</div>
+        <div>Price: ${priceText}</div>
         <div>SubTrends: ${subTrendsCount}</div>
     `;
     window.pointTooltip.style.left = `${mouseX + 10}px`;
@@ -132,15 +129,17 @@ window.showTrendlinePointMenu = function (point, mouseX, mouseY) {
     menu.style.pointerEvents = 'auto';
     menu.style.minWidth = '150px';
 
-    // Use the point's stored price
-    const price = point.price;
+    const trend = point && (point.trend || point.trendline);
+    const node = trend && (point.type === 'start' ? trend.start : trend.end);
+    const price = point && point.price != null ? point.price : (node && node.point);
+    const priceText = typeof price === 'number' ? price.toFixed(8) : (price || '');
 
     menu.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <strong>Trend Point Menu</strong>
             <span class="close-menu" style="cursor: pointer; padding: 0 5px;">×</span>
         </div>
-        <div>Price: ${price.toFixed(8)}</div>
+        ${priceText ? `<div>Price: ${priceText}</div>` : ''}
         <div class="line-menu-item" data-action="entry">Set as Entry</div>
         <div class="line-menu-item" data-action="stop">Set as Stop Loss</div>
         <div class="line-menu-item" data-action="pt">Set as Profit Target</div>

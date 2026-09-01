@@ -125,7 +125,14 @@ window.clearAllDrawings = function() {
     }
 };
 
+window.positionToastContainer = function() {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    container.style.top = '20px';
+};
+
 window.showToast = function(msg, duration = 2000) {
+    window.positionToastContainer();
     const container = document.getElementById('toast-container') || document.body;
     const toast = document.createElement('div');
     toast.style.cssText = `
@@ -532,7 +539,6 @@ function showTriggerTypeMenu(line, pageX, pageY) {
                 const idx = draw_lines.indexOf(line);
                 if (idx !== -1) draw_lines.splice(idx, 1);
                 if (typeof window.updateSidebar === 'function') window.updateSidebar();
-                showToast(`Trigger created: ${type.replace('_', ' ')}`, 2200);
                 drawCandlestickChart(window.stockData, window.start, window.end);
             })
             .catch(err => {
