@@ -18,10 +18,10 @@ window.recordAlert = function(entry) {
     const row = {
         id: entry.id || ('alert_' + Date.now() + '_' + Math.random().toString(16).slice(2)),
         time: entry.time || Date.now(),
-        kind: entry.kind || 'Event',
+        type: entry.kind || entry.type || 'Alert',
         product: entry.product || '',
-        detail: entry.detail || '',
-        status: entry.status || ''
+        title: entry.title || '',
+        message: entry.detail || entry.message || ''
     };
     window.alertLog.unshift(row);
     if (window.alertLog.length > 200) window.alertLog.length = 200;
@@ -42,10 +42,10 @@ window.renderAlertLog = function() {
             body.innerHTML = window.alertLog.map(a => `
                 <tr>
                     <td>${formatAlertTime(a.time)}</td>
-                    <td>${a.kind}</td>
-                    <td>${a.product}</td>
-                    <td>${a.detail}</td>
-                    <td>${a.status}</td>
+                    <td>${a.type || ''}</td>
+                    <td>${a.product || ''}</td>
+                    <td>${a.title || ''}</td>
+                    <td>${a.message || ''}</td>
                 </tr>
             `).join('');
         }
@@ -60,27 +60,6 @@ window.renderAlertLog = function() {
         }
     }
 };
-
-function seedTriggeredAlerts() {
-    const sources = [
-        ...(window.exchange?.Triggers || []),
-        ...(window.current_triggers || [])
-    ];
-    const seen = new Set();
-    sources.forEach(t => {
-        if (!t || t.status !== 'triggered' || seen.has(t.id)) return;
-        seen.add(t.id);
-        window.alertLog.push({
-            id: 'seed_' + t.id,
-            time: t.updated_at || t.created_at || Date.now(),
-            kind: 'Trigger',
-            product: t.product_id || '',
-            detail: `${(t.type || 'trigger').replace(/_/g, ' ')} @ ${formatAlertPrice(t.price)}`,
-            status: 'triggered'
-        });
-    });
-    renderAlertLog();
-}
 
 function applyTriggerUpdate(data) {
     if (!data) return;
@@ -104,13 +83,13 @@ function handleTriggerEvent(data) {
     if (data.status === 'triggered') {
         const already = (window.alertLog || []).some(a => a.id === data.id || a.id === 'seed_' + data.id);
         if (!already) {
-            recordAlert({
-                id: data.id,
-                kind: 'Trigger',
-                product: data.product_id || '',
-                detail: `${(data.type || 'trigger').replace(/_/g, ' ')} @ ${formatAlertPrice(data.price)}`,
-                status: 'triggered'
-            });
+            // recordAlert({
+            //     id: data.id,
+            //     kind: 'Trigger',
+            //     product: data.product_id || '',
+            //     detail: `${(data.type || 'trigger').replace(/_/g, ' ')} @ ${formatAlertPrice(data.price)}`,
+            //     status: 'triggered'
+            // });
             if (typeof showTriggerNotification === 'function') {
                 showTriggerNotification(data);
             } else if (typeof showToast === 'function') {
@@ -126,15 +105,104 @@ function handleTriggerEvent(data) {
 
 function handleFillEvent(data) {
     if (!data) return;
-    recordAlert({
-        id: data.id || data.trade_id || data.OrderID,
-        kind: 'Fill',
-        product: data.product_id || data.ProductID || '',
-        detail: `${data.side || data.Side || ''} ${data.size || data.Size || ''} @ ${formatAlertPrice(data.price || data.Price)}`,
-        status: data.status || 'filled'
-    });
+    // recordAlert({
+    //     id: data.id || data.trade_id || data.OrderID,
+    //     kind: 'Fill',
+    //     product: data.product_id || data.ProductID || '',
+    //     detail: `${data.side || data.Side || ''} ${data.size || data.Size || ''} @ ${formatAlertPrice(data.price || data.Price)}`,
+    //     status: data.status || 'filled'
+    // });
     if (typeof showToast === 'function') {
         showToast(`Fill  ${data.product_id || data.ProductID || ''}  @ ${formatAlertPrice(data.price || data.Price)}`, 4000);
+    }
+}
+
+const BACKEND_URL = "http://192.168.1.118:31337"
+
+function alertFromPayload(data) {
+    if (!data) return null;
+    return {
+        id: data.id,
+        time: data.created_at || Date.now(),
+        kind: data.type || 'Alert',
+        product: data.product_id || '',
+        title: data.title || '',
+        detail: data.message || ''
+    };
+}
+
+function handleAlertEvent(data) {
+    if (!data) return
+    const already = (window.alertLog || []).some(a => String(a.id) === String(data.id))
+    if (already) return
+    recordAlert(alertFromPayload(data))
+    if (typeof showAlertNotification === 'function') {
+        showAlertNotification(data)
+    } else if (typeof showToast === 'function') {
+        showToast([data.product_id, data.title, data.message].filter(Boolean).join('  ') || 'ALERT', 5000)
+    }
+}
+
+function fetchAlerts() {
+    return fetch('/alerts')
+        .then(res => {
+            if (!res.ok) throw new Error('alerts ' + res.status);
+            return res.json();
+        })
+        .then(payload => {
+            const list = Array.isArray(payload) ? payload : (payload.alerts || payload.data || []);
+            const seen = new Set((window.alertLog || []).map(a => String(a.id)));
+            list.forEach(item => {
+                if (!item || item.id == null || seen.has(String(item.id))) return;
+                seen.add(String(item.id));
+                window.alertLog.push(alertFromPayload(item));
+            });
+            window.alertLog.sort((a, b) => new Date(b.time) - new Date(a.time));
+            if (window.alertLog.length > 200) window.alertLog.length = 200;
+            renderAlertLog();
+        })
+        .catch(err => console.error('Error fetching alerts:', err));
+}
+
+function connectToAlertsStream() {
+    if (window._alertSseConnecting) return
+    window._alertSseConnecting = true
+    if (window._alertEventSource) {
+        window._alertEventSource.close()
+        window._alertEventSource = null
+    }
+    const eventSource = new EventSource(`${BACKEND_URL}/alerts/stream`)
+    window._alertEventSource = eventSource
+
+    eventSource.onopen = () => {
+        window._alertSseConnecting = false
+    }
+
+    const onPayload = (raw) => {
+        const parsed = JSON.parse(raw)
+        const data = parsed && parsed.data && (parsed.event === 'alert' || parsed.data.id != null)
+        ? parsed.data
+        : parsed;
+        handleAlertEvent(data)
+    }
+
+    eventSource.onmessage = (event) => {
+        try { onPayload(event.data) }
+        catch (err) {console.error('Error processing alert message:', err, event.data) }
+    }
+    eventSource.addEventListener('alert',  (event) => {
+        try { onPayload(event.data) }
+        catch (err) {console.error('Error processing alert message:', err, event.data) }
+    })
+
+    eventSource.onerror = (error) => {
+        console.error('Alerts SSE connection error:', error)
+        window._alertSseConnecting = false
+        if (window._alertEventSource) {
+            window._alertEventSource.close()
+            window._alertEventSource = null
+        }
+        setTimeout(() => connectToAlertsStream(), 5000)
     }
 }
 
@@ -146,8 +214,7 @@ function connectToBackend() {
         window._eventSource = null;
     }
     console.log("Connect To Backend")
-    const backendURL = "http://192.168.1.118:31337";
-    const eventSource = new EventSource(`${backendURL}/trigger/stream`);
+    const eventSource = new EventSource(`${BACKEND_URL}/trigger/stream`);
     window._eventSource = eventSource;
 
     eventSource.onopen = () => {
@@ -209,7 +276,8 @@ function connectToBackend() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    seedTriggeredAlerts();
+    fetchAlerts()
+    connectToAlertsStream()
     const alertsTab = document.getElementById('alerts-tab');
     if (alertsTab) {
         alertsTab.addEventListener('shown.bs.tab', () => {

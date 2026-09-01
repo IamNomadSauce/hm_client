@@ -601,8 +601,6 @@ function handleBracketPointDrag(event) {
     }
 }
 
-
-
 const showTriggerNotification = function(trigger) {
     const type = (trigger.type || 'trigger').replace(/_/g, ' ');
     const price = trigger.price != null ? trigger.price : '';
@@ -610,6 +608,13 @@ const showTriggerNotification = function(trigger) {
     showToast(`${product}  ${type}  @ ${price}  TRIGGERED`, 5000);
 }
 
+const showAlertNotification = function(alert) {
+    const product = alert.product_id || ''
+    const title = alert.title || ''
+    const message = alert.message || ''
+    const text = [product, title, message].filter(Boolean).join('  ')
+    showToast(text || 'ALERT', 5000)
+}
 
 const triggerHoverHandler = function(e, chartState) {
 	const rect = canvas.getBoundingClientRect();
@@ -1559,17 +1564,23 @@ window.addEventListener('resize', function() {
     });
 });
 
-document.getElementById('base-trends').addEventListener('click', function() {
-	console.log("base-trends")
-	window.base_trends_toggle = !window.base_trends_toggle
-	window.drawCandlestickChart(window.stockData, start, end)
-})
+const baseTrends = document.getElementById('base-trends');
+if (baseTrends) {
+	baseTrends.addEventListener('click', function() {
+		console.log("base-trends")
+		window.base_trends_toggle = !window.base_trends_toggle
+		window.drawCandlestickChart(window.stockData, start, end)
+	})
+}
 
-document.getElementById('meta-trends').addEventListener('click', function() {
-	console.log("meta-trends")
-	window.meta_trends_toggle = !window.meta_trends_toggle
-	window.drawCandlestickChart(window.stockData, start, end)
-})
+const metaTrends = document.getElementById('meta-trends');
+if (metaTrends) {
+	metaTrends.addEventListener('click', function() {
+		console.log("meta-trends")
+		window.meta_trends_toggle = !window.meta_trends_toggle
+		window.drawCandlestickChart(window.stockData, start, end)
+	})
+}
 
 document.querySelectorAll('.line-menu-item').forEach(item => {
 	item.addEventListener('click', function(e) {
@@ -1705,18 +1716,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('click', function(e) {
-	if (!e.target.closest('lineMenu') && !e.target.closest('#candlestickChart')) {
+	if (!e.target.closest('#lineMenu') && !e.target.closest('#candlestickChart')) {
 		window.hideLineMenu();
 	}
 });
 
 window.showLineMenu = function(x, y) {
 	const menu = document.getElementById('lineMenu');
+	if (!menu) return;
 	const line = draw_lines[activeLineIndex];
 
-	// Calculate line's Y position using stored chartState
 	if (chartState && line) {
-        const rect = canvas.getBoundingClientRext()
+        const rect = canvas.getBoundingClientRect();
         const pageX = rect.left + (x ?? 0) + window.scrollX
         const pageY = rect.top + (
             chartState.height - chartState.margin -
@@ -1730,6 +1741,7 @@ window.showLineMenu = function(x, y) {
 
 window.hideLineMenu = function() {
 	const menu = document.getElementById('lineMenu');
+	if (!menu) return;
 	menu.style.display = 'none';
 }
 

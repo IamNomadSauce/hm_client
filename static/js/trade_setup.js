@@ -678,14 +678,14 @@ function executeTradeSetup(tradeSetupData) {
         .then(response => response.json())
         .then(data => {
             console.log('Trade setup created:', data);
-            if (typeof window.recordAlert === 'function') {
-                window.recordAlert({
-                    kind: 'Trade',
-                    product: tradeSetupData.product || '',
-                    detail: `${formattedData.side} ${formattedData.size} @ ${formattedData.entry_price}`,
-                    status: 'submitted'
-                });
-            }
+            // if (typeof window.recordAlert === 'function') {
+            //     window.recordAlert({
+            //         kind: 'Trade',
+            //         product: tradeSetupData.product || '',
+            //         detail: `${formattedData.side} ${formattedData.size} @ ${formattedData.entry_price}`,
+            //         status: 'submitted'
+            //     });
+            // }
             if (typeof showToast === 'function') {
                 showToast(`Trade submitted  ${tradeSetupData.product || ''}  @ ${formattedData.entry_price}`, 4000);
             }
@@ -732,14 +732,14 @@ function createTradeGroup(trade) {
         .then(response => response.json())
         .then(data => {
             console.log('Trade group created:', data);
-            if (typeof window.recordAlert === 'function') {
-                window.recordAlert({
-                    kind: 'Trade',
-                    product: trade.productId || '',
-                    detail: `${side} ${trade.size || ''} @ ${trade.entry}`,
-                    status: 'submitted'
-                });
-            }
+            // if (typeof window.recordAlert === 'function') {
+            //     // window.recordAlert({
+            //     //     kind: 'Trade',
+            //     //     product: trade.productId || '',
+            //     //     detail: `${side} ${trade.size || ''} @ ${trade.entry}`,
+            //     //     status: 'submitted'
+            //     // });
+            // }
             if (typeof showToast === 'function') {
                 showToast(`Trade submitted  ${trade.productId || ''}  @ ${trade.entry}`, 4000);
             }

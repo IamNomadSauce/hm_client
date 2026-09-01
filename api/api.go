@@ -469,6 +469,25 @@ func GetCandles(product, timeframe, exchange string) ([]model.Candle, error) {
 	return candles, nil
 }
 
+func GetAlerts(baseURL string) ([]byte, error) {
+	resp, err := http.Get(baseURL + "/alerts")
+	if err != nil {
+		return nil, fmt.Errorf("Error retrieving alerts: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Error reading alerts response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Status Code: %d, Body: %s", resp.StatusCode, string(body))
+	}
+
+	return body, nil
+}
+
 func reverseCandles(candles []model.Candle) {
 	for i, j := 0, len(candles)-1; i < j; i, j = i+1, j-1 {
 		candles[i], candles[j] = candles[j], candles[i]

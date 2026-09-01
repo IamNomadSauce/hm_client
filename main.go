@@ -35,6 +35,7 @@ func main() {
 	http.HandleFunc("/create-trigger", createTriggerHandler)
 	http.HandleFunc("/delete-trigger/{id}", deleteTriggerHandler)
 	http.HandleFunc("/update-trigger", updateTriggerHandler)
+	http.HandleFunc("/alerts", alertsHandler)
 	//http.HandleFunc("/change_exchange", exchange_changeHandler)
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -377,6 +378,29 @@ func deleteTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		"status":  "success",
 		"message": "Trigger deleted successfully",
 	})
+}
+
+func alertsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	url := os.Getenv("URL")
+	body, err := api.GetAlerts(url)
+	if err != nil {
+		log.Printf("Error fetching alerts: %v", err)
+		http.Error(w, "Failed to fetch alerts", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(body)
 }
 
 func createTriggerHandler(w http.ResponseWriter, r *http.Request) {
