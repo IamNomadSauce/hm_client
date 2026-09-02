@@ -1060,6 +1060,33 @@ function pinTrend(trend) {
 	window.trendlinePath.push(trend);
 }
 
+function collectTrailingEndTrends(roots) {
+	const result = [];
+	if (!Array.isArray(roots) || !roots.length) return result;
+
+	function trailingAfter(parent) {
+		const kids = parent?.trends || [];
+		if (!kids.length) return;
+		const cutoff = parent.end?.time;
+		const after = kids.filter(k => {
+			if (cutoff == null) return true;
+			const start = k.start?.time;
+			const end = k.end?.time;
+			return end > cutoff || start >= cutoff;
+		});
+		after.forEach(k => result.push(k));
+		if (after.length) {
+			trailingAfter(after[after.length - 1]);
+		} else {
+			trailingAfter(kids[kids.length - 1]);
+		}
+	}
+
+	trailingAfter(roots[roots.length - 1]);
+	return result;
+}
+window.collectTrailingEndTrends = collectTrailingEndTrends;
+
 function popLastPinnedTrend() {
 	const path = window.trendlinePath || [];
 	if (!path.length) return false;
@@ -1083,6 +1110,9 @@ function collectHoverableTrends() {
 	(window.pinnedTrends || []).forEach(pinned => {
 		(pinned.trends || []).forEach(add);
 	});
+	if (window.meta_trends_toggle) {
+		(window.trailingEndTrends || []).forEach(add);
+	}
 	const hovered = window.hoveredTrendline;
 	if (hovered?.trends?.length && !isTrendPinned(hovered)) {
 		hovered.trends.forEach(add);

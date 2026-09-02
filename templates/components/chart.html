@@ -77,10 +77,16 @@
     console.log("Testing Exchange Triggers")
     console.log("Exchange Triggers", window.exchange.Triggers)
     window.current_triggers = (window.exchange && window.exchange.Triggers ? window.exchange.Triggers : []).filter(t => t.product_id === window.selectedProduct.product_id) || [];
+    window.trailingEndTrends = typeof window.collectTrailingEndTrends === 'function'
+        ? window.collectTrailingEndTrends(window.trendlines || window.currentTrendlines)
+        : [];
     window.drawCandlestickChart(window.stockData, window.start, window.end);
 
     function init() {
         console.log("chart.html INIT")
+        window.trailingEndTrends = typeof window.collectTrailingEndTrends === 'function'
+            ? window.collectTrailingEndTrends(window.trendlines || window.currentTrendlines)
+            : [];
         window.drawCandlestickChart(window.stockData, window.start, window.end);
         window.setupEventListeners();
         window.updateSidebar = createTradeSetupBar();
