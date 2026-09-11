@@ -18,6 +18,57 @@ window.ctx = canvas.getContext('2d');
 
 window.chartState = null;
 
+// Swing dots
+function swingLabelColor(label, fallback) {
+    switch (label) {
+        case 'HH': return 'green';
+        case 'LL': return 'red';
+        case 'HL': return 'gold';
+        case 'LH': return 'gold';
+        default: return fallback || 'white';
+    }
+}
+
+function swingRole(label) {
+    if (label === 'HL' || label === 'LH') return 'contained';
+    if (label === 'HH' || label === 'LL') return 'structure';
+    return '';
+}
+
+function pushTrendPoint(x, y, trend, index, type, price, label, width, height, margin) {
+    if (x < margin || x > width - margin || y < margin || y > height - margin) return;
+    trendlinePoints.push({ x, y, trend, index, type, price, label: label || '' });
+}
+
+function isSwingLabel(label) {
+    return label === 'HH' || label === 'LL' || label === 'HL' || label === 'LH';
+}
+
+function drawLabeledNode(ctx, node, trend, index, type, width, height, margin, minPrice, maxPrice, viewStart, viewEnd) {
+    if (!node || node.time == null || node.point == null || !isSwingLabel(node.label)) return;
+    const x = xFromTimestamp(node.time, width, margin, viewStart, viewEnd);
+    const y = height - margin - ((node.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
+    const isHovered = window.hoveredTrendlinePoint &&
+        window.hoveredTrendlinePoint.trend === trend &&
+        window.hoveredTrendlinePoint.type === type &&
+        window.hoveredTrendlinePoint.label === node.label &&
+        window.hoveredTrendlinePoint.price === node.point;
+    ctx.beginPath();
+    ctx.arc(x, y, isHovered ? 7 : (type === 'contained' ? 3 : 4), 0, 2 * Math.PI);
+    ctx.fillStyle = swingLabelColor(node.label, node.color);
+    ctx.fill();
+    pushTrendPoint(x, y, trend, index, type, node.point, node.label, width, height, margin);
+}
+
+function drawTrendSwingDots(ctx, trend, index, width, height, margin, minPrice, maxPrice, viewStart, viewEnd) {
+    if (!trend) return;
+    drawLabeledNode(ctx, trend.start, trend, index, 'start', width, height, margin, minPrice, maxPrice, viewStart, viewEnd);
+    drawLabeledNode(ctx, trend.end, trend, index, 'end', width, height, margin, minPrice, maxPrice, viewStart, viewEnd);
+    (trend.contained || []).forEach(pt => {
+        drawLabeledNode(ctx, pt, trend, index, 'contained', width, height, margin, minPrice, maxPrice, viewStart, viewEnd);
+    });
+}
+
 window.updateChartState = function (ctx, width, height, margin, minPrice, maxPrice, firstCandleTime, lastCandleTime, trendlines) {
     chartState = {
         ctx,
@@ -140,8 +191,6 @@ window.drawCandlestickChart = function (data, start, end) {
 
     if (window.current_trend) {
         trend = window.current_trend
-        // console.log("Render current_trend", trend)
-
 
         // ------------- Range Lines
 
@@ -150,7 +199,7 @@ window.drawCandlestickChart = function (data, start, end) {
         ctx.moveTo(margin, start_inv_Y);
         ctx.lineTo(width - margin, start_inv_Y);
         ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = '#b87100';
+        ctx.strokeStyle = 'white';
         ctx.stroke();
         ctx.setLineDash([]);
         //
@@ -159,30 +208,9 @@ window.drawCandlestickChart = function (data, start, end) {
         ctx.moveTo(margin, end_inv_Y);
         ctx.lineTo(width - margin, end_inv_Y);
         ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = '#b87100';
+        ctx.strokeStyle = 'white';
         ctx.stroke();
         ctx.setLineDash([]);
-        //
-        // const start_ts_Y = height - margin - ((trend.start.trendStart - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        // ctx.beginPath();
-        // ctx.moveTo(margin, start_ts_Y);
-        // ctx.lineTo(width - margin, start_ts_Y);
-        // ctx.setLineDash([5, 5]);
-        // ctx.strokeStyle = '#b87100';
-        // ctx.stroke();
-        // ctx.setLineDash([]);
-        //
-        // const end_ts_Y = height - margin - ((trend.end.trendStart - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
-        // ctx.beginPath();
-        // ctx.moveTo(margin, end_ts_Y);
-        // ctx.lineTo(width - margin, end_ts_Y);
-        // ctx.setLineDash([5, 5]);
-        // ctx.strokeStyle = '#b87100';
-        // ctx.stroke();
-        // ctx.setLineDash([]);
-        //
-
-
 
         // ------------- Range Boxes
         
@@ -217,12 +245,23 @@ window.drawCandlestickChart = function (data, start, end) {
         ctx.strokeStyle = '#ffffff';
         ctx.stroke();
 
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '12px Arial';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('L2H ' + trend.l2h.point, width - 100, l2hY - 5);
+
         const l2gY = height - margin - ((trend.l2g.point - minPrice) / (maxPrice - minPrice)) * (height - 2 * margin);
         ctx.beginPath();
         ctx.moveTo(margin, l2gY);
         ctx.lineTo(width - margin, l2gY);
         ctx.strokeStyle = '#ffffff';
         ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '12px Arial';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('L2G ' + trend.l2g.point, width - 100, l2gY - 5);
 
     }
 
@@ -338,48 +377,12 @@ window.drawCandlestickChart = function (data, start, end) {
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = trendline.status === "done" ? trendline.color : trendline.color;
+            ctx.strokeStyle = trendline.end.color;
+            // ctx.strokeStyle = trendline.status === "done" ? trendline.color : trendline.color;
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Draw start point
-            const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'start';
-            ctx.beginPath();
-            ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
-            ctx.fillStyle = trendline.color;
-            ctx.fill();
-
-            // Draw end point
-            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'end';
-            ctx.beginPath();
-            ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
-            ctx.fillStyle = 'white';
-            ctx.fill();
-
-            const ishovered = window.hoveredTrendline;
-
-
-            // Store main trendline points with explicit price
-            if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-                trendlinePoints.push({
-                    x: startX,
-                    y: startY,
-                    trend: trendline, // Reference to the main trendline object
-                    index: index,
-                    type: 'start',
-                    price: trendline.start.point // Explicitly store the main trendline’s start price
-                });
-            }
-            if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-                trendlinePoints.push({
-                    x: endX,
-                    y: endY,
-                    trend: trendline,
-                    index: index,
-                    type: 'end',
-                    price: trendline.end.point // Explicitly store the main trendline’s end price
-                });
-            }
+            drawTrendSwingDots(ctx, trendline, index, width, height, margin, minPrice, maxPrice, start, end);
         });
     }
 
@@ -402,46 +405,13 @@ window.drawCandlestickChart = function (data, start, end) {
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = trendline.status == "done" ? "gray" : "gold";
+            // ctx.strokeStyle = trendline.status == "done" ? "gray" : "gold";
+            ctx.strokeStyle = trendline.color
             // ctx.strokeStyle = trendline.status == "done" ? (trendline.direction == "up" ? "green" : "red") : "gold";
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Draw start point
-            const isStartHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'start';
-            ctx.beginPath();
-            ctx.arc(startX, startY, isStartHovered ? 8 : 4, 0, 2 * Math.PI);
-            ctx.fillStyle = trendline.color;
-            ctx.fill();
-
-            // Draw end point
-            const isEndHovered = window.hoveredTrendlinePoint && window.hoveredTrendlinePoint.trend === trendline && window.hoveredTrendlinePoint.type === 'end';
-            ctx.beginPath();
-            ctx.arc(endX, endY, isEndHovered ? 8 : 4, 0, 2 * Math.PI);
-            ctx.fillStyle = trendline.color;
-            ctx.fill();
-
-            // Store points if within visible bounds
-            if (startX >= margin && startX <= width - margin && startY >= margin && startY <= height - margin) {
-                trendlinePoints.push({
-                    x: startX,
-                    y: startY,
-                    trend: trendline,
-                    index,
-                    type: 'start',
-                    price: trendline.start.point
-                });
-            }
-            if (endX >= margin && endX <= width - margin && endY >= margin && endY <= height - margin) {
-                trendlinePoints.push({
-                    x: endX,
-                    y: endY,
-                    trend: trendline,
-                    index,
-                    type: 'end',
-                    price: trendline.end.point
-                });
-            }
+            drawTrendSwingDots(ctx, trendline, index, width, height, margin, minPrice, maxPrice, start, end);
         });
 
         let last_trend = basetrends[basetrends.length - 1]
@@ -454,7 +424,7 @@ window.drawCandlestickChart = function (data, start, end) {
         count++
         // console.log("TREND COLOR", count, trend)
         drawTrendChildren(ctx, trend, width, height, margin, minPrice, maxPrice, {
-            stroke: trend.color,
+            stroke: trend.end.color,
             width: 2
         }, start, end, firstCandleTime, lastCandleTime);
     })
@@ -462,7 +432,7 @@ window.drawCandlestickChart = function (data, start, end) {
     if (hovered?.trends?.length && !pinned.includes(hovered)) {
         console.log("HOVERED", hovered)
         drawTrendChildren(ctx, hovered, width, height, margin, minPrice, maxPrice, {
-            stroke: 'rgba(255, 215, 0, 0.5)',
+            stroke: hovered.end.color,
             width: 1
         }, start, end, firstCandleTime, lastCandleTime);
     }
@@ -479,9 +449,11 @@ window.drawCandlestickChart = function (data, start, end) {
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
-            ctx.strokeStyle = trend.color || trend.end?.color || 'gold';
-            ctx.lineWidth = 2;
+            // ctx.strokeStyle = trend.color || trend.end?.color || 'gold';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
             ctx.stroke();
+            drawTrendSwingDots(ctx, trend, 0, width, height, margin, minPrice, maxPrice, start, end);
         });
     }
 	
@@ -494,10 +466,19 @@ window.drawCandlestickChart = function (data, start, end) {
 
 function drawTrendChildren(ctx, trend, width, height, margin, minPrice, maxPrice, style, viewStart, viewEnd, firstTs, lastTs) {
     if (!trend?.trends?.length) return;
+    let kids = trend.trends;
+    while (kids.length === 1 && kids[0] &&
+        kids[0].start?.time === trend.start?.time &&
+        kids[0].end?.time === trend.end?.time &&
+        kids[0].start?.point === trend.start?.point &&
+        kids[0].end?.point === trend.end?.point &&
+        kids[0].trends?.length) {
+        kids = kids[0].trends;
+    }
     ctx.save();
     ctx.strokeStyle = style.stroke;
     ctx.lineWidth = style.width;
-    trend.trends.forEach(subtrend => {
+    kids.forEach(subtrend => {
         if (trendFullyOutside(subtrend.start?.time, subtrend.end?.time, firstTs, lastTs)) return;
         const startX = xFromTimestamp(subtrend.start.time, width, margin, viewStart, viewEnd);
         const endX = xFromTimestamp(subtrend.end.time, width, margin, viewStart, viewEnd);
@@ -506,7 +487,9 @@ function drawTrendChildren(ctx, trend, width, height, margin, minPrice, maxPrice
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
+        ctx.strokeStyle = subtrend.color;
         ctx.stroke();
+        drawTrendSwingDots(ctx, subtrend, 0, width, height, margin, minPrice, maxPrice, viewStart, viewEnd);
     });
     ctx.restore();
 }

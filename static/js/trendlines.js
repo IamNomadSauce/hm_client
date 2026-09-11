@@ -80,7 +80,14 @@ window.showPointTooltip = function (point, mouseX, mouseY) {
     if (!point) return;
     const trend = point.trend || point.trendline;
     if (!trend) return;
-    const node = point.type === 'start' ? trend.start : trend.end;
+    let node = null;
+    if (point.type === 'start') node = trend.start;
+    else if (point.type === 'end') node = trend.end;
+    else if (point.type === 'contained' && Array.isArray(trend.contained)) {
+        node = trend.contained.find(p => p && p.point === point.price && (point.label ? p.label === point.label : true)) || null;
+    }
+    const label = point.label || (node && node.label) || '';
+    const role = (label === 'HL' || label === 'LH') ? 'contained' : ((label === 'HH' || label === 'LL') ? 'structure' : '');
     const time = node && node.time;
     const price = point.price != null ? point.price : (node && node.point);
     const subTrendsCount = trend.trends ? trend.trends.length : 0;
@@ -88,10 +95,9 @@ window.showPointTooltip = function (point, mouseX, mouseY) {
     const timeText = time ? new Date(time * 1000).toLocaleString() : '';
 
     window.pointTooltip.innerHTML = `
-        <div>Trendline Index: ${point.index + 1}</div>
+        <div>Type: ${label || point.type || ''}</div>
+        ${role ? `<div>Role: ${role}</div>` : ''}
         <div>Point: ${point.type}</div>
-        <div>Color: ${(node && node.color) || ''}</div>
-        <div>Label: ${(node && node.label) || ''}</div>
         <div>Time: ${timeText}</div>
         <div>Price: ${priceText}</div>
         <div>SubTrends: ${subTrendsCount}</div>

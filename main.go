@@ -982,7 +982,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 						TrendStart: math.Max(candle.Close, candle.Open),
 					}
 					current.Status = "done"
-					current.Color = "gold"
+					// current.Color = "gray"
 					trendlines = append(trendlines, current)
 
 					// 2. Start a new downtrend from the high.
@@ -994,7 +994,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 							Inv:        candle.High,
 							TrendStart: math.Min(candle.Close, candle.Open),
 						},
-						Color:     "red",
+						// Color:     "green",
 						Direction: "down",
 						Status:    "current",
 					}
@@ -1025,7 +1025,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 							Inv:        candle.High,
 							TrendStart: math.Min(candle.Close, candle.Open),
 						},
-						Color:     "red",
+						// Color:     "red",
 						Direction: "down",
 						Status:    "current",
 					}
@@ -1060,6 +1060,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 							Inv:        candle.Low,
 							TrendStart: math.Max(candle.Close, candle.Open),
 						},
+						// Color:     "green",
 						Direction: "up",
 						Status:    "current",
 					}
@@ -1092,6 +1093,7 @@ func makeAPITrendlines(candles []model.Candle) ([]model.Trendline, error) {
 							Inv:        candle.Low,
 							TrendStart: math.Max(candle.Close, candle.Open),
 						},
+						// Color:     "green",
 						Direction: "up",
 						Status:    "current",
 					}
@@ -1139,10 +1141,30 @@ func buildTrendlines(trendlines []model.Trendline, depth int) []model.Trendline 
 				return trendlines[k].Start.Time >= nextStart
 			})
 		}
-		v.TrendLines = trendlines[startIdx:endIdx]
+		v.TrendLines = unwrapIdentityChildren(model.Trendline{
+			Start:      v.Start,
+			End:        v.End,
+			TrendLines: trendlines[startIdx:endIdx],
+		})
 	}
 
 	return buildTrendlines(dx_trends, depth+1)
+}
+
+func sameSpan(a, b model.Trendline) bool {
+	return a.Start.Time == b.Start.Time && a.End.Time == b.End.Time &&
+		a.Start.Point == b.Start.Point && a.End.Point == b.End.Point
+}
+
+func unwrapIdentityChildren(parent model.Trendline) []model.Trendline {
+	kids := parent.TrendLines
+	for len(kids) == 1 && sameSpan(parent, kids[0]) {
+		if len(kids[0].TrendLines) == 0 {
+			break
+		}
+		kids = kids[0].TrendLines
+	}
+	return kids
 }
 
 func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
@@ -1158,8 +1180,8 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 			// Determine the label and color based on the trend
 			if c.End.Point < b.End.Point && c.End.Point > a.End.Point {
 				c.End.Label = "HL"
-				c.End.Color = "cyan"
-				c.Color = "cyan"
+				c.End.Color = "gold"
+				c.Color = "gold"
 			} else if c.End.Point < a.End.Point && b.End.Point > a.End.Point {
 				c.End.Label = "LL"
 				c.End.Color = "red"
@@ -1170,8 +1192,8 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 				c.Color = "green"
 			} else if c.End.Point < a.End.Point && b.End.Point < c.End.Point {
 				c.End.Label = "LH"
-				c.End.Color = "yellow"
-				c.Color = "gray"
+				c.End.Color = "orange"
+				c.Color = "orange"
 			}
 			fmt.Printf("%s", c.Label)
 
@@ -1179,7 +1201,7 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 
 			// Update the trendlines with the new labels and colors
 			trendlines[i+2].End.Label = c.End.Label
-
+			trendlines[i+2].End.Color = c.End.Color
 		}
 	}
 
@@ -1198,58 +1220,53 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 		end := trend.End
 		start := trend.Start
 		if end.Label == "LL" {
-			// log.Println(end.Label)
-			if direction == "down" { // Continuation
-				// log.Println("Continuation LL", direction, end.Point)
+			if direction == "down" { // continuation
 				if end.Point < current.L2H.Point {
-					current.Color = "red"
+					// current.Color = "gray"
 					current.End = end
-					current.End.Color = ""
 					current.L2H = end
 					current.L2G = start
 				}
-			} else if direction == "up" { // HH -> LL New Trend
-				// log.Println("New Trend LL", end.Point)
+			} else if direction == "up" { // reversal
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
 				temp_current.Start = current.End
 				temp_current.End = end
 				current = temp_current
-				current.Color = "blue"
+				// current.Color = "gray"
 				current.L2H = current.End
 				current.L2G = current.Start
-				current.End.Color = ""
 				direction = "down"
 			}
-		} else if end.Label == "HH" { // HH
-			// log.Println(end.Label)
+		} else if end.Label == "HH" {
 			if direction == "up" { // Continuation
-				// log.Println("Continuation HH", direction, end.Point)
 				if end.Point > current.L2G.Point {
-					current.Color = "green"
+					// current.Color = "gray"
 					current.End = end
-					current.End.Color = ""
 					current.L2G = end
 					current.L2H = start
 				}
-			} else if direction == "down" { // New Trend
-				// log.Println("New Trend HH", end.Point)
+			} else if direction == "down" { // reversal
 				return_trends = append(return_trends, current)
 
 				var temp_current model.Trendline
 				temp_current.Start = current.End
 				temp_current.End = end
 				current = temp_current
-				current.Color = "gold"
+				// current.Color = "gray"
 				current.L2G = current.End
 				current.L2H = current.Start
-				current.End.Color = ""
 				direction = "up"
 			}
 		} else if end.Label == "HL" {
-
+			if direction == "up" {
+				current.Contained = append(current.Contained, end)
+			}
 		} else if end.Label == "LH" {
+			if direction == "down" {
+				current.Contained = append(current.Contained, end)
+			}
 		}
 	}
 

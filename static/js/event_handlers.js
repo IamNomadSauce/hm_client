@@ -1052,8 +1052,19 @@ function unpinTrendBranch(trend) {
 	window.trendlinePath = (window.trendlinePath || []).filter(t => !remove.some(r => sameTrend(t, r)));
 }
 
+function unwrapIdentityChildren(trend) {
+	let kids = trend?.trends || [];
+	while (kids.length === 1 && sameTrend(trend, kids[0]) && kids[0].trends?.length) {
+		kids = kids[0].trends;
+	}
+	return kids;
+}
+
 function pinTrend(trend) {
-	if (!trend?.trends?.length || isTrendPinned(trend)) return;
+	if (!trend) return;
+	const kids = unwrapIdentityChildren(trend);
+	if (kids !== trend.trends) trend.trends = kids;
+	if (!trend.trends?.length || isTrendPinned(trend)) return;
 	window.pinnedTrends = window.pinnedTrends || [];
 	window.trendlinePath = window.trendlinePath || [];
 	window.pinnedTrends.push(trend);
