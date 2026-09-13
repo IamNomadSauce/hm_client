@@ -1141,9 +1141,11 @@ func buildTrendlines(trendlines []model.Trendline, depth int) []model.Trendline 
 				return trendlines[k].Start.Time >= nextStart
 			})
 		}
+		v.Color = v.End.Color
 		v.TrendLines = unwrapIdentityChildren(model.Trendline{
 			Start:      v.Start,
 			End:        v.End,
+			Color:      v.Color,
 			TrendLines: trendlines[startIdx:endIdx],
 		})
 	}
@@ -1180,8 +1182,8 @@ func dxTrendlines(trendlines []model.Trendline) ([]model.Trendline, error) {
 			// Determine the label and color based on the trend
 			if c.End.Point < b.End.Point && c.End.Point > a.End.Point {
 				c.End.Label = "HL"
-				c.End.Color = "gold"
-				c.Color = "gold"
+				c.End.Color = "cyan"
+				c.Color = "cyan"
 			} else if c.End.Point < a.End.Point && b.End.Point > a.End.Point {
 				c.End.Label = "LL"
 				c.End.Color = "red"
