@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"time"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -360,8 +361,56 @@ func CreateNewTrade(baseURL string, order model.TradeBlock) error {
 	return nil
 }
 
+func GetAvailableProducts(baseURL string, xchID int, q, sort, dir string, limit, offset int) (model.AvailableProductResponse, error) {
+	params := url.Values{}
+	params.Set("xch_id", strconv.Itoa(xchID))
+	if q != "" {
+		params.Set("q", q)
+	}
+	if sort == "" {
+		sort = "volume"
+	}
+	params.Set("sort", sort)
+	if dir == "" {
+		dir = "desc"
+	}
+	params.Set("dir", dir)
+	if limit <= 0 {
+		limit = 50
+	}
+	params.Set("limit", strconv.Itoa(limit))
+	if offset < 0 {
+		offset = 0
+	}
+	params.Set("offset", strconv.Itoa(offset))
+
+	endpoint := baseURL + "/available-products?" + params.Encode()
+	resp, err := http.Get(endpoint)
+	if err != nil {
+		return model.AvailableProductResponse{}, fmt.Errorf("error retrieving URL: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return model.AvailableProductResponse{}, fmt.Errorf("error reading response: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return model.AvailableProductResponse{}, fmt.Errorf("status code: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	var result model.AvailableProductResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return model.AvailableProductResponse{}, fmt.Errorf("error unmarshalling available products: %v", err)
+	}
+	if result.Products == nil {
+		result.Products = []model.Product{}
+	}
+	return result, nil
+}
+
 func AddToWatchlist(baseURL string, exchangeID int, productID string) error {
-	log.Printf("API:AddToWatchlist\n%s\n%s", exchangeID, productID)
+	log.Printf("API:AddToWatchlist xch_id=%d product_id=%s", exchangeID, productID)
 	url := baseURL + "/add-to-watchlist"
 
 	// Create the request payload
@@ -404,7 +453,7 @@ func AddToWatchlist(baseURL string, exchangeID int, productID string) error {
 	}
 
 	// Check response status
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
 	}
 

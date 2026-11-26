@@ -84,6 +84,12 @@ type Product struct {
 	Volume_24h        string `json:"volume_24"`
 	Base_Currency_ID  string `json:"base_currency_id"`
 	Quote_Currency_ID string `json:"quote_currency_id"`
+	InWatchlist bool `json:"in_watchlist"`
+}
+
+type AvailableProductResponse struct {
+	Products []Product `json:"products"`
+	Total int `json:"total"`
 }
 
 type Asset struct {
@@ -91,8 +97,8 @@ type Asset struct {
 	Balance          float64 `json:"balance"`
 	Asset            string  `json:"asset"`
 	AvailableBalance Balance `json:"available_balance"`
-	Hold             Balance `json:"hold_balance`
-	Value            float64 `json:"value`
+	Hold             Balance `json:"hold_balance"`
+	Value            float64 `json:"value"`
 	XchID            int     `json:"xch_id"`
 }
 

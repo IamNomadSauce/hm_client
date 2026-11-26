@@ -60,30 +60,43 @@
                   </ul>
                 </div>
 
-				{{/*}}
-              <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle bg-dark" type="button" data-bs-toggle="dropdown">
-                  +
-                </button>
-                <div class="dropdown-menu bg-dark p-2" style="width: 300px;">
-                  <input type="text" class="form-control bg-dark text-white-50 mb-2" id="productSearch"
-                    placeholder="Search products...">
-                  <div class="dropdown-products">
-                    {{range .SelectedExchange.AvailableProducts}}
-                    <div class="dropdown-item bg-dark text-white-50 product-item">
-                      <form action="/add-to-watchlist" method="POST">
-                        <input type="hidden" name="xch_id" value="{{$.SelectedExchange.ID}}">
-                        <input type="hidden" name="product_id" value="{{.ProductID}}">
-                        <button type="submit" class="btn btn-sm btn-dark w-100 text-start">
-                          {{.ProductID}} | {{.Volume_24h}}
-                        </button>
-                      </form>
-                    </div>
-                    {{end}}
-                  </div>
+          {{if gt (len .Exchanges) 0}}
+            <div class="dropdown" id="available-products-dropdown"
+                 data-xch-id="{{.SelectedExchange.ID}}"
+                 data-selected-index="{{.SelectedIndex}}"
+                 data-product-index="{{.ProductIndex}}"
+                 data-timeframe-index="{{.TimeframeIndex}}">
+              <button class="btn btn-sm btn-secondary dropdown-toggle bg-dark" type="button"
+                      data-bs-toggle="dropdown" aria-expanded="false" title="Add product to watchlist">+</button>
+              <div class="dropdown-menu bg-dark p-2" style="width: 340px;">
+                <div class="d-flex gap-1 px-1 pb-2">
+                  <input type="text" class="form-control form-control-sm bg-dark text-white" id="productSearch"
+                         placeholder="Search products..." autocomplete="off">
+                  <select class="form-select form-select-sm bg-dark text-white" id="productSort" aria-label="Sort by">
+                    <option value="volume">Volume</option>
+                    <option value="price">Price</option>
+                    <option value="product_id">Product</option>
+                    <option value="base_name">Base</option>
+                    <option value="status">Status</option>
+                  </select>
+                  <select class="form-select form-select-sm bg-dark text-white" id="productDir" aria-label="Direction">
+                    <option value="desc">Desc</option>
+                    <option value="asc">Asc</option>
+                  </select>
+                </div>
+
+                <div class="dropdown-products" id="productResults">
+                  <div class="text-secondary px-2 py-1">Loading…</div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center px-2 pt-2">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="productPrev" disabled>&lt; Prev</button>
+                  <span class="text-secondary small" id="productPageInfo">0–0 of 0</span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="productNext" disabled>Next &gt;</button>
                 </div>
               </div>
-				{{*/}}
+            </div>
+            {{end}}
 
             </div>
           </div>
@@ -675,33 +688,6 @@ function showToast(msg, duration = 2000) {
         });
       });
 
-      // Product search functionality
-      const searchInput = document.getElementById('productSearch');
-      const productItems = document.querySelectorAll('.product-item');
-
-      if (searchInput) {
-        searchInput.addEventListener('input', function (e) {
-          const searchTerm = e.target.value.toLowerCase().trim();
-          productItems.forEach(item => {
-            const text = item.textContent.toLowerCase();
-            item.style.display = text.includes(searchTerm) ? 'block' : 'none';
-          });
-        });
-
-        // Prevent dropdown from closing when clicking search
-        searchInput.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        });
-      }
-
-      // Keep dropdown open while filtering
-      const dropdownMenu = document.querySelector('.dropdown-menu');
-      if (dropdownMenu) {
-        dropdownMenu.addEventListener('click', function (e) {
-          e.stopPropagation();
-        });
-      }
 
       function updatePieChart() {
         const svg = document.querySelector('.portfolio-pie');
@@ -816,4 +802,6 @@ function showToast(msg, duration = 2000) {
       }
     });
   </script>
+
+<script src="/static/js/available_products.js"></script>
   {{end}}

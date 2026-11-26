@@ -28,6 +28,7 @@ func main() {
 	http.HandleFunc("/finance", financeHandler)
 	http.HandleFunc("/horizon", horizonAcctHandler)
 	http.HandleFunc("/add-to-watchlist", addToWatchlistHandler)
+	http.HandleFunc("/available-products", availableProductsHandler)
 	http.HandleFunc("/trade-entry", tradeEntryHandler)
 	http.HandleFunc("/create-trade", newTradeBlockHandler)
 	http.HandleFunc("/delete-trade-block", deleteTradeBlockHandler)
@@ -599,11 +600,19 @@ func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get values from form
 	exchangeID, err := strconv.Atoi(r.FormValue("xch_id"))
-	if err != nil {
+	if err != nil || exchangeID <= 0 {
 		http.Error(w, "Invalid exchange ID", http.StatusBadRequest)
 		return
 	}
-	productID := r.FormValue("product_id")
+	productID := strings.TrimSpace(r.FormValue("product_id"))
+	if productID == "" {
+		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
 
 	log.Printf("Frontend handler: exchange_id=%d, product_id=%s", exchangeID, productID)
 
@@ -615,8 +624,80 @@ func addToWatchlistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	target := "/finance"
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+
 	// Redirect back to the finance page
-	http.Redirect(w, r, "/finance", http.StatusSeeOther)
+	http.Redirect(w, r, target, http.StatusSeeOther)
+}
+
+func availableProductsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	q := r.URL.Query()
+
+	xchID, err := strconv.Atoi(q.Get("xch_id"))
+	if err != nil || xchID <= 0 {
+		http.Error(w, "Invalid or missing xch_id", http.StatusBadRequest)
+		return
+	}
+
+	sortBy := q.Get("sort")
+	if sortBy == "" {
+		sortBy = "volume"
+	}
+
+	switch sortBy {
+	case "volume", "price", "product_id", "base_name", "status":
+	default:
+		http.Error(w, "Invalid sort", http.StatusBadRequest)
+		return
+	}
+
+	dir := q.Get("dir")
+	if dir == "" {
+		dir = "desc"
+	}
+	if dir != "asc" && dir != "desc" {
+		http.Error(w, "Invalid dir", http.StatusBadRequest)
+		return
+	}
+
+	limit := 50
+	if raw := q.Get("limit"); raw != "" {
+		limit, err = strconv.Atoi(raw)
+		if err != nil || limit < 1 || limit > 100 {
+			http.Error(w, "Invalid limit", http.StatusBadRequest)
+			return
+		}
+	}
+
+	offset := 0
+	if raw := q.Get("offset"); raw != "" {
+		offset, err = strconv.Atoi(raw)
+		if err != nil || offset < 0 {
+			http.Error(w, "Invalid offset", http.StatusBadRequest)
+			return
+		}
+	}
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
+
+	result, err := api.GetAvailableProducts(os.Getenv("URL"), xchID, q.Get("q"), sortBy, dir, limit, offset)
+	if err != nil {
+		log.Printf("Error fetching available products: %v", err)
+		http.Error(w, "Failed to fetch available products", http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func tradeEntryHandler(w http.ResponseWriter, r *http.Request) {
